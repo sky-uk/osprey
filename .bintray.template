@@ -17,10 +17,10 @@
   [
     { "includePattern": "dist/(.*)/(.*)/osprey\\.(.*)",
       "excludePattern": "dist/latest/(.*)",
-      "uploadPattern": "$1/osprey-$1_$2.$3"
+      "uploadPattern": "osprey/$1/osprey-$1_$2.$3"
     },
     { "includePattern": "dist/latest/(.*)/osprey\\.(.*)",
-      "uploadPattern": "latest/osprey-latest_$1.$2",
+      "uploadPattern": "osprey/latest/osprey-latest_$1.$2",
       "matrixParams": { "override": 1 }
     }
   ],
