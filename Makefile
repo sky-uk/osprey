@@ -90,8 +90,8 @@ proto :
 git_rev := $(shell git rev-parse --short HEAD)
 git_tag := $(shell git tag --points-at=$(git_rev))
 release_date := $(shell date +%d-%m-%Y)
-latest_git_tag := $(git for-each-ref --format="%(tag)" --sort=-taggerdate refs/tags | grep osprey | head -1)
-latest_git_rev := $(git rev-list -n 1 $(latest_git_tag))
+latest_git_tag := $(shell git for-each-ref --format="%(tag)" --sort=-taggerdate refs/tags | head -1)
+latest_git_rev := $(shell git rev-list --abbrev-commit -n 1 $(latest_git_tag))
 
 prepare-release-bintray :
 ifeq ($(strip $(SKIP_PREPARE_RELEASE_BINTRAY)), )
@@ -109,7 +109,7 @@ else
 		artifact=osprey; \
 		case $$distribution in \
 			windows*) \
-				mv osprey osprey.exe \
+				cp osprey osprey.exe; \
 				artifact=$$artifact.zip; \
 				zip -9 $$artifact osprey.exe; \
 				;; \
