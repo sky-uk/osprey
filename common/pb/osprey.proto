@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package pb;
+
+message LoginRequest {}
+
+message LoginResponse {
+  Cluster cluster = 1;
+  AuthProvider provider = 2;
+  User user = 3;
+}
+
+message Cluster {
+  string name = 1;
+  string apiServerURL = 2;
+  string apiServerCA = 3;
+}
+
+message AuthProvider {
+  string clientID = 1;
+  string clientSecret = 2;
+  string issuerURL = 3;
+  string issuerCA = 4;
+}
+
+message User {
+  string username = 1;
+  string token = 2;
+}
+
+

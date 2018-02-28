@@ -1,0 +1,33 @@
+language: go
+
+go:
+  - 1.9.2
+
+before_install:
+  - sudo apt-get -y update
+  - sudo apt-get -y install --no-install-recommends slapd
+  - sudo apt-get -y install --no-install-recommends ldap-utils
+  - sudo apt-get -y install tree
+
+services:
+  - docker
+
+script: make travis
+
+before_deploy:
+- make prepare-release-bintray
+- if [ "SKIP_PREPARE_RELEASE_BINTRAY" != "true" ]; then export SKIP_PREPARE_RELEASE_BINTRAY=true; fi
+deploy:
+- provider: bintray
+  skip_cleanup: true
+  file: dist/bintray.json
+  user: $BINTRAY_USER
+  key: $BINTRAY_API_KEY
+  on:
+    tags: true
+- provider: script
+  script: make release-docker
+  skip_cleanup: true
+  on:
+    tags: true
+

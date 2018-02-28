@@ -1,0 +1,19 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+  labels:
+    service: @dexService@
+  name: @dexIngress@
+  namespace: @namespace@
+spec:
+  rules:
+  - host: @dexHost@
+    http:
+      paths:
+      - backend:
+          serviceName: @dexService@
+          servicePort: @dexPort@
+        path: /
+status:
+  loadBalancer: {}

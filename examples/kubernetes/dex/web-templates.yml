@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: @dexWebTemplates@
+  namespace: @namespace@
+data:
+  approval.html: |
+    {
+        "req_field":"req",
+        "req_value":"{{ .AuthReqID }}",
+        "approval_field":"approval",
+        "approval_value":"approve"
+    }
+  error.html: |
+    {
+        "error_type": "{{ .ErrType }}"
+        "error_msg": "{{ .ErrMsg }}"
+    }
+  footer.html: ""
+  header.html: ""
+  login.html: ""
+  oob.html: ""
+  password.html: |
+    {
+        "action":"{{ .PostURL }}",
+        "login": "login",
+        "password": "password",
+        "invalid": {{ .Invalid }}
+    }

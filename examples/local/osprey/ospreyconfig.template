@@ -1,0 +1,6 @@
+kubeconfig: @clusterClientKubeconfig@
+certificate-authority: @ospreyCA@
+targets:
+  localhost:
+    server: @ospreyURL@
+    aliases: [@clusterEnvironment@]

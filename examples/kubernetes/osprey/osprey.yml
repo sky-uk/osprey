@@ -1,0 +1,59 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: @ospreyApp@
+  name: @ospreyDeployment@
+  namespace: @namespace@
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: @ospreyApp@
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: @ospreyApp@
+    spec:
+      volumes:
+      - name: ssl
+        secret:
+          secretName: @ospreySslSecret@
+
+      containers:
+      - name: osprey
+        image: @ospreyImage@
+        command:
+        - /usr/local/bin/osprey
+        args:
+        - serve
+        - --port=@ospreyPort@
+        - --environment=@clusterEnvironment@
+        - --secret=@ospreySecret@
+        - --redirectURL=@ospreyRedirectURL@
+        - --tls-cert=/ssl/osprey-cert.pem
+        - --tls-key=/ssl/osprey-key.pem
+        - --apiServerURL=@clusterApiServerURL@
+        - --apiServerCA=/ssl/apiserver-ca.pem
+        - --issuerURL=@dexURL@
+        - --issuerCA=/ssl/dex-ca.pem
+        - --debug=true
+
+        ports:
+        - containerPort: @ospreyPort@
+          name: osprey
+          protocol: TCP
+
+        resources:
+          limits:
+            memory: 256Mi
+          requests:
+            cpu: 150m
+            memory: 256Mi
+
+        volumeMounts:
+        - mountPath: /ssl
+          name: ssl
+          readOnly: true

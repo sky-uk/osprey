@@ -1,0 +1,47 @@
+# Config template copied from:
+# http://www.zytrax.com/books/ldap/ch5/index.html#step1-slapd
+# TLS instructions found here:
+# http://www.openldap.org/doc/admin24/tls.html
+
+{{ range $i, $include := .Includes }}
+include {{ $include }}
+{{ end }}
+
+# MODULELOAD definitions
+# not required (comment out) before version 2.3
+moduleload back_bdb.la
+
+database bdb
+suffix "dc=example,dc=org"
+
+# root or superuser
+rootdn "{{ .RootDN }}"
+rootpw {{ .RootPwd }}
+# The database directory MUST exist prior to running slapd AND
+# change path as necessary
+directory	{{ .LDAPDir }}
+
+TLSCertificateFile {{ .TLSCertPath }}
+TLSCertificateKeyFile {{ .TLSKeyPath }}
+
+# Indices to maintain for this directory
+# unique id so equality match only
+index	uid	eq
+# allows general searching on commonname, givenname and email
+index	cn,gn,mail eq,sub
+# allows multiple variants on surname searching
+index sn eq,sub
+# sub above includes subintial,subany,subfinal
+# optimise department searches
+index ou eq
+# if searches will include objectClass uncomment following
+# index objectClass eq
+# shows use of default index parameter
+index default eq,sub
+# indices missing - uses default eq,sub
+index telephonenumber
+
+# other database parameters
+# read more in slapd.conf reference section
+cachesize 10000
+checkpoint 128 15

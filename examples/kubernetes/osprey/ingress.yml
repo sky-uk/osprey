@@ -1,0 +1,16 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  labels:
+    service: @ospreyService@
+  name: @ospreyIngress@
+  namespace: @namespace@
+spec:
+  rules:
+  - host: @ospreyHost@
+    http:
+      paths:
+      - backend:
+          serviceName: @ospreyService@
+          servicePort: @ospreyPort@
+        path: /

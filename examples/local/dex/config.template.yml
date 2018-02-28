@@ -1,0 +1,44 @@
+# The properties placeholders in this file (@property@) are replaced
+# with properties loaded from examples/local/local.properties.
+issuer: @dexURL@
+expiry:
+  signingKeys: 24h
+  idTokens: 24h
+storage:
+  type: sqlite3
+  config:
+    file: @dexStorage@
+web:
+  https: @dexHost@:@dexPort@
+  tlsCert: @dexTlsCert@
+  tlsKey: @dexTlsKey@
+frontend:
+  dir: @dexFrontendDir@
+  theme: osprey
+oauth2:
+  skipApprovalScreen: true
+logger:
+  level: debug
+  format: json
+staticClients:
+- id: @clusterEnvironment@
+  name: osprey
+  secret: @ospreySecret@
+  redirectURIs:
+  - @ospreyRedirectURL@
+
+# This enables a connector using a local storage configured
+# with the specified static users
+# Only one connector is supported at a given time
+enablePasswordDB: true
+staticPasswords:
+- email: "jane@@clusterEnvironment@"
+  # bcrypt hash of the string "doe" minimum cost 10
+  hash: "$2a$10$C6dvAf.iI0wj/r6AY.i.JeQrSHXiiNFy4rlPEenJbZOV.liKDbsba"
+  username: "jane"
+  userID: "c6f3201d-6d67-4414-8808-f746d051c565"
+- email: "john@@clusterEnvironment@"
+  # bcrypt hash of the string "doe" minimum cost 10
+  hash: "$2a$10$/2bVyw5crNLojXJGce9YAuLJUe6tx1uS4MRrpenEfKbOJA015mGTS"
+  username: "john"
+  userID: "15f9c960-008e-456c-927b-49440df774c0"
