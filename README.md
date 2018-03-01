@@ -40,7 +40,7 @@ To install a specific version replace `latest` with the release version.
 
 **Linux and Mac OS**
 ```
-  curl https://dl.bintray.com/sky-uk/oss-generic/osprey/latest/osprey-latest_linux_amd64.tar.gz -o osprey.tar.gz
+  curl -L https://dl.bintray.com/sky-uk/oss-generic/osprey/latest/osprey-latest_linux_amd64.tar.gz -o osprey.tar.gz
 
   tar -xvf osprey.tar.gz -C $HOME/.local/bin
   chmod +x $HOME/.local/bin/osprey
