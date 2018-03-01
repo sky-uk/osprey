@@ -144,7 +144,11 @@ ifeq ($(strip $(git_tag)),)
 else
 	@echo "== release docker"
 	@echo "releasing $(image):$(git_tag)"
-	@echo docker login -u $(DOCKER_USERNAME) -P $(DOCKER_PASSWORD)
-	@echo docker tag $(image):latest $(image):$(git_tag)
-	@echo docker push $(image):$(git_tag)
+	@docker login -u $(DOCKER_USERNAME) -p $(DOCKER_PASSWORD)
+	docker tag $(image):latest $(image):$(git_tag)
+	docker push $(image):$(git_tag)
+	@if [ "$(git_rev)" = "$(latest_git_rev)" ]; then \
+		echo "updating latest image"; \
+		echo docker push $(image):latest ; \
+	fi;
 endif
