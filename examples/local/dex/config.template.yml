@@ -15,6 +15,8 @@ web:
 frontend:
   dir: @dexFrontendDir@
   theme: osprey
+telemetry:
+  http: @dexHost@:@dexTelemetryPort@
 oauth2:
   skipApprovalScreen: true
 logger:

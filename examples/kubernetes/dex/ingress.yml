@@ -15,5 +15,9 @@ spec:
           serviceName: @dexService@
           servicePort: @dexPort@
         path: /
+      - backend:
+          serviceName: @dexService@
+          servicePort: @dexTelemetryPort@
+        path: /
 status:
   loadBalancer: {}

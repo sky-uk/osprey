@@ -11,5 +11,10 @@ spec:
     port: @dexPort@
     targetPort: @dexPort@
     nodePort: @dexNodePort@
+  - name: dex-metrics
+    protocol: TCP
+    port: @dexTelemetryPort@
+    targetPort: @dexTelemetryPort@
+    nodePort: @dexTelemetryNodePort@
   selector:
     app: @dexApp@
