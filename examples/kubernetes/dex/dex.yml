@@ -62,8 +62,11 @@ spec:
             scheme: HTTPS
 
         ports:
-        - containerPort: @dexPort@
-          name: dex
+        - name: dex
+          containerPort: @dexPort@
+          protocol: TCP
+        - name: dex-metrics
+          containerPort: @dexTelemetryPort@
           protocol: TCP
 
         resources:

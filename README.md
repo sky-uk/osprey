@@ -366,7 +366,7 @@ A set of examples resources has been provided to create the required resources
 to deploy Dex and Osprey to a kubernetes cluster.
 The templates can be found in `examples/kubernetes`.
 
-1. Provide the required prperties in `examples/kubernetes/kubernetes.properties`:
+1. Provide the required properties in `examples/kubernetes/kubernetes.properties`:
    - `node`, the script uses a NodePort service, so in order to configure the
      osprey and dex to talk to each other, a node ip from the target cluster
      must be provided.
@@ -376,31 +376,22 @@ The templates can be found in `examples/kubernetes`.
      ```
    - `context`, the script uses kubectl to apply the resources and for this it
      needs a context to target.
-   - `ospreyNodePort`, `dexNodePort`, the ports where Osprey and Dex will be
-     available across the cluster. A default value is provided, but if the
-     ports are already in use, they must be changed.
+   - `ospreyNodePort`, `dexNodePort`, `dexTelemetryNodePort`, the ports
+     where Osprey and Dex (service and metrics) will be available across
+     the cluster. A default value is provided, but if the ports are already
+     in use, they must be changed.
    - `ospreyImage`, if you want to try a different version for the server.
 
 2. Run the shell script to render the templates and to to deploy the resources
    to the specified cluster.
    ```
-   examples/kubernetes/deploy-all.sh /full/path/to/runtime/dir
+   examples/kubernetes/deploy-all.sh </full/path/to/runtime/dir>
    ```
 3. Use the osprey client
-Some properties are required before running the script. Update them in
-`examples/kubernetes/kubernetes.properties`:
-- `node`, the script uses a NodePort service, so in order to configure the
-  osprey and dex to talk to each other, a node ip from the target cluster
-  must be provided.
-  A list of ips to chose from can be obtained via:
-  ```
-  kubectl --context ${context} get nodes -o template --template='{{range.items}}{{range.status.addresses}}{{if eq .type "InternalIP"}}  {{.address}}:{{end}}{{end}}{{end}}' | tr ":" "\n"
-  ```
-- `context`, the script uses kubectl to apply the resources and for this it
-  needs a context to target.
-- `ospreyNodePort`, `dexNodePort`, the ports where Osprey and Dex will be
-  available across the cluster. A default value is provided, but if the
-  ports are already in use, they must be changed.
+   ```
+   osprey --ospreyconfig </full/path/to/runtime/dir/>osprey/ospreyconfig --help
+   ```
+
 
 More properties are available to customize the resources at will.
 
