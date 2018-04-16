@@ -86,14 +86,7 @@ func (o *TestOsprey) ToGroupClaims(authInfo *clientgo.AuthInfo) ([]string, error
 	return extractClaims(token)
 }
 
-func extractClaims(token jwt.JWT) (groups []string, err error) {
-	claimedGroups := token.Claims().Get("groups")
-	for _, group := range claimedGroups.([]interface{}) {
-		groups = append(groups, group.(string))
-	}
-	return groups, err
-}
-
+// CallHealthcheck returns the current status of osprey's healthcheck as an http response and error
 func (o *TestOsprey) CallHealthcheck() (*http.Response, error) {
 	ospreyHealthCheckURL := fmt.Sprintf("%s/healthz", o.URL)
 	req, err := http.NewRequest(http.MethodGet, ospreyHealthCheckURL, nil)
@@ -101,4 +94,12 @@ func (o *TestOsprey) CallHealthcheck() (*http.Response, error) {
 
 	resp, err := httpClient.Do(req)
 	return resp, err
+}
+
+func extractClaims(token jwt.JWT) (groups []string, err error) {
+	claimedGroups := token.Claims().Get("groups")
+	for _, group := range claimedGroups.([]interface{}) {
+		groups = append(groups, group.(string))
+	}
+	return groups, err
 }

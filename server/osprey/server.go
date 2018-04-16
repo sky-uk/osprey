@@ -84,7 +84,7 @@ func (o *osprey) issuerURL() string {
 }
 
 func (o *osprey) GetAccessToken(ctx context.Context, username, password string) (*pb.LoginResponse, error) {
-	loginForm, err := o.requestAuth(username, password, ctx)
+	loginForm, err := o.requestAuth(ctx, username, password)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (o *osprey) GetAccessToken(ctx context.Context, username, password string) 
 	return response, nil
 }
 
-func (o *osprey) requestAuth(username, password string, ctx context.Context) (*loginForm, error) {
+func (o *osprey) requestAuth(ctx context.Context, username, password string) (*loginForm, error) {
 	if username == "" || password == "" {
 		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
 	}
