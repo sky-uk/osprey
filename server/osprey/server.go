@@ -68,10 +68,11 @@ func NewServer(environment, secret, redirectURL, issuerHost, issuerPath, issuerC
 	ctx := oidc.ClientContext(context.Background(), client)
 	provider, err := oidc.NewProvider(ctx, o.issuerURL())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create oidc provider %q: %v", o.issuerURL(), err)
+		log.Warnf("unable to create oidc provider %q: %v", o.issuerURL(), err)
+	} else {
+		o.provider = provider
+		o.verifier = provider.Verifier(&oidc.Config{ClientID: environment})
 	}
-	o.provider = provider
-	o.verifier = provider.Verifier(&oidc.Config{ClientID: environment})
 	return o, nil
 }
 
@@ -83,7 +84,7 @@ func (o *osprey) issuerURL() string {
 }
 
 func (o *osprey) GetAccessToken(ctx context.Context, username, password string) (*pb.LoginResponse, error) {
-	loginForm, err := o.requestAuth(username, password)
+	loginForm, err := o.requestAuth(username, password, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -94,12 +95,16 @@ func (o *osprey) GetAccessToken(ctx context.Context, username, password string) 
 	return response, nil
 }
 
-func (o *osprey) requestAuth(username, password string) (*loginForm, error) {
+func (o *osprey) requestAuth(username, password string, ctx context.Context) (*loginForm, error) {
 	if username == "" || password == "" {
 		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
 	}
 
-	authCodeURL := o.oauth2Config().AuthCodeURL(ospreyState)
+	oauthConfig, err := o.oauth2Config(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create oauth config: %v", err))
+	}
+	authCodeURL := oauthConfig.AuthCodeURL(ospreyState)
 
 	authResponse, err := o.client.Get(authCodeURL)
 	if err != nil {
@@ -137,7 +142,12 @@ func (o *osprey) Authorise(ctx context.Context, code, state, failure string) (*p
 	}
 
 	clientCtx := oidc.ClientContext(ctx, o.client)
-	token, err := o.oauth2Config().Exchange(clientCtx, code)
+
+	oauthConfig, err := o.oauth2Config(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create oauth config: %v", err))
+	}
+	token, err := oauthConfig.Exchange(clientCtx, code)
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to exchange code for token: %v", err))
 	}
@@ -192,14 +202,22 @@ func consumeAuthResponse(form *loginForm, response *http.Response) (*loginForm, 
 	return nil, status.Errorf(codes.Unknown, err.Error())
 }
 
-func (o *osprey) oauth2Config() *oauth2.Config {
+func (o *osprey) oauth2Config(ctx context.Context) (*oauth2.Config, error) {
+	if o.provider == nil {
+		provider, err := oidc.NewProvider(ctx, o.issuerURL())
+		if err != nil {
+			return nil, fmt.Errorf("unable to create oidc provider %q: %v", o.issuerURL(), err)
+		}
+		o.provider = provider
+		o.verifier = provider.Verifier(&oidc.Config{ClientID: o.environment})
+	}
 	return &oauth2.Config{
 		ClientID:     o.environment,
 		ClientSecret: o.secret,
 		Endpoint:     o.provider.Endpoint(),
 		Scopes:       []string{"groups", "openid", "profile", "email", "offline_access"},
 		RedirectURL:  o.redirectURL,
-	}
+	}, nil
 }
 
 // ReadAndEncodeFile load the file contents and base64 encodes it

@@ -5,8 +5,11 @@ import (
 
 	"io/ioutil"
 
+	"net/http"
+
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
+	"github.com/sky-uk/osprey/common/web"
 	"github.com/sky-uk/osprey/server/osprey"
 	clientgo "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -89,4 +92,13 @@ func extractClaims(token jwt.JWT) (groups []string, err error) {
 		groups = append(groups, group.(string))
 	}
 	return groups, err
+}
+
+func (o *TestOsprey) CallHealthcheck() (*http.Response, error) {
+	ospreyHealthCheckURL := fmt.Sprintf("%s/healthz", o.URL)
+	req, err := http.NewRequest(http.MethodGet, ospreyHealthCheckURL, nil)
+	httpClient, err := web.NewTLSClient(o.CertFile)
+
+	resp, err := httpClient.Do(req)
+	return resp, err
 }
