@@ -177,6 +177,15 @@ var _ = Describe("E2E", func() {
 				Expect(ospreyconfig.ConfigFile).To(BeAnExistingFile())
 			})
 
+			It("healthcheck should return ok", func() {
+				for _, osprey := range ospreys {
+					resp, err := osprey.CallHealthcheck()
+
+					Expect(err).To(BeNil(), "could not call healthcheck")
+					Expect(resp.StatusCode).To(Equal(200))
+				}
+			})
+
 			Context("kubeconfig file", func() {
 				var (
 					generatedConfig *clientgo.Config
