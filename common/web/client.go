@@ -3,10 +3,12 @@ package web
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -22,9 +24,9 @@ func NewTLSClient(certs ...string) (*http.Client, error) {
 	}
 	for _, ca := range certs {
 		if ca != "" {
-			serverCA, err := ioutil.ReadFile(ca)
+			serverCA, err := loadCertData(ca)
 			if err != nil {
-				return nil, fmt.Errorf("failed to read CA file %q: %v", ca, err)
+				return nil, fmt.Errorf("failed to load CA data: %v", err)
 			}
 
 			if !certPool.AppendCertsFromPEM(serverCA) {
@@ -46,4 +48,24 @@ func NewTLSClient(certs ...string) (*http.Client, error) {
 			ExpectContinueTimeout: 5 * time.Second,
 		},
 	}, nil
+}
+
+func loadCertData(cert string) ([]byte, error) {
+	var certData []byte
+
+	if _, err := os.Stat(cert); err == nil {
+		certData, err = ioutil.ReadFile(cert)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA file %q: %v", cert, err)
+		}
+	} else {
+		certData, err = base64.StdEncoding.DecodeString(cert)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode CA data: %v", err)
+		}
+	}
+
+	return certData, nil
 }
