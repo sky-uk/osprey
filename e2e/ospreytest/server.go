@@ -1,7 +1,9 @@
 package ospreytest
 
 import (
+	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"os/exec"
 	"path/filepath"
 
@@ -117,6 +119,33 @@ func BuildConfig(testDir string, servers []*TestOsprey) (*TestConfig, error) {
 			Server:               osprey.URL,
 			CertificateAuthority: osprey.CertFile,
 			Aliases:              []string{osprey.OspreyconfigAliasName()},
+		}
+		config.Targets[targetName] = target
+	}
+	ospreyconfigFile := fmt.Sprintf("%s/.osprey/config", testDir)
+	testConfig := &TestConfig{Config: config, ConfigFile: ospreyconfigFile}
+	return testConfig, ospreyClient.SaveConfig(config, ospreyconfigFile)
+}
+
+// BuildCADataConfig creates an ospreyconfig file with as many targets as servers are provided.
+// It uses testDir as the home for the .kube and .osprey folders.
+// It also base64 encodes the CA data instead of using the file path.
+func BuildCADataConfig(testDir string, servers []*TestOsprey) (*TestConfig, error) {
+	config := ospreyClient.NewConfig()
+	config.Kubeconfig = fmt.Sprintf("%s/.kube/config", testDir)
+	for _, osprey := range servers {
+		targetName := osprey.OspreyconfigTargetName()
+		certFile, err := ioutil.ReadFile(osprey.CertFile)
+		if err != nil {
+			return nil, err
+		}
+
+		caData := base64.StdEncoding.EncodeToString(certFile)
+		target := &ospreyClient.Osprey{
+			Server:                   osprey.URL,
+			CertificateAuthority:     "",
+			CertificateAuthorityData: caData,
+			Aliases:                  []string{osprey.OspreyconfigAliasName()},
 		}
 		config.Targets[targetName] = target
 	}

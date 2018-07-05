@@ -34,6 +34,10 @@ type Config struct {
 	// CertificateAuthority is the path to a cert file for the certificate authority.
 	// +optional
 	CertificateAuthority string `yaml:"certificate-authority,omitempty"`
+	// CertificateAuthorityData is base64-encoded CA cert data.
+	// This will override any cert file specified in CertificateAuthority.
+	// +optional
+	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
 	// Kubeconfig specifies the path to read/write the kubeconfig file
 	// +optional
 	Kubeconfig string `yaml:"kubeconfig,omitempty"`
@@ -47,8 +51,12 @@ type Osprey struct {
 	Server string `yaml:"server"`
 	// CertificateAuthority is the path to a cert file for the certificate authority.
 	// +optional
-	CertificateAuthority string   `yaml:"certificate-authority,omitempty"`
-	Aliases              []string `yaml:"aliases,omitempty"`
+	CertificateAuthority string `yaml:"certificate-authority,omitempty"`
+	// CertificateAuthorityData is base64-encoded CA cert data.
+	// This will override any cert file specified in CertificateAuthority.
+	// +optional
+	CertificateAuthorityData string   `yaml:"certificate-authority-data,omitempty"`
+	Aliases                  []string `yaml:"aliases,omitempty"`
 }
 
 // NewConfig is a convenience function that returns a new Config object with non-nil maps
@@ -67,6 +75,19 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config file %s: %v", path, err)
 	}
+
+	// Overwrite global CA if we have a base64 CA cert
+	if config.CertificateAuthorityData != "" {
+		config.CertificateAuthority = config.CertificateAuthorityData
+	}
+
+	for _, target := range config.Targets {
+		// Overwrite target CA if we have a base64 CA cert
+		if target.CertificateAuthorityData != "" {
+			target.CertificateAuthority = target.CertificateAuthorityData
+		}
+	}
+
 	err = config.validate()
 	if err != nil {
 		return nil, fmt.Errorf("invalid config %s: %v", path, err)

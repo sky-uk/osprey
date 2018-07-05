@@ -30,6 +30,8 @@ var (
 	testDir          string
 	ospreyconfigFlag string
 	ospreyconfig     *TestConfig
+	caDataConfigFlag string
+	caDataConfig     *TestConfig
 )
 
 var _ = BeforeSuite(func() {
@@ -56,6 +58,11 @@ var _ = BeforeSuite(func() {
 	Expect(err).To(BeNil(), "Creates the osprey config")
 
 	ospreyconfigFlag = "--ospreyconfig=" + ospreyconfig.ConfigFile
+
+	caDataConfig, err = BuildCADataConfig(testDir, ospreys)
+	Expect(err).To(BeNil(), "Creates the osprey config")
+
+	caDataConfigFlag = "--ospreyconfig=" + caDataConfig.ConfigFile
 })
 
 var _ = AfterSuite(func() {
@@ -71,11 +78,12 @@ var _ = AfterSuite(func() {
 
 var _ = Describe("E2E", func() {
 	Context("user", func() {
-		var user, login, logout *clitest.CommandWrapper
+		var user, login, caDataLogin, logout *clitest.CommandWrapper
 
 		BeforeEach(func() {
 			user = Client("user", ospreyconfigFlag)
 			login = Client("user", "login", ospreyconfigFlag)
+			caDataLogin = Client("user", "login", caDataConfigFlag)
 			logout = Client("user", "logout", ospreyconfigFlag)
 		})
 
@@ -165,6 +173,10 @@ var _ = Describe("E2E", func() {
 		Context("login", func() {
 			It("logins successfully with good credentials", func() {
 				login.LoginAndAssertSuccess("jane", "foo")
+			})
+
+			It("logins successfully with good credentials and base64 CA data", func() {
+				caDataLogin.LoginAndAssertSuccess("jane", "foo")
 			})
 
 			It("fails login with invalid credentials", func() {
