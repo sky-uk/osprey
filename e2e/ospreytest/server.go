@@ -1,14 +1,13 @@
 package ospreytest
 
 import (
-	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"os/exec"
 	"path/filepath"
 
 	"github.com/onsi/ginkgo"
 	ospreyClient "github.com/sky-uk/osprey/client"
+	"github.com/sky-uk/osprey/common/web"
 	"github.com/sky-uk/osprey/e2e/clitest"
 	"github.com/sky-uk/osprey/e2e/dextest"
 	"github.com/sky-uk/osprey/e2e/ssltest"
@@ -111,45 +110,42 @@ func StopOsprey(server *TestOsprey) error {
 // BuildConfig creates an ospreyconfig file with as many targets as servers are provided.
 // It uses testDir as the home for the .kube and .osprey folders.
 func BuildConfig(testDir string, servers []*TestOsprey) (*TestConfig, error) {
-	config := ospreyClient.NewConfig()
-	config.Kubeconfig = fmt.Sprintf("%s/.kube/config", testDir)
-	for _, osprey := range servers {
-		targetName := osprey.OspreyconfigTargetName()
-		target := &ospreyClient.Osprey{
-			Server:               osprey.URL,
-			CertificateAuthority: osprey.CertFile,
-			Aliases:              []string{osprey.OspreyconfigAliasName()},
-		}
-		config.Targets[targetName] = target
-	}
-	ospreyconfigFile := fmt.Sprintf("%s/.osprey/config", testDir)
-	testConfig := &TestConfig{Config: config, ConfigFile: ospreyconfigFile}
-	return testConfig, ospreyClient.SaveConfig(config, ospreyconfigFile)
+	return BuildCADataConfig(testDir, servers, false, "")
 }
 
 // BuildCADataConfig creates an ospreyconfig file with as many targets as servers are provided.
 // It uses testDir as the home for the .kube and .osprey folders.
 // It also base64 encodes the CA data instead of using the file path.
-func BuildCADataConfig(testDir string, servers []*TestOsprey) (*TestConfig, error) {
+func BuildCADataConfig(testDir string, servers []*TestOsprey, caData bool, caPath string) (*TestConfig, error) {
 	config := ospreyClient.NewConfig()
 	config.Kubeconfig = fmt.Sprintf("%s/.kube/config", testDir)
+	ospreyconfigFile := fmt.Sprintf("%s/.osprey/config", testDir)
+
 	for _, osprey := range servers {
 		targetName := osprey.OspreyconfigTargetName()
-		certFile, err := ioutil.ReadFile(osprey.CertFile)
-		if err != nil {
-			return nil, err
+
+		target := &ospreyClient.Osprey{
+			Server:  osprey.URL,
+			Aliases: []string{osprey.OspreyconfigAliasName()},
 		}
 
-		caData := base64.StdEncoding.EncodeToString(certFile)
-		target := &ospreyClient.Osprey{
-			Server:                   osprey.URL,
-			CertificateAuthority:     "",
-			CertificateAuthorityData: caData,
-			Aliases:                  []string{osprey.OspreyconfigAliasName()},
+		if caData {
+			config.Kubeconfig = fmt.Sprintf("%s/.kube/config-data", testDir)
+			ospreyconfigFile = fmt.Sprintf("%s/.osprey/config-data", testDir)
+
+			certData, err := web.LoadTLSCert(osprey.CertFile)
+			if err != nil {
+				return nil, err
+			}
+
+			target.CertificateAuthority = caPath
+			target.CertificateAuthorityData = certData
+		} else {
+			target.CertificateAuthority = osprey.CertFile
 		}
+
 		config.Targets[targetName] = target
 	}
-	ospreyconfigFile := fmt.Sprintf("%s/.osprey/config", testDir)
 	testConfig := &TestConfig{Config: config, ConfigFile: ospreyconfigFile}
 	return testConfig, ospreyClient.SaveConfig(config, ospreyconfigFile)
 }

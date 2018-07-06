@@ -90,7 +90,8 @@ func (o *TestOsprey) ToGroupClaims(authInfo *clientgo.AuthInfo) ([]string, error
 func (o *TestOsprey) CallHealthcheck() (*http.Response, error) {
 	ospreyHealthCheckURL := fmt.Sprintf("%s/healthz", o.URL)
 	req, err := http.NewRequest(http.MethodGet, ospreyHealthCheckURL, nil)
-	httpClient, err := web.NewTLSClient(o.CertFile)
+	certData, _ := web.LoadTLSCert(o.CertFile)
+	httpClient, err := web.NewTLSClient(certData)
 
 	resp, err := httpClient.Do(req)
 	return resp, err

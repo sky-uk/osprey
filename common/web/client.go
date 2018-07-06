@@ -4,13 +4,27 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
-	"os"
 	"time"
 )
+
+// LoadTLSCert loads a PEM-encoded certificate from file and returns it as a
+// base64-encoded string.
+func LoadTLSCert(path string) (string, error) {
+	fileData, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to read certificate file %q: %v", path, err)
+	}
+
+	certData := base64.StdEncoding.EncodeToString(fileData)
+
+	return certData, nil
+}
 
 // NewTLSClient creates a new http.Client configured for TLS. It uses the system
 // certs by default if possible and appends all of the provided certs.
@@ -24,13 +38,13 @@ func NewTLSClient(certs ...string) (*http.Client, error) {
 	}
 	for _, ca := range certs {
 		if ca != "" {
-			serverCA, err := loadCertData(ca)
+			serverCA, err := base64.StdEncoding.DecodeString(ca)
 			if err != nil {
-				return nil, fmt.Errorf("failed to load CA data: %v", err)
+				return nil, fmt.Errorf("failed to decode CA data: %v", err)
 			}
 
 			if !certPool.AppendCertsFromPEM(serverCA) {
-				return nil, fmt.Errorf("no certs found in CA file %q", ca)
+				return nil, errors.New("unable to add certificate to pool")
 			}
 		}
 	}
@@ -48,24 +62,4 @@ func NewTLSClient(certs ...string) (*http.Client, error) {
 			ExpectContinueTimeout: 5 * time.Second,
 		},
 	}, nil
-}
-
-func loadCertData(cert string) ([]byte, error) {
-	var certData []byte
-
-	if _, err := os.Stat(cert); err == nil {
-		certData, err = ioutil.ReadFile(cert)
-
-		if err != nil {
-			return nil, fmt.Errorf("failed to read CA file %q: %v", cert, err)
-		}
-	} else {
-		certData, err = base64.StdEncoding.DecodeString(cert)
-
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode CA data: %v", err)
-		}
-	}
-
-	return certData, nil
 }

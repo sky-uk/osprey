@@ -10,6 +10,7 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
+	"github.com/sky-uk/osprey/common/web"
 	"gopkg.in/yaml.v2"
 )
 
@@ -76,22 +77,31 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to unmarshal config file %s: %v", path, err)
 	}
 
-	// Overwrite global CA if we have a base64 CA cert
-	if config.CertificateAuthorityData != "" {
-		config.CertificateAuthority = config.CertificateAuthorityData
-	}
-
-	for _, target := range config.Targets {
-		// Overwrite target CA if we have a base64 CA cert
-		if target.CertificateAuthorityData != "" {
-			target.CertificateAuthority = target.CertificateAuthorityData
-		}
-	}
-
 	err = config.validate()
 	if err != nil {
 		return nil, fmt.Errorf("invalid config %s: %v", path, err)
 	}
+
+	// Set CAData from PEM-encoded cert file if no CAData
+	if config.CertificateAuthority != "" && config.CertificateAuthorityData == "" {
+		certData, err := web.LoadTLSCert(config.CertificateAuthority)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load global CA certificate: %v", err)
+		}
+		config.CertificateAuthorityData = certData
+	}
+
+	for name, target := range config.Targets {
+		// Set CAData from PEM-encoded cert file if no CAData
+		if target.CertificateAuthority != "" && target.CertificateAuthorityData == "" {
+			certData, err := web.LoadTLSCert(target.CertificateAuthority)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load CA certificate for target %s: %v", name, err)
+			}
+			target.CertificateAuthorityData = certData
+		}
+	}
+
 	return config, err
 }
 

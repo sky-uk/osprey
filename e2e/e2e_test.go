@@ -30,8 +30,6 @@ var (
 	testDir          string
 	ospreyconfigFlag string
 	ospreyconfig     *TestConfig
-	caDataConfigFlag string
-	caDataConfig     *TestConfig
 )
 
 var _ = BeforeSuite(func() {
@@ -58,11 +56,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).To(BeNil(), "Creates the osprey config")
 
 	ospreyconfigFlag = "--ospreyconfig=" + ospreyconfig.ConfigFile
-
-	caDataConfig, err = BuildCADataConfig(testDir, ospreys)
-	Expect(err).To(BeNil(), "Creates the osprey config")
-
-	caDataConfigFlag = "--ospreyconfig=" + caDataConfig.ConfigFile
 })
 
 var _ = AfterSuite(func() {
@@ -78,12 +71,11 @@ var _ = AfterSuite(func() {
 
 var _ = Describe("E2E", func() {
 	Context("user", func() {
-		var user, login, caDataLogin, logout *clitest.CommandWrapper
+		var user, login, logout *clitest.CommandWrapper
 
 		BeforeEach(func() {
 			user = Client("user", ospreyconfigFlag)
 			login = Client("user", "login", ospreyconfigFlag)
-			caDataLogin = Client("user", "login", caDataConfigFlag)
 			logout = Client("user", "logout", ospreyconfigFlag)
 		})
 
@@ -175,10 +167,6 @@ var _ = Describe("E2E", func() {
 				login.LoginAndAssertSuccess("jane", "foo")
 			})
 
-			It("logins successfully with good credentials and base64 CA data", func() {
-				caDataLogin.LoginAndAssertSuccess("jane", "foo")
-			})
-
 			It("fails login with invalid credentials", func() {
 				login.LoginAndAssertFailure("admin", "wrong")
 			})
@@ -196,6 +184,40 @@ var _ = Describe("E2E", func() {
 					Expect(err).To(BeNil(), "could not call healthcheck")
 					Expect(resp.StatusCode).To(Equal(200))
 				}
+			})
+
+			Context("with certificate-authority-data", func() {
+				var caDataLogin *clitest.CommandWrapper
+
+				BeforeEach(func() {
+					caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "")
+					Expect(err).To(BeNil(), "Creates the osprey config")
+
+					caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
+
+					caDataLogin = Client("user", "login", caDataConfigFlag)
+				})
+
+				It("logs in successfully", func() {
+					caDataLogin.LoginAndAssertSuccess("jane", "foo")
+				})
+			})
+
+			Context("with CA and CA-data", func() {
+				var caDataLogin *clitest.CommandWrapper
+
+				BeforeEach(func() {
+					caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "/road/to/nowhere")
+					Expect(err).To(BeNil(), "Creates the osprey config")
+
+					caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
+
+					caDataLogin = Client("user", "login", caDataConfigFlag)
+				})
+
+				It("ignores CA path and logs in successfully", func() {
+					caDataLogin.LoginAndAssertSuccess("jane", "foo")
+				})
 			})
 
 			Context("kubeconfig file", func() {
