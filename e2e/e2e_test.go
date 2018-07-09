@@ -186,38 +186,22 @@ var _ = Describe("E2E", func() {
 				}
 			})
 
-			Context("with certificate-authority-data", func() {
-				var caDataLogin *clitest.CommandWrapper
+			It("logs in with certificate-authority-data", func() {
+				caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "")
+				Expect(err).To(BeNil(), "Creates the osprey config")
+				caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
+				caDataLogin := Client("user", "login", caDataConfigFlag)
 
-				BeforeEach(func() {
-					caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "")
-					Expect(err).To(BeNil(), "Creates the osprey config")
-
-					caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
-
-					caDataLogin = Client("user", "login", caDataConfigFlag)
-				})
-
-				It("logs in successfully", func() {
-					caDataLogin.LoginAndAssertSuccess("jane", "foo")
-				})
+				caDataLogin.LoginAndAssertSuccess("jane", "foo")
 			})
 
-			Context("with CA and CA-data", func() {
-				var caDataLogin *clitest.CommandWrapper
+			It("logs in overriding certificate-authority with certificate-authority-data", func() {
+				caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "/road/to/nowhere")
+				Expect(err).To(BeNil(), "Creates the osprey config")
+				caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
+				caDataLogin := Client("user", "login", caDataConfigFlag)
 
-				BeforeEach(func() {
-					caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "/road/to/nowhere")
-					Expect(err).To(BeNil(), "Creates the osprey config")
-
-					caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
-
-					caDataLogin = Client("user", "login", caDataConfigFlag)
-				})
-
-				It("ignores CA path and logs in successfully", func() {
-					caDataLogin.LoginAndAssertSuccess("jane", "foo")
-				})
+				caDataLogin.LoginAndAssertSuccess("jane", "foo")
 			})
 
 			Context("kubeconfig file", func() {

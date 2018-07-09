@@ -55,7 +55,6 @@ func init() {
 
 func serve(cmd *cobra.Command, args []string) {
 	var err error
-
 	issuerCAData, err := webClient.LoadTLSCert(issuerCA)
 	if err != nil {
 		log.Fatalf("Failed to load issuerCA: %v", err)

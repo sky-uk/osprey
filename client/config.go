@@ -89,6 +89,9 @@ func LoadConfig(path string) (*Config, error) {
 			return nil, fmt.Errorf("failed to load global CA certificate: %v", err)
 		}
 		config.CertificateAuthorityData = certData
+	} else if config.CertificateAuthorityData != "" {
+    // CA is ignored if CAData is present
+		config.CertificateAuthority = ""
 	}
 
 	for name, target := range config.Targets {
@@ -99,6 +102,9 @@ func LoadConfig(path string) (*Config, error) {
 				return nil, fmt.Errorf("failed to load CA certificate for target %s: %v", name, err)
 			}
 			target.CertificateAuthorityData = certData
+		} else if target.CertificateAuthorityData != "" {
+      // CA is ignored if CAData is present
+			target.CertificateAuthority = ""
 		}
 	}
 

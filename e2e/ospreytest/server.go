@@ -130,7 +130,6 @@ func BuildCADataConfig(testDir string, servers []*TestOsprey, caData bool, caPat
 		}
 
 		if caData {
-			config.Kubeconfig = fmt.Sprintf("%s/.kube/config-data", testDir)
 			ospreyconfigFile = fmt.Sprintf("%s/.osprey/config-data", testDir)
 
 			certData, err := web.LoadTLSCert(osprey.CertFile)

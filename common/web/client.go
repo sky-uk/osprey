@@ -16,13 +16,10 @@ import (
 // base64-encoded string.
 func LoadTLSCert(path string) (string, error) {
 	fileData, err := ioutil.ReadFile(path)
-
 	if err != nil {
 		return "", fmt.Errorf("failed to read certificate file %q: %v", path, err)
 	}
-
 	certData := base64.StdEncoding.EncodeToString(fileData)
-
 	return certData, nil
 }
 
