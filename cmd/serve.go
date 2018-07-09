@@ -55,7 +55,17 @@ func init() {
 
 func serve(cmd *cobra.Command, args []string) {
 	var err error
-	httpClient, err := webClient.NewTLSClient(issuerCA, tlsCert)
+	issuerCAData, err := webClient.LoadTLSCert(issuerCA)
+	if err != nil {
+		log.Fatalf("Failed to load issuerCA: %v", err)
+	}
+
+	tlsCertData, err := webClient.LoadTLSCert(tlsCert)
+	if err != nil {
+		log.Fatalf("Failed to load tls-cert: %v", err)
+	}
+
+	httpClient, err := webClient.NewTLSClient(issuerCAData, tlsCertData)
 	if err != nil {
 		log.Fatal("Failed to create http client")
 	}

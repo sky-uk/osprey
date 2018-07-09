@@ -1,3 +1,6 @@
+# Release 1.1.0
+- Adds support for `certificate-authority-data` in client config.
+
 # Release 1.0.0
 - Includes client commands: `user`, `user login`, `user logout`.
 - Includes server command: `serve`.

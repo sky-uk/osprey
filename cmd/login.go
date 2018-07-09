@@ -50,7 +50,7 @@ func login(cmd *cobra.Command, args []string) {
 	}
 	success := true
 	for name, target := range ospreyconfig.Targets {
-		c := client.NewClient(target.Server, ospreyconfig.CertificateAuthority, target.CertificateAuthority)
+		c := client.NewClient(target.Server, ospreyconfig.CertificateAuthorityData, target.CertificateAuthorityData)
 		tokenData, err := c.GetAccessToken(credentials)
 		if err != nil {
 			if state, ok := status.FromError(err); ok && state.Code() == codes.Unauthenticated {

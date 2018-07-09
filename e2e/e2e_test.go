@@ -186,6 +186,24 @@ var _ = Describe("E2E", func() {
 				}
 			})
 
+			It("logs in with certificate-authority-data", func() {
+				caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "")
+				Expect(err).To(BeNil(), "Creates the osprey config")
+				caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
+				caDataLogin := Client("user", "login", caDataConfigFlag)
+
+				caDataLogin.LoginAndAssertSuccess("jane", "foo")
+			})
+
+			It("logs in overriding certificate-authority with certificate-authority-data", func() {
+				caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "/road/to/nowhere")
+				Expect(err).To(BeNil(), "Creates the osprey config")
+				caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
+				caDataLogin := Client("user", "login", caDataConfigFlag)
+
+				caDataLogin.LoginAndAssertSuccess("jane", "foo")
+			})
+
 			Context("kubeconfig file", func() {
 				var (
 					generatedConfig *clientgo.Config

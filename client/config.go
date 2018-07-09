@@ -10,6 +10,7 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
+	"github.com/sky-uk/osprey/common/web"
 	"gopkg.in/yaml.v2"
 )
 
@@ -34,6 +35,10 @@ type Config struct {
 	// CertificateAuthority is the path to a cert file for the certificate authority.
 	// +optional
 	CertificateAuthority string `yaml:"certificate-authority,omitempty"`
+	// CertificateAuthorityData is base64-encoded CA cert data.
+	// This will override any cert file specified in CertificateAuthority.
+	// +optional
+	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
 	// Kubeconfig specifies the path to read/write the kubeconfig file
 	// +optional
 	Kubeconfig string `yaml:"kubeconfig,omitempty"`
@@ -47,8 +52,12 @@ type Osprey struct {
 	Server string `yaml:"server"`
 	// CertificateAuthority is the path to a cert file for the certificate authority.
 	// +optional
-	CertificateAuthority string   `yaml:"certificate-authority,omitempty"`
-	Aliases              []string `yaml:"aliases,omitempty"`
+	CertificateAuthority string `yaml:"certificate-authority,omitempty"`
+	// CertificateAuthorityData is base64-encoded CA cert data.
+	// This will override any cert file specified in CertificateAuthority.
+	// +optional
+	CertificateAuthorityData string   `yaml:"certificate-authority-data,omitempty"`
+	Aliases                  []string `yaml:"aliases,omitempty"`
 }
 
 // NewConfig is a convenience function that returns a new Config object with non-nil maps
@@ -67,10 +76,38 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config file %s: %v", path, err)
 	}
+
 	err = config.validate()
 	if err != nil {
 		return nil, fmt.Errorf("invalid config %s: %v", path, err)
 	}
+
+	// Set CAData from PEM-encoded cert file if no CAData
+	if config.CertificateAuthority != "" && config.CertificateAuthorityData == "" {
+		certData, err := web.LoadTLSCert(config.CertificateAuthority)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load global CA certificate: %v", err)
+		}
+		config.CertificateAuthorityData = certData
+	} else if config.CertificateAuthorityData != "" {
+    // CA is ignored if CAData is present
+		config.CertificateAuthority = ""
+	}
+
+	for name, target := range config.Targets {
+		// Set CAData from PEM-encoded cert file if no CAData
+		if target.CertificateAuthority != "" && target.CertificateAuthorityData == "" {
+			certData, err := web.LoadTLSCert(target.CertificateAuthority)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load CA certificate for target %s: %v", name, err)
+			}
+			target.CertificateAuthorityData = certData
+		} else if target.CertificateAuthorityData != "" {
+      // CA is ignored if CAData is present
+			target.CertificateAuthority = ""
+		}
+	}
+
 	return config, err
 }
 
