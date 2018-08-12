@@ -5,6 +5,8 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/sky-uk/osprey/e2e/ospreytest"
 
+	"os"
+
 	"github.com/sky-uk/osprey/e2e/clitest"
 )
 
@@ -18,6 +20,10 @@ var _ = Describe("User", func() {
 	})
 
 	It("displays 'none' when osprey has not been used", func() {
+		if err := os.Remove(ospreyconfig.Kubeconfig); err != nil {
+			Expect(os.IsNotExist(err)).To(BeTrue())
+		}
+
 		user.RunAndAssertSuccess()
 
 		output := user.GetOutput()

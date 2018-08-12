@@ -8,10 +8,11 @@ import (
 	"io/ioutil"
 	"os"
 
+	"testing"
+
 	"github.com/sky-uk/osprey/e2e/dextest"
 	"github.com/sky-uk/osprey/e2e/ldaptest"
 	"github.com/sky-uk/osprey/e2e/util"
-	"testing"
 )
 
 func TestOspreySuite(t *testing.T) {
@@ -19,21 +20,29 @@ func TestOspreySuite(t *testing.T) {
 	RunSpecs(t, "Osprey test suite")
 }
 
+const (
+	dexPortsFrom = int32(11980)
+)
+
 var (
-	envs             []string
 	ospreys          []*TestOsprey
 	dexes            []*dextest.TestDex
 	ldapServer       *ldaptest.TestLDAP
 	testDir          string
 	ospreyconfigFlag string
 	ospreyconfig     *TestConfig
+	environments     = map[string][]string{
+		"local":   {},
+		"sandbox": {"sandbox"},
+		"dev":     {"development"},
+		"stage":   {"development"},
+		"prod":    {"production"},
+	}
 )
 
 var _ = BeforeSuite(func() {
 	var err error
 	testDir, err = ioutil.TempDir("", "osprey-")
-
-	envs = []string{"sandbox", "dev"}
 
 	util.CreateBinaries()
 
@@ -42,12 +51,16 @@ var _ = BeforeSuite(func() {
 	ldapServer, err = ldaptest.Start(testDir) //uses the ldaptest/testdata/schema.ldap
 	Expect(err).To(BeNil(), "Starts the ldap server")
 
-	dexPortsFrom := int32(11980)
+	var envs []string
+	for env := range environments {
+		envs = append(envs, env)
+	}
+
 	dexes, err = dextest.StartDexes(testDir, ldapServer, envs, dexPortsFrom)
 	Expect(err).To(BeNil(), "Starts the dex servers")
 
 	ospreys, err = StartOspreys(testDir, dexes, dexPortsFrom+int32(len(dexes)))
-	Expect(err).To(BeNil(), "Starts the opsrey servers")
+	Expect(err).To(BeNil(), "Starts the osprey servers")
 
 	ospreyconfig, err = BuildConfig(testDir, ospreys)
 	Expect(err).To(BeNil(), "Creates the osprey config")

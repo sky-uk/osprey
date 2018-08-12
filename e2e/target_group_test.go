@@ -10,7 +10,7 @@ import (
 	clientgo "k8s.io/client-go/tools/clientcmd/api"
 )
 
-var _ = Describe("Login", func() {
+var _ = Describe("Target group", func() {
 	var user, login, logout *clitest.CommandWrapper
 
 	BeforeEach(func() {
@@ -30,7 +30,7 @@ var _ = Describe("Login", func() {
 	It("creates a kubeconfig file on the specified location", func() {
 		login.LoginAndAssertSuccess("jane", "foo")
 
-		Expect(ospreyconfig.Kubeconfig).To(BeAnExistingFile())
+		Expect(ospreyconfig.ConfigFile).To(BeAnExistingFile())
 	})
 
 	It("healthcheck should return ok", func() {
