@@ -25,19 +25,25 @@ const (
 )
 
 var (
-	ospreys          []*TestOsprey
-	dexes            []*dextest.TestDex
-	ldapServer       *ldaptest.TestLDAP
-	testDir          string
-	ospreyconfigFlag string
-	ospreyconfig     *TestConfig
-	environments     = map[string][]string{
+	err          error
+	ospreys      []*TestOsprey
+	dexes        []*dextest.TestDex
+	ldapServer   *ldaptest.TestLDAP
+	testDir      string
+	environments = map[string][]string{
 		"local":   {},
 		"sandbox": {"sandbox"},
 		"dev":     {"development"},
 		"stage":   {"development"},
 		"prod":    {"production"},
 	}
+
+	targetedOspreys  []*TestOsprey
+	ospreyconfigFlag string
+	ospreyconfig     *TestConfig
+	defaultGroup     string
+	targetGroup      string
+	targetGroupFlag  string
 )
 
 var _ = BeforeSuite(func() {
@@ -61,11 +67,6 @@ var _ = BeforeSuite(func() {
 
 	ospreys, err = StartOspreys(testDir, dexes, dexPortsFrom+int32(len(dexes)))
 	Expect(err).To(BeNil(), "Starts the osprey servers")
-
-	ospreyconfig, err = BuildConfig(testDir, ospreys)
-	Expect(err).To(BeNil(), "Creates the osprey config")
-
-	ospreyconfigFlag = "--ospreyconfig=" + ospreyconfig.ConfigFile
 })
 
 var _ = AfterSuite(func() {
@@ -78,3 +79,21 @@ var _ = AfterSuite(func() {
 	ldaptest.Stop(ldapServer)
 	os.RemoveAll(testDir)
 })
+
+func setupOspreyFlags() {
+	ospreyconfig, err = BuildConfig(testDir, defaultGroup, environments, ospreys)
+	Expect(err).To(BeNil(), "Creates the osprey config with groups")
+	ospreyconfigFlag = "--ospreyconfig=" + ospreyconfig.ConfigFile
+
+	if targetGroup != "" {
+		targetGroupFlag = "--group=" + targetGroup
+	}
+
+	targetedOspreys = GetOspreysByGroup(targetGroup, defaultGroup, environments, ospreys)
+}
+
+func cleanup() {
+	if err := os.Remove(ospreyconfig.Kubeconfig); err != nil {
+		Expect(os.IsNotExist(err)).To(BeTrue())
+	}
+}

@@ -18,14 +18,18 @@ var userCmd = &cobra.Command{
 
 var (
 	ospreyconfigFile string
+	group            string
 )
 
 func init() {
 	RootCmd.AddCommand(userCmd)
-	userCmd.PersistentFlags().StringVarP(&ospreyconfigFile, "ospreyconfig", "o", "", "osprey targets configuration. Defaults to $HOME/.osprey/config")
+	persistentFlags := userCmd.PersistentFlags()
+	persistentFlags.StringVarP(&ospreyconfigFile, "ospreyconfig", "o", "", "osprey targets configuration. Defaults to $HOME/.osprey/config")
+	persistentFlags.StringVarP(&group, "group", "g", "", "name of the group to log in to.")
+
 }
 
-func user(cmd *cobra.Command, args []string) {
+func user(_ *cobra.Command, _ []string) {
 	ospreyconfig, err := client.LoadConfig(ospreyconfigFile)
 
 	if err != nil {
@@ -36,8 +40,15 @@ func user(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalf("Failed to initialise kubeconfig: %v", err)
 	}
+
+	targetsByGroup := ospreyconfig.TargetsByGroup(group)
+	if len(targetsByGroup) == 0 {
+		log.Warnf("Specified group %q has no targets", group)
+		return
+	}
+
 	success := true
-	for name := range ospreyconfig.Targets {
+	for name := range targetsByGroup {
 		userData, err := kubeconfig.GetUser(name)
 		if err != nil {
 			log.Errorf("Failed to retrieve user for %s from kubeconfig: %v", name, err)

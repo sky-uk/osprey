@@ -39,10 +39,13 @@ type Config struct {
 	// This will override any cert file specified in CertificateAuthority.
 	// +optional
 	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
-	// Kubeconfig specifies the path to read/write the kubeconfig file
+	// Kubeconfig specifies the path to read/write the kubeconfig file.
 	// +optional
 	Kubeconfig string `yaml:"kubeconfig,omitempty"`
-	// Ospreys is a map of referenceable names to osprey configs
+	// DefaultGroup specifies the group to log in to if none provided.
+	// +optional
+	DefaultGroup string `yaml:"default-group,omitempty"`
+	// Targets is a map of referenceable names to osprey configs
 	Targets map[string]*Osprey `yaml:"targets"`
 }
 
@@ -56,8 +59,13 @@ type Osprey struct {
 	// CertificateAuthorityData is base64-encoded CA cert data.
 	// This will override any cert file specified in CertificateAuthority.
 	// +optional
-	CertificateAuthorityData string   `yaml:"certificate-authority-data,omitempty"`
-	Aliases                  []string `yaml:"aliases,omitempty"`
+	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
+	// Aliases is a list of names that the osprey server can be called.
+	// +optional
+	Aliases []string `yaml:"aliases,omitempty"`
+	// Groups is a list of names that can be used to group different osprey servers.
+	// +optional
+	Groups []string `yaml:"groups,omitempty"`
 }
 
 // NewConfig is a convenience function that returns a new Config object with non-nil maps
@@ -109,7 +117,6 @@ func LoadConfig(path string) (*Config, error) {
 			target.CertificateAuthority = ""
 		}
 	}
-
 	return config, err
 }
 
@@ -140,6 +147,28 @@ func (c *Config) validate() error {
 		}
 	}
 	return nil
+}
+
+// TargetsByGroup retrieves the Osprey targets that match the group.
+// If the group is not provided the DefaultGroup for this configuration will be used.
+func (c *Config) TargetsByGroup(group string) map[string]*Osprey {
+	actualGroup := group
+	if actualGroup == "" {
+		actualGroup = c.DefaultGroup
+	}
+	targetedOspreys := make(map[string]*Osprey)
+	for key, osprey := range c.Targets {
+		if len(osprey.Groups) == 0 && actualGroup == "" {
+			targetedOspreys[key] = osprey
+		}
+		for _, ospreyGroup := range osprey.Groups {
+			if actualGroup == ospreyGroup {
+				targetedOspreys[key] = osprey
+				break
+			}
+		}
+	}
+	return targetedOspreys
 }
 
 func homeDir() string {

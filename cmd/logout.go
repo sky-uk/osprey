@@ -20,7 +20,7 @@ func init() {
 	userCmd.AddCommand(logoutCmd)
 }
 
-func logout(cmd *cobra.Command, args []string) {
+func logout(_ *cobra.Command, _ []string) {
 	ospreyconfig, err := client.LoadConfig(ospreyconfigFile)
 
 	if err != nil {
@@ -31,8 +31,15 @@ func logout(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalf("Failed to initialise kubeconfig: %v", err)
 	}
+
+	targetsByGroup := ospreyconfig.TargetsByGroup(group)
+	if len(targetsByGroup) == 0 {
+		log.Warnf("Specified group %q has no targets", group)
+		return
+	}
+
 	success := true
-	for name := range ospreyconfig.Targets {
+	for name := range targetsByGroup {
 		err = kubeconfig.Remove(name)
 		if err != nil {
 			log.Errorf("Failed to remove %s from kubeconfig: %v", name, err)

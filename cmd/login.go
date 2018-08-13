@@ -32,11 +32,22 @@ func init() {
 	userCmd.AddCommand(loginCmd)
 }
 
-func login(cmd *cobra.Command, args []string) {
+func login(_ *cobra.Command, _ []string) {
 	ospreyconfig, err := client.LoadConfig(ospreyconfigFile)
 
 	if err != nil {
 		log.Fatalf("Failed to load ospreyconfig file %s: %v", ospreyconfigFile, err)
+	}
+
+	err = kubeconfig.LoadConfig(ospreyconfig.Kubeconfig)
+	if err != nil {
+		log.Fatalf("Failed to initialise kubeconfig: %v", err)
+	}
+
+	targetsByGroup := ospreyconfig.TargetsByGroup(group)
+	if len(targetsByGroup) == 0 {
+		log.Warnf("Specified group %q has no targets", group)
+		return
 	}
 
 	credentials, err := client.GetCredentials()
@@ -44,17 +55,13 @@ func login(cmd *cobra.Command, args []string) {
 		log.Fatalf("Failed to get credentials: %v", err)
 	}
 
-	err = kubeconfig.LoadConfig(ospreyconfig.Kubeconfig)
-	if err != nil {
-		log.Fatalf("Failed to initialise kubeconfig: %v", err)
-	}
 	success := true
-	for name, target := range ospreyconfig.Targets {
+	for name, target := range targetsByGroup {
 		c := client.NewClient(target.Server, ospreyconfig.CertificateAuthorityData, target.CertificateAuthorityData)
 		tokenData, err := c.GetAccessToken(credentials)
 		if err != nil {
 			if state, ok := status.FromError(err); ok && state.Code() == codes.Unauthenticated {
-				log.Fatalf("Failed to log in: %s", state.Message())
+				log.Fatalf("Failed to log in to %s: %v", name, state.Message())
 			}
 			msg := fmt.Sprintf("Failed to log in to %s: %v", name, err)
 			success = false

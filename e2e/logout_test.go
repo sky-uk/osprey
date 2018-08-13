@@ -10,12 +10,23 @@ import (
 )
 
 var _ = Describe("Logout", func() {
-	var user, login, logout *clitest.CommandWrapper
+	var login, logout *clitest.CommandWrapper
 
 	BeforeEach(func() {
-		user = Client("user", ospreyconfigFlag)
-		login = Client("user", "login", ospreyconfigFlag)
-		logout = Client("user", "logout", ospreyconfigFlag)
+		defaultGroup = ""
+		targetGroup = ""
+		targetGroupFlag = ""
+	})
+
+	JustBeforeEach(func() {
+		setupOspreyFlags()
+
+		login = Client("user", "login", ospreyconfigFlag, targetGroupFlag)
+		logout = Client("user", "logout", ospreyconfigFlag, targetGroupFlag)
+	})
+
+	AfterEach(func() {
+		cleanup()
 	})
 
 	Context("without login", func() {
@@ -30,7 +41,7 @@ var _ = Describe("Logout", func() {
 	})
 
 	Context("after login", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			login.LoginAndAssertSuccess("jane", "foo")
 			err := kubeconfig.LoadConfig(ospreyconfig.Kubeconfig)
 			Expect(err).To(BeNil(), "successfully creates a kubeconfig")
@@ -43,15 +54,14 @@ var _ = Describe("Logout", func() {
 
 			loggedOutConfig, err := kubeconfig.GetConfig()
 			Expect(err).To(BeNil(), "successfully updated kubeconfig")
-			for _, osprey := range ospreys {
+			for _, osprey := range targetedOspreys {
 				authInfoID := osprey.OspreyconfigTargetName()
 				expectedAuthInfo := osprey.ToKubeconfigUserWithoutToken()
 				expectedAuthInfo.LocationOfOrigin = ospreyconfig.Kubeconfig
 				Expect(loggedOutConfig.AuthInfos).To(HaveKey(authInfoID))
 				Expect(loggedOutConfig.AuthInfos[authInfoID]).To(Equal(expectedAuthInfo), "does not have a token")
 			}
-			Expect(len(loggedOutConfig.AuthInfos)).To(Equal(len(ospreys)))
+			Expect(len(loggedOutConfig.AuthInfos)).To(Equal(len(targetedOspreys)))
 		})
 	})
-
 })
