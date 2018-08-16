@@ -5,6 +5,8 @@ import (
 	"github.com/sky-uk/osprey/client/kubeconfig"
 	"github.com/spf13/cobra"
 
+	"os"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -26,7 +28,6 @@ func init() {
 	persistentFlags := userCmd.PersistentFlags()
 	persistentFlags.StringVarP(&ospreyconfigFile, "ospreyconfig", "o", "", "osprey targets configuration. Defaults to $HOME/.osprey/config")
 	persistentFlags.StringVarP(&group, "group", "g", "", "name of the group to log in to.")
-
 }
 
 func user(_ *cobra.Command, _ []string) {
@@ -43,8 +44,8 @@ func user(_ *cobra.Command, _ []string) {
 
 	targetsByGroup := ospreyconfig.TargetsByGroup(group)
 	if len(targetsByGroup) == 0 {
-		log.Warnf("Specified group %q has no targets", group)
-		return
+		log.Errorf("Group not found: %q", group)
+		os.Exit(1)
 	}
 
 	success := true

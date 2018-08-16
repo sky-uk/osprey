@@ -124,10 +124,10 @@ var _ = Describe("User", func() {
 				targetGroup = "non_existent"
 			})
 
-			It("does nothing", func() {
-				user.RunAndAssertSuccess()
+			It("displays error", func() {
+				user.RunAndAssertFailure()
 
-				Expect(user.GetOutput()).To(ContainSubstring("no targets"))
+				Expect(user.GetOutput()).To(ContainSubstring("Group not found"))
 			})
 		})
 	})

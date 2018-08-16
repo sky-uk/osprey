@@ -5,6 +5,8 @@ import (
 	"github.com/sky-uk/osprey/client/kubeconfig"
 	"github.com/spf13/cobra"
 
+	"os"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,8 +36,8 @@ func logout(_ *cobra.Command, _ []string) {
 
 	targetsByGroup := ospreyconfig.TargetsByGroup(group)
 	if len(targetsByGroup) == 0 {
-		log.Warnf("Specified group %q has no targets", group)
-		return
+		log.Errorf("Group not found: %q", group)
+		os.Exit(1)
 	}
 
 	success := true

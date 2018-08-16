@@ -173,13 +173,13 @@ var _ = Describe("Login", func() {
 				targetGroup = "non_existent"
 			})
 
-			It("does nothing", func() {
-				login.LoginAndAssertSuccess("jane", "foo")
+			It("displays error", func() {
+				login.LoginAndAssertFailure("jane", "foo")
 
 				_, err := os.Stat(ospreyconfig.Kubeconfig)
 				Expect(os.IsNotExist(err)).To(BeTrue())
 
-				Expect(login.GetOutput()).To(ContainSubstring("no targets"))
+				Expect(login.GetOutput()).To(ContainSubstring("Group not found"))
 			})
 		})
 	})

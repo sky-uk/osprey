@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"os"
+
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -46,8 +48,8 @@ func login(_ *cobra.Command, _ []string) {
 
 	targetsByGroup := ospreyconfig.TargetsByGroup(group)
 	if len(targetsByGroup) == 0 {
-		log.Warnf("Specified group %q has no targets", group)
-		return
+		log.Errorf("Group not found: %q", group)
+		os.Exit(1)
 	}
 
 	credentials, err := client.GetCredentials()
