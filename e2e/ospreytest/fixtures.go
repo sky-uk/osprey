@@ -55,7 +55,12 @@ func WithoutToken(authInfo *clientgo.AuthInfo) *clientgo.AuthInfo {
 
 // OspreyconfigTargetName returns the ospreyconfig target's name for the TestOsprey instance.
 func (o *TestOsprey) OspreyconfigTargetName() string {
-	return fmt.Sprintf("%s%s", targetNamePrefix, o.Environment)
+	return OspreyconfigTargetName(o.Environment)
+}
+
+// OspreyconfigTargetName returns the ospreyconfig target's name for the environment.
+func OspreyconfigTargetName(environment string) string {
+	return fmt.Sprintf("%s%s", targetNamePrefix, environment)
 }
 
 // OspreyconfigAliasName returns the ospreyconfig target's alias for the TestOsprey instance.
@@ -95,6 +100,30 @@ func (o *TestOsprey) CallHealthcheck() (*http.Response, error) {
 
 	resp, err := httpClient.Do(req)
 	return resp, err
+}
+
+// GetOspreysByGroup returns the ospreys matching by group or default group given the environmentGroups definition.
+func GetOspreysByGroup(group, defaultGroup string, environmentGroups map[string][]string, ospreys []*TestOsprey) []*TestOsprey {
+	var targetedOspreys []*TestOsprey
+	actualGroup := group
+	if actualGroup == "" {
+		actualGroup = defaultGroup
+	}
+	for _, target := range ospreys {
+		if groups, ok := environmentGroups[target.Environment]; ok {
+			if len(groups) == 0 && actualGroup == "" {
+				targetedOspreys = append(targetedOspreys, target)
+			}
+			for _, ospreyGroup := range groups {
+				if actualGroup == ospreyGroup {
+					targetedOspreys = append(targetedOspreys, target)
+					break
+				}
+			}
+		}
+	}
+
+	return targetedOspreys
 }
 
 func extractClaims(token jwt.JWT) (groups []string, err error) {

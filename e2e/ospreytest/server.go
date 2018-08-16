@@ -103,23 +103,37 @@ func StopOsprey(server *TestOsprey) error {
 		return nil
 	}
 	server.StopAsync()
-	server.PrintOutput()
+	if !server.Successful() {
+		server.PrintOutput()
+	}
 	return server.Error()
 }
 
-// BuildConfig creates an ospreyconfig file with as many targets as servers are provided.
+// BuildConfig creates an ospreyconfig file using the groups provided for the targets.
 // It uses testDir as the home for the .kube and .osprey folders.
-func BuildConfig(testDir string, servers []*TestOsprey) (*TestConfig, error) {
-	return BuildCADataConfig(testDir, servers, false, "")
+func BuildConfig(testDir, defaultGroup string, targetGroups map[string][]string, servers []*TestOsprey) (*TestConfig, error) {
+	return BuildFullConfig(testDir, defaultGroup, targetGroups, servers, false, "")
 }
 
 // BuildCADataConfig creates an ospreyconfig file with as many targets as servers are provided.
 // It uses testDir as the home for the .kube and .osprey folders.
 // It also base64 encodes the CA data instead of using the file path.
 func BuildCADataConfig(testDir string, servers []*TestOsprey, caData bool, caPath string) (*TestConfig, error) {
+	return BuildFullConfig(testDir, "", map[string][]string{}, servers, caData, caPath)
+}
+
+// BuildFullConfig creates an ospreyconfig file with as many targets as servers are provided. The targets will contain
+// the groups that have been specified.
+// It uses testDir as the home for the .kube and .osprey folders.
+// If caData is true, it base64 encodes the CA data instead of using the file path.
+func BuildFullConfig(testDir, defaultGroup string, targetGroups map[string][]string, servers []*TestOsprey, caData bool, caPath string) (*TestConfig, error) {
 	config := ospreyClient.NewConfig()
 	config.Kubeconfig = fmt.Sprintf("%s/.kube/config", testDir)
 	ospreyconfigFile := fmt.Sprintf("%s/.osprey/config", testDir)
+
+	if defaultGroup != "" {
+		config.DefaultGroup = defaultGroup
+	}
 
 	for _, osprey := range servers {
 		targetName := osprey.OspreyconfigTargetName()
@@ -131,7 +145,6 @@ func BuildCADataConfig(testDir string, servers []*TestOsprey, caData bool, caPat
 
 		if caData {
 			ospreyconfigFile = fmt.Sprintf("%s/.osprey/config-data", testDir)
-
 			certData, err := web.LoadTLSCert(osprey.CertFile)
 			if err != nil {
 				return nil, err
@@ -141,6 +154,10 @@ func BuildCADataConfig(testDir string, servers []*TestOsprey, caData bool, caPat
 			target.CertificateAuthorityData = certData
 		} else {
 			target.CertificateAuthority = osprey.CertFile
+		}
+
+		if groups, ok := targetGroups[osprey.Environment]; ok {
+			target.Groups = groups
 		}
 
 		config.Targets[targetName] = target

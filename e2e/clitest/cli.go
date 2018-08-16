@@ -31,7 +31,6 @@ func (c *CommandWrapper) Run() {
 func (c *CommandWrapper) RunAndAssertSuccess() {
 	c.run()
 	assertNoExitError(c.stderr, c.Error)
-	c.PrintOutput()
 }
 
 // RunAndAssertFailure runs the wrapped command and asserts failure.

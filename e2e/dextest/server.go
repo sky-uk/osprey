@@ -22,7 +22,12 @@ import (
 	"github.com/sky-uk/osprey/e2e/util"
 )
 
-var logger = log.New().WithFields(log.Fields{"logger": "dex"})
+var logger = log.New()
+
+func init() {
+	logger.WithFields(log.Fields{"logger": "dex"})
+	logger.SetLevel(log.WarnLevel)
+}
 
 // TestDex represents a Dex server instance used for testing.
 type TestDex struct {
@@ -41,7 +46,7 @@ func (d *TestDex) URL() string {
 // StartDexes creates one dex test server per environment provided, using the same ldap instance as a connector
 // It will stop creating any more dex servers on the firs error encountered, and return the created ones so far.
 func StartDexes(testDir string, ldap *ldaptest.TestLDAP, environments []string, portsFrom int32) ([]*TestDex, error) {
-	logger.Level = log.ErrorLevel
+
 	var dexes []*TestDex
 	for i, env := range environments {
 		port := portsFrom + int32(i)
