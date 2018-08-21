@@ -1,3 +1,7 @@
+- Handles `groups` for targets, allowing client commands to target a
+  specific group.
+- Adds client commands: `config`, `config groups`.
+
 # Release 1.1.0
 - Adds support for `certificate-authority-data` in client config.
 

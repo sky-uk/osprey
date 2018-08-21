@@ -25,11 +25,7 @@ const (
 )
 
 var (
-	err          error
-	ospreys      []*TestOsprey
-	dexes        []*dextest.TestDex
-	ldapServer   *ldaptest.TestLDAP
-	testDir      string
+	// Default variables, should not be changed
 	environments = map[string][]string{
 		"local":   {},
 		"sandbox": {"sandbox"},
@@ -38,12 +34,21 @@ var (
 		"prod":    {"production"},
 	}
 
-	targetedOspreys  []*TestOsprey
-	ospreyconfigFlag string
-	ospreyconfig     *TestConfig
-	defaultGroup     string
-	targetGroup      string
-	targetGroupFlag  string
+	// Suite variables instantiated once
+	ospreys    []*TestOsprey
+	dexes      []*dextest.TestDex
+	ldapServer *ldaptest.TestLDAP
+	testDir    string
+
+	// Suite variables modifiable per test scenario
+	err               error
+	environmentsToUse map[string][]string
+	targetedOspreys   []*TestOsprey
+	ospreyconfigFlag  string
+	ospreyconfig      *TestConfig
+	defaultGroup      string
+	targetGroup       string
+	targetGroupFlag   string
 )
 
 var _ = BeforeSuite(func() {
@@ -80,10 +85,6 @@ var _ = AfterSuite(func() {
 	os.RemoveAll(testDir)
 })
 
-func setupOspreyClientFlags() {
-	setupOspreyClientForEnvironments(environments)
-}
-
 func setupOspreyClientForEnvironments(envs map[string][]string) {
 	ospreyconfig, err = BuildConfig(testDir, defaultGroup, envs, ospreys)
 	Expect(err).To(BeNil(), "Creates the osprey config with groups")
@@ -94,6 +95,16 @@ func setupOspreyClientForEnvironments(envs map[string][]string) {
 	}
 
 	targetedOspreys = GetOspreysByGroup(targetGroup, defaultGroup, envs, ospreys)
+}
+
+func resetDefaults() {
+	environmentsToUse = make(map[string][]string)
+	for k, v := range environments {
+		environmentsToUse[k] = v
+	}
+	defaultGroup = ""
+	targetGroup = ""
+	targetGroupFlag = ""
 }
 
 func cleanup() {

@@ -16,14 +16,11 @@ var _ = Describe("Login", func() {
 	var login *clitest.CommandWrapper
 
 	BeforeEach(func() {
-		defaultGroup = ""
-		targetGroup = ""
-		targetGroupFlag = ""
+		resetDefaults()
 	})
 
 	JustBeforeEach(func() {
-		setupOspreyClientFlags()
-
+		setupOspreyClientForEnvironments(environmentsToUse)
 		login = Client("user", "login", ospreyconfigFlag, targetGroupFlag)
 	})
 
@@ -151,6 +148,10 @@ var _ = Describe("Login", func() {
 
 			Context("with default group", func() {
 				BeforeEach(func() {
+					environmentsToUse = map[string][]string{
+						"prod": {"production"},
+						"dev":  {"development"},
+					}
 					defaultGroup = "production"
 					expectedEnvironments = []string{"prod"}
 				})

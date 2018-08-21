@@ -136,6 +136,9 @@ func BuildFullConfig(testDir, defaultGroup string, targetGroups map[string][]str
 	}
 
 	for _, osprey := range servers {
+		if _, ok := targetGroups[osprey.Environment]; len(targetGroups) > 0 && !ok {
+			continue
+		}
 		targetName := osprey.OspreyconfigTargetName()
 
 		target := &ospreyClient.Osprey{
