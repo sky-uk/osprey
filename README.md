@@ -73,6 +73,12 @@ To pull a specific version replace `latest` with the release version.
 The `osprey client` will request the user credentials and generate a
 kubeconfig file based on the contents of its [configuration](#client-configuration).
 
+To get the version of the binary use the root command:
+```
+$  osprey --version                                                                                                                                                                                                 (add-groups-commands✱)
+osprey version dev-8c8751f (Tue 21 Aug 20:19:49 UTC 2018)
+```
+
 ## Client usage
 - [config](#config)
 - [groups](#groups)
@@ -217,7 +223,7 @@ targets:
     aliases: [foo.alias]
 
     #  list of names that can be used to logically group different osprey servers.
-        groups: [foo]
+    groups: [foo]
 
     # Mandatory for windows, optional for unix systems.
     # CA cert to use for HTTPS connections to osprey.

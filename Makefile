@@ -1,6 +1,15 @@
 files := $(shell find . -path ./vendor -prune -path ./pb -prune -o -name '*.go' -print)
 pkgs := $(shell go list ./... | grep -v /vendor/ )
 
+git_rev := $(shell git rev-parse --short HEAD)
+git_tag := $(shell git tag --points-at=$(git_rev))
+release_date := $(shell date +%d-%m-%Y)
+latest_git_tag := $(shell git for-each-ref --format="%(tag)" --sort=-taggerdate refs/tags | head -1)
+latest_git_rev := $(shell git rev-list --abbrev-commit -n 1 $(latest_git_tag))
+version := $(if $(git_tag),$(git_tag),dev-$(git_rev))
+build_time := $(shell date -u)
+ldflags := -X "github.com/sky-uk/osprey/cmd.version=$(version)" -X "github.com/sky-uk/osprey/cmd.buildTime=$(build_time)"
+
 cwd= $(shell pwd)
 build_dir := $(cwd)/build/bin
 dist_dir := $(cwd)/dist
@@ -45,19 +54,19 @@ clean :
 
 build :
 	@echo "== build"
-	GOOS=${target_os} GOARCH=amd64 go build -o ${build_dir}/${target_os}_amd64/osprey -v
+	GOOS=${target_os} GOARCH=amd64 go build -ldflags '-s $(ldflags)' -o ${build_dir}/${target_os}_amd64/osprey -v
 
 install :
 	@echo "== install"
 	@echo "Installing binary for ${target_os}"
-	GOOS=${target_os} GOARCH=amd64 go install -v
+	GOOS=${target_os} GOARCH=amd64 go install -ldflags '$(ldflags)' -v
 
 cross-compile:
 	@echo "== cross compile"
 	@echo "Cross compiling binary for ${cross_os}"
-	GOOS=${cross_os} GOARCH=amd64 go build -o ${build_dir}/${cross_os}_amd64/osprey -v
+	GOOS=${cross_os} GOARCH=amd64 go build -ldflags '-s $(ldflags)' -o ${build_dir}/${cross_os}_amd64/osprey -v
 	@echo "Cross compiling binary for windows"
-	GOOS=windows GOARCH=amd64 go build -o ${build_dir}/windows_amd64/osprey -v
+	GOOS=windows GOARCH=amd64 go build -ldflags '-s $(ldflags)' -o ${build_dir}/windows_amd64/osprey -v
 
 unformatted = $(shell goimports -l $(files))
 
@@ -86,12 +95,6 @@ test :
 proto :
 	@echo "== compiling proto files"
 	@docker run -v `pwd`/pb:/pb -w / grpc/go:1.0 protoc -I /pb /pb/osgsprey.proto --go_out=plugins=grpc:pb
-
-git_rev := $(shell git rev-parse --short HEAD)
-git_tag := $(shell git tag --points-at=$(git_rev))
-release_date := $(shell date +%d-%m-%Y)
-latest_git_tag := $(shell git for-each-ref --format="%(tag)" --sort=-taggerdate refs/tags | head -1)
-latest_git_rev := $(shell git rev-list --abbrev-commit -n 1 $(latest_git_tag))
 
 prepare-release-bintray :
 ifeq ($(strip $(SKIP_PREPARE_RELEASE_BINTRAY)), )

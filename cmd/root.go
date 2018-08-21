@@ -27,10 +27,15 @@ var RootCmd = &cobra.Command{
 
 var (
 	debugLogging bool
+	// injected by "go tool link -X"
+	version string
+	// injected by "go tool link -X"
+	buildTime string
 )
 
 func init() {
 	cobra.OnInitialize(initLogs)
+	RootCmd.Version = fmt.Sprintf("%s (%s)", version, buildTime)
 	RootCmd.PersistentFlags().BoolVarP(&debugLogging, "debug", "X", false, "enable debug logging")
 }
 
