@@ -80,8 +80,12 @@ var _ = AfterSuite(func() {
 	os.RemoveAll(testDir)
 })
 
-func setupOspreyFlags() {
-	ospreyconfig, err = BuildConfig(testDir, defaultGroup, environments, ospreys)
+func setupOspreyClientFlags() {
+	setupOspreyClientForEnvironments(environments)
+}
+
+func setupOspreyClientForEnvironments(envs map[string][]string) {
+	ospreyconfig, err = BuildConfig(testDir, defaultGroup, envs, ospreys)
 	Expect(err).To(BeNil(), "Creates the osprey config with groups")
 	ospreyconfigFlag = "--ospreyconfig=" + ospreyconfig.ConfigFile
 
@@ -89,7 +93,7 @@ func setupOspreyFlags() {
 		targetGroupFlag = "--group=" + targetGroup
 	}
 
-	targetedOspreys = GetOspreysByGroup(targetGroup, defaultGroup, environments, ospreys)
+	targetedOspreys = GetOspreysByGroup(targetGroup, defaultGroup, envs, ospreys)
 }
 
 func cleanup() {

@@ -20,7 +20,7 @@ var _ = Describe("User", func() {
 	})
 
 	JustBeforeEach(func() {
-		setupOspreyFlags()
+		setupOspreyClientFlags()
 
 		user = Client("user", ospreyconfigFlag, targetGroupFlag)
 		login = Client("user", "login", ospreyconfigFlag, targetGroupFlag)

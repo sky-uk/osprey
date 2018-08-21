@@ -24,7 +24,6 @@ func init() {
 
 func logout(_ *cobra.Command, _ []string) {
 	ospreyconfig, err := client.LoadConfig(ospreyconfigFile)
-
 	if err != nil {
 		log.Fatalf("Failed to load ospreyconfig file %s: %v", ospreyconfigFile, err)
 	}

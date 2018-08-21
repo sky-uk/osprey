@@ -149,6 +149,26 @@ func (c *Config) validate() error {
 	return nil
 }
 
+// Groups returns the list of groups defined in the Config
+func (c *Config) Groups() []string {
+	targetsByGroup := make(map[string][]string)
+	for key, osprey := range c.Targets {
+		if len(osprey.Groups) == 0 {
+			targets := targetsByGroup[""]
+			targetsByGroup[""] = append(targets, key)
+		}
+		for _, group := range osprey.Groups {
+			targets := targetsByGroup[group]
+			targetsByGroup[group] = append(targets, key)
+		}
+	}
+	var groups []string
+	for group := range targetsByGroup {
+		groups = append(groups, group)
+	}
+	return groups
+}
+
 // TargetsByGroup retrieves the Osprey targets that match the group.
 // If the group is not provided the DefaultGroup for this configuration will be used.
 func (c *Config) TargetsByGroup(group string) map[string]*Osprey {

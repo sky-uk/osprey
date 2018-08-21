@@ -21,7 +21,7 @@ var _ = Describe("Logout", func() {
 	})
 
 	JustBeforeEach(func() {
-		setupOspreyFlags()
+		setupOspreyClientFlags()
 
 		login = Client("user", "login", ospreyconfigFlag, targetGroupFlag)
 		logout = Client("user", "logout", ospreyconfigFlag, targetGroupFlag)
