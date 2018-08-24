@@ -27,10 +27,15 @@ var RootCmd = &cobra.Command{
 
 var (
 	debugLogging bool
+	// injected by "go tool link -X"
+	version string
+	// injected by "go tool link -X"
+	buildTime string
 )
 
 func init() {
 	cobra.OnInitialize(initLogs)
+	RootCmd.Version = fmt.Sprintf("%s (%s)", version, buildTime)
 	RootCmd.PersistentFlags().BoolVarP(&debugLogging, "debug", "X", false, "enable debug logging")
 }
 
@@ -56,5 +61,13 @@ func checkURL(value, flagName string) {
 	_, err := url.Parse(value)
 	if err != nil {
 		log.Fatalf("The %s value %s is invalid: %v", flagName, value, err)
+	}
+}
+
+func displayActiveGroup(providedGroup, defaultGroup string) {
+	if providedGroup != "" {
+		log.Infof("Active group: %s", providedGroup)
+	} else if defaultGroup != "" {
+		log.Infof("Active group (default): %s", defaultGroup)
 	}
 }

@@ -12,18 +12,17 @@ import (
 )
 
 var _ = Describe("Logout", func() {
-	var login, logout *clitest.CommandWrapper
+	var logout clitest.TestCommand
+	var login clitest.LoginCommand
 
 	BeforeEach(func() {
-		defaultGroup = ""
-		targetGroup = ""
-		targetGroupFlag = ""
+		resetDefaults()
 	})
 
 	JustBeforeEach(func() {
-		setupOspreyFlags()
+		setupOspreyClientForEnvironments(environmentsToUse)
 
-		login = Client("user", "login", ospreyconfigFlag, targetGroupFlag)
+		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag)
 		logout = Client("user", "logout", ospreyconfigFlag, targetGroupFlag)
 	})
 
@@ -58,8 +57,8 @@ var _ = Describe("Logout", func() {
 			It("only logs out from the specified targets", func() {
 				By("Having already logged in to a previous group")
 				loggedInGroup := "development"
-				loggedInEnvironments := GetOspreysByGroup(loggedInGroup, "", environments, ospreys)
-				devLogin := Client("user", "login", ospreyconfigFlag, "--group="+loggedInGroup)
+				loggedInEnvironments := GetOspreysByGroup(loggedInGroup, "", environmentsToUse, ospreys)
+				devLogin := Login("user", "login", ospreyconfigFlag, "--group="+loggedInGroup)
 				devLogin.LoginAndAssertSuccess("jane", "foo")
 
 				By("logging out of the specified targets")
@@ -102,8 +101,12 @@ var _ = Describe("Logout", func() {
 				AssertLogsOutFromTargets()
 			})
 
-			Context("no default group", func() {
+			Context("with default group", func() {
 				BeforeEach(func() {
+					environmentsToUse = map[string][]string{
+						"prod": {"production"},
+						"dev":  {"development"},
+					}
 					defaultGroup = "production"
 					expectedEnvironments = []string{"prod"}
 				})
@@ -135,6 +138,12 @@ var _ = Describe("Logout", func() {
 
 				Expect(login.GetOutput()).To(ContainSubstring("Group not found"))
 			})
+		})
+	})
+
+	Context("output", func() {
+		assertSharedOutputTest(func() clitest.TestCommand {
+			return Client("user", "logout", ospreyconfigFlag, targetGroupFlag)
 		})
 	})
 })

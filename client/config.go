@@ -146,29 +146,56 @@ func (c *Config) validate() error {
 			return fmt.Errorf("%s's target server is required", name)
 		}
 	}
+
+	groupedTargets := c.TargetsByGroup()
+	if _, ok := groupedTargets[""]; ok && c.DefaultGroup != "" {
+		return fmt.Errorf("default group %q shadows ungrouped targets", c.DefaultGroup)
+	}
 	return nil
 }
 
-// TargetsByGroup retrieves the Osprey targets that match the group.
+// Groups returns the list of groups defined in the Config
+func (c *Config) Groups() []string {
+	targetsByGroup := c.TargetsByGroup()
+	var groups []string
+	for group := range targetsByGroup {
+		if group == "" {
+			continue
+		}
+		groups = append(groups, group)
+	}
+	return groups
+}
+
+// TargetsInGroup retrieves the Osprey targets that match the group.
 // If the group is not provided the DefaultGroup for this configuration will be used.
-func (c *Config) TargetsByGroup(group string) map[string]*Osprey {
+func (c *Config) TargetsInGroup(group string) map[string]*Osprey {
 	actualGroup := group
 	if actualGroup == "" {
 		actualGroup = c.DefaultGroup
 	}
-	targetedOspreys := make(map[string]*Osprey)
+	groupedTargets := c.TargetsByGroup()
+	return groupedTargets[actualGroup]
+}
+
+// TargetsByGroup returns the Config targets organized by groups.
+// One target may appear in multiple groups.
+func (c *Config) TargetsByGroup() map[string]map[string]*Osprey {
+	targetsByGroup := make(map[string]map[string]*Osprey)
 	for key, osprey := range c.Targets {
-		if len(osprey.Groups) == 0 && actualGroup == "" {
-			targetedOspreys[key] = osprey
+		ospreyGroups := osprey.Groups
+		if len(ospreyGroups) == 0 {
+			ospreyGroups = []string{""}
 		}
-		for _, ospreyGroup := range osprey.Groups {
-			if actualGroup == ospreyGroup {
-				targetedOspreys[key] = osprey
-				break
+
+		for _, group := range ospreyGroups {
+			if _, ok := targetsByGroup[group]; !ok {
+				targetsByGroup[group] = make(map[string]*Osprey)
 			}
+			targetsByGroup[group][key] = osprey
 		}
 	}
-	return targetedOspreys
+	return targetsByGroup
 }
 
 func homeDir() string {

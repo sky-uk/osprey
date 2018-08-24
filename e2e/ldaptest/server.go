@@ -25,7 +25,7 @@ const (
 
 // TestLDAP holds the info about the running process and its configuration
 type TestLDAP struct {
-	*clitest.AsyncCommandWrapper
+	clitest.AsyncTestCommand
 	DexConfig *dex_ldap.Config
 	TLSCert   string
 }
@@ -72,7 +72,7 @@ func Stop(server *TestLDAP) {
 	if server == nil {
 		return
 	}
-	server.StopAsync()
+	server.Stop()
 	if !server.Successful() {
 		server.PrintOutput()
 	}
@@ -176,16 +176,17 @@ func includes(wd string) (paths []string, err error) {
 
 func startTestServer(ldapConfig *SLAPDConfig) (*TestLDAP, error) {
 	socketPath := url.QueryEscape(filepath.Join(ldapConfig.LDAPDir, "ldap.unix"))
-	cmd := &clitest.AsyncCommandWrapper{Cmd: exec.Command("slapd", "-d", "0",
-		"-h", "ldap://"+host()+" ldaps://"+secureHost()+" ldapi://"+socketPath,
+	cmd := clitest.NewAsyncCommand("slapd",
+		"-d", "0",
+		"-h", fmt.Sprintf("ldap://%s ldaps://%s ldapi://%s", host(), secureHost(), socketPath),
 		"-f", ldapConfig.configPath,
-	)}
+	)
 	ldapServer := &TestLDAP{
-		AsyncCommandWrapper: cmd,
-		TLSCert:             ldapConfig.TLSCertPath,
-		DexConfig:           newLDAPConfig(ldapConfig),
+		AsyncTestCommand: cmd,
+		TLSCert:          ldapConfig.TLSCertPath,
+		DexConfig:        newLDAPConfig(ldapConfig),
 	}
-	ldapServer.RunAsync()
+	ldapServer.Run()
 	return ldapServer, ldapServer.Error()
 }
 
@@ -195,18 +196,18 @@ func loadSchemaData() error {
 		return err
 	}
 	schemaPath := filepath.Join(td, "schema.ldap")
-	var ldapAdd *clitest.CommandWrapper
+	var ldapAdd clitest.TestCommand
 	// Try a few times to connect to the LDAP server. Sometimes it can take a while for it to come up.
 	wait := 100 * time.Millisecond
 	for i := 0; i < 10; i++ {
 		time.Sleep(wait)
-		ldapAdd = &clitest.CommandWrapper{Cmd: exec.Command("ldapadd",
+		ldapAdd = clitest.NewCommand("ldapadd",
 			"-x",
 			"-D", rootDN,
 			"-w", rootPwd,
 			"-f", schemaPath,
 			"-H", fmt.Sprintf("ldap://%s", host()),
-		)}
+		)
 		ldapAdd.Run()
 		if !ldapAdd.Successful() {
 			ldapAdd.PrintOutput()
@@ -216,7 +217,7 @@ func loadSchemaData() error {
 		break
 	}
 	if !ldapAdd.Successful() {
-		return ldapAdd.Error
+		return ldapAdd.Error()
 	}
 	return nil
 }

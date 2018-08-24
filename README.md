@@ -73,7 +73,15 @@ To pull a specific version replace `latest` with the release version.
 The `osprey client` will request the user credentials and generate a
 kubeconfig file based on the contents of its [configuration](#client-configuration).
 
+To get the version of the binary use the root command:
+```
+$  osprey --version
+osprey version dev-8c8751f (Tue 21 Aug 20:19:49 UTC 2018)
+```
+
 ## Client usage
+- [config](#config)
+- [groups](#groups)
 - [login](#login)
 - [logout](#logout)
 - [user](#user)
@@ -81,12 +89,33 @@ kubeconfig file based on the contents of its [configuration](#client-configurati
 With a [configuration](#client-configuration) file like:
 ```
 targets:
+  local.cluster:
+    server: https://osprey.local.cluster
   foo.cluster:
     server: https://osprey.foo.cluster
     alias: [foo]
+    groups: [foo, foobar]
   bar.cluster:
     server: https://osprey.bar.cluster
+    groups: [bar, foobar]
 ```
+
+The `groups` are labels that allow the targets to be organised into categories.
+They can be used, for example, to split non-production and production clusters
+into different groups, thus making the interaction explicit.
+
+Most of the client commands accept a `--group <value>` flag which indicate
+osprey to execute the commands only against targets containing the specified
+value in their `groups` definition.
+
+A `default-group` may be defined at the top of the configuration which will
+apply that group to any command if the `--group` flag is not used.
+When a default group exists *all targets should belong to at least one group*;
+otherwise the configuraiton will become invalid and an error will be displayed
+when running any command.
+
+If no group is provided, and no `default-group` is defined, the operations
+will be performed against targets without group definitions.
 
 ### Login
 Requests a kubernetes access token for each of the configured targets and
@@ -96,24 +125,40 @@ and creates the kubeconfig's cluster, user and context elements for them.
 $ osprey user login
 user: someone
 password: ***
-Logged in to foo.cluster | foo
-Logged in to bar.cluster
+Logged in to local.cluster
 ```
 
 It will generate the kubeconfig file creating a `cluster` and `user` entry
 per osprey target and one context with the `target` name and as many extra
 contexts as `aliases` have been specified.
 
+When specifying the `--group` flag, the operations will apply to the targets
+belonging to the specified group. If targeting a group (provided or default)
+the output will include the name of the group.
+```
+$ osprey user login --group foobar
+user: someone
+password: ***
+
+Logging in to group 'foobar'
+
+Logged in to foo.cluster | foo
+Logged in to bar.cluster
+```
+
 At login, aliases are displayed after the pipes (i.e `| foo`)
 
 ### User
 Displays information about the currently logged in user (it shows the details
-even if the token has already expired)
+even if the token has already expired).
+It contains the email of the logged in user and the list of LDAP membership
+groups the user is a part of. The latter come from the claims in the
+user's token.
 
 ```
-$ osprey user
-foo.cluster: someone@email.com [group1, group2]
-bar.cluster: someone@email.com [group1, group2]
+$ osprey user --group foobar
+foo.cluster: someone@email.com [membership A, membership B]
+bar.cluster: someone@email.com [membership C]
 ```
 
 If no user is logged in, osprey displays `none` instead of the user details.
@@ -123,12 +168,36 @@ Removes the token for the currently logged in user for every configured
 target.
 
 ```
-$ osprey user logout
+$ osprey user logout --group foobar
 Logged out from foo.cluster
 Logged out from bar.cluster
 ```
 
 If no user is logged in the command is a no-op.
+
+### Config
+This command is currently a no-op, used only to group the commands related
+to the osprey configuration.
+
+### Groups
+Displays the list of defined groups within the client configuration.
+It allows displaying the list of targets per group and to target a specific
+group via flags.
+
+```
+$ osprey config groups --list-targets
+Osprey groups:
+  bar
+     bar.cluster
+  foo
+     foo.cluster | foo
+  foobar
+     bar.cluster
+     foo.cluster | foo
+```
+
+If the configuration specifies a default group, it will be highlighted
+with a `*` before its name, e.g. `* foobar`.
 
 ## Client configuration
 The client installation script gets the configuration supported by the
@@ -151,6 +220,10 @@ The client uses a yaml configuration file. It's recommended location is:
 # Same caveat for Windows systems applies.
 # certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5vdCB2YWxpZAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
 
+# Optional group name to be the default for all commands that accept it.
+# When this value is defined, all targets must define at least one group.
+# default-group: my-group
+
 # Named map of target osprey servers to contact for access-tokens
 targets:
   # Target osprey's environment name.
@@ -161,6 +234,9 @@ targets:
 
     #  list of names to generate aditional contexts against the target.
     aliases: [foo.alias]
+
+    #  list of names that can be used to logically group different osprey servers.
+    groups: [foo]
 
     # Mandatory for windows, optional for unix systems.
     # CA cert to use for HTTPS connections to osprey.
