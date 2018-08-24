@@ -56,6 +56,8 @@ func login(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to get credentials: %v", err)
 	}
 
+	displayActiveGroup(group, ospreyconfig.DefaultGroup)
+
 	success := true
 	for name, target := range targetsInGroup {
 		c := client.NewClient(target.Server, ospreyconfig.CertificateAuthorityData, target.CertificateAuthorityData)

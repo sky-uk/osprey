@@ -11,7 +11,8 @@ import (
 )
 
 var _ = Describe("User", func() {
-	var user, login, logout *clitest.CommandWrapper
+	var user, logout clitest.TestCommand
+	var login clitest.LoginCommand
 
 	BeforeEach(func() {
 		resetDefaults()
@@ -21,7 +22,7 @@ var _ = Describe("User", func() {
 		setupOspreyClientForEnvironments(environmentsToUse)
 
 		user = Client("user", ospreyconfigFlag, targetGroupFlag)
-		login = Client("user", "login", ospreyconfigFlag, targetGroupFlag)
+		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag)
 		logout = Client("user", "logout", ospreyconfigFlag, targetGroupFlag)
 	})
 
@@ -61,7 +62,7 @@ var _ = Describe("User", func() {
 				}
 			})
 
-			It("shows empty groups when user has no groups", func() {
+			It("shows empty LDAP groups when user has no LDAP groups", func() {
 				login.LoginAndAssertSuccess("juan", "foobar")
 
 				user.RunAndAssertSuccess()
@@ -133,4 +134,9 @@ var _ = Describe("User", func() {
 		})
 	})
 
+	Context("output", func() {
+		assertSharedOutputTest(func() clitest.TestCommand {
+			return Client("user", ospreyconfigFlag, targetGroupFlag)
+		})
+	})
 })

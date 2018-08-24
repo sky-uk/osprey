@@ -47,6 +47,8 @@ func user(_ *cobra.Command, _ []string) {
 		os.Exit(1)
 	}
 
+	displayActiveGroup(group, ospreyconfig.DefaultGroup)
+
 	success := true
 	for name := range targetsInGroup {
 		userData, err := kubeconfig.GetUser(name)

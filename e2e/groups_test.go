@@ -12,7 +12,7 @@ import (
 
 var _ = Describe("Groups", func() {
 	var (
-		groups              *clitest.CommandWrapper
+		groups              clitest.TestCommand
 		listTargetsFlag     string
 		expectedOutputLines []string
 	)
@@ -57,7 +57,7 @@ var _ = Describe("Groups", func() {
 
 		Context("with no default group", func() {
 			BeforeEach(func() {
-				expectedOutputLines = []string{"Osprey groups:", "development", "production", "sandbox"}
+				expectedOutputLines = []string{"Osprey groups:", "  development", "  production", "  sandbox"}
 			})
 
 			AssertGroupsSuccessfulOutput()
@@ -72,10 +72,16 @@ var _ = Describe("Groups", func() {
 					"sandbox": {"sandbox"},
 				}
 				defaultGroup = "development"
-				expectedOutputLines = []string{"Osprey groups:", "development", "production", "sandbox"}
+				expectedOutputLines = []string{"Osprey groups:", "* development", "  production", "  sandbox"}
 			})
 
 			AssertGroupsSuccessfulOutput()
+
+			It("highlights the default group", func() {
+				groups.RunAndAssertSuccess()
+
+				Expect(groups.GetOutput()).To(ContainSubstring("* development"))
+			})
 		})
 
 		Context("with list targets", func() {
@@ -87,13 +93,13 @@ var _ = Describe("Groups", func() {
 				BeforeEach(func() {
 					expectedOutputLines = []string{
 						"Osprey groups:",
-						"development",
-						"   kubectl.dev | alias.kubectl.dev",
-						"   kubectl.stage | alias.kubectl.stage",
-						"production",
-						"   kubectl.prod | alias.kubectl.prod",
-						"sandbox",
-						"   kubectl.sandbox | alias.kubectl.sandbox",
+						"  development",
+						"    kubectl.dev | alias.kubectl.dev",
+						"    kubectl.stage | alias.kubectl.stage",
+						"  production",
+						"    kubectl.prod | alias.kubectl.prod",
+						"  sandbox",
+						"    kubectl.sandbox | alias.kubectl.sandbox",
 					}
 				})
 
@@ -105,9 +111,9 @@ var _ = Describe("Groups", func() {
 					targetGroup = "development"
 					expectedOutputLines = []string{
 						"Osprey groups:",
-						"development",
-						"   kubectl.dev | alias.kubectl.dev",
-						"   kubectl.stage | alias.kubectl.stage",
+						"  development",
+						"    kubectl.dev | alias.kubectl.dev",
+						"    kubectl.stage | alias.kubectl.stage",
 					}
 				})
 

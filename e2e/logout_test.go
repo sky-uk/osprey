@@ -12,7 +12,8 @@ import (
 )
 
 var _ = Describe("Logout", func() {
-	var login, logout *clitest.CommandWrapper
+	var logout clitest.TestCommand
+	var login clitest.LoginCommand
 
 	BeforeEach(func() {
 		resetDefaults()
@@ -21,7 +22,7 @@ var _ = Describe("Logout", func() {
 	JustBeforeEach(func() {
 		setupOspreyClientForEnvironments(environmentsToUse)
 
-		login = Client("user", "login", ospreyconfigFlag, targetGroupFlag)
+		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag)
 		logout = Client("user", "logout", ospreyconfigFlag, targetGroupFlag)
 	})
 
@@ -57,7 +58,7 @@ var _ = Describe("Logout", func() {
 				By("Having already logged in to a previous group")
 				loggedInGroup := "development"
 				loggedInEnvironments := GetOspreysByGroup(loggedInGroup, "", environmentsToUse, ospreys)
-				devLogin := Client("user", "login", ospreyconfigFlag, "--group="+loggedInGroup)
+				devLogin := Login("user", "login", ospreyconfigFlag, "--group="+loggedInGroup)
 				devLogin.LoginAndAssertSuccess("jane", "foo")
 
 				By("logging out of the specified targets")
@@ -137,6 +138,12 @@ var _ = Describe("Logout", func() {
 
 				Expect(login.GetOutput()).To(ContainSubstring("Group not found"))
 			})
+		})
+	})
+
+	Context("output", func() {
+		assertSharedOutputTest(func() clitest.TestCommand {
+			return Client("user", "logout", ospreyconfigFlag, targetGroupFlag)
 		})
 	})
 })

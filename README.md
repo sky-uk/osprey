@@ -75,7 +75,7 @@ kubeconfig file based on the contents of its [configuration](#client-configurati
 
 To get the version of the binary use the root command:
 ```
-$  osprey --version                                                                                                                                                                                                 (add-groups-commands✱)
+$  osprey --version
 osprey version dev-8c8751f (Tue 21 Aug 20:19:49 UTC 2018)
 ```
 
@@ -101,6 +101,9 @@ targets:
 ```
 
 The `groups` are labels that allow the targets to be organised into categories.
+They can be used, for example, to split non-production and production clusters
+into different groups, thus making the interaction explicit.
+
 Most of the client commands accept a `--group <value>` flag which indicate
 osprey to execute the commands only against targets containing the specified
 value in their `groups` definition.
@@ -130,11 +133,15 @@ per osprey target and one context with the `target` name and as many extra
 contexts as `aliases` have been specified.
 
 When specifying the `--group` flag, the operations will apply to the targets
-belonging to the specified group.
+belonging to the specified group. If targeting a group (provided or default)
+the output will include the name of the group.
 ```
 $ osprey user login --group foobar
 user: someone
 password: ***
+
+Logging in to group 'foobar'
+
 Logged in to foo.cluster | foo
 Logged in to bar.cluster
 ```
@@ -143,12 +150,15 @@ At login, aliases are displayed after the pipes (i.e `| foo`)
 
 ### User
 Displays information about the currently logged in user (it shows the details
-even if the token has already expired)
+even if the token has already expired).
+It contains the email of the logged in user and the list of LDAP membership
+groups the user is a part of. The latter come from the claims in the
+user's token.
 
 ```
 $ osprey user --group foobar
-foo.cluster: someone@email.com [group1, group2]
-bar.cluster: someone@email.com [group1, group2]
+foo.cluster: someone@email.com [membership A, membership B]
+bar.cluster: someone@email.com [membership C]
 ```
 
 If no user is logged in, osprey displays `none` instead of the user details.
@@ -175,16 +185,19 @@ It allows displaying the list of targets per group and to target a specific
 group via flags.
 
 ```
-$ osprey config groups --list-targets                                                                                                                                                                                                                                                     (add-groups-commands✱)
+$ osprey config groups --list-targets
 Osprey groups:
-bar
-   bar.cluster
-foo
-   foo.cluster | foo
-foobar
-   bar.cluster
-   foo.cluster | foo
+  bar
+     bar.cluster
+  foo
+     foo.cluster | foo
+  foobar
+     bar.cluster
+     foo.cluster | foo
 ```
+
+If the configuration specifies a default group, it will be highlighted
+with a `*` before its name, e.g. `* foobar`.
 
 ## Client configuration
 The client installation script gets the configuration supported by the

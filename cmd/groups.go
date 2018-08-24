@@ -58,7 +58,11 @@ func groups(_ *cobra.Command, _ []string) {
 	var outputLines []string
 	outputLines = append(outputLines, "Osprey groups:")
 	for _, groupName := range groups {
-		outputLines = append(outputLines, groupName)
+		highlight := " "
+		if groupName == ospreyconfig.DefaultGroup {
+			highlight = "*"
+		}
+		outputLines = append(outputLines, fmt.Sprintf("%s %s", highlight, groupName))
 
 		targets := targetsByGroup[groupName]
 		var targetNames []string
@@ -74,7 +78,7 @@ func groups(_ *cobra.Command, _ []string) {
 				sort.Strings(osprey.Aliases)
 				aliases = fmt.Sprintf(" | %s", strings.Join(osprey.Aliases, ", "))
 			}
-			outputLines = append(outputLines, fmt.Sprintf("   %s%s", name, aliases))
+			outputLines = append(outputLines, fmt.Sprintf("    %s%s", name, aliases))
 		}
 	}
 	fmt.Println(strings.Join(outputLines, "\n"))

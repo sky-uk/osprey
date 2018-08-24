@@ -63,3 +63,11 @@ func checkURL(value, flagName string) {
 		log.Fatalf("The %s value %s is invalid: %v", flagName, value, err)
 	}
 }
+
+func displayActiveGroup(providedGroup, defaultGroup string) {
+	if providedGroup != "" {
+		log.Infof("Active group: %s", providedGroup)
+	} else if defaultGroup != "" {
+		log.Infof("Active group (default): %s", defaultGroup)
+	}
+}

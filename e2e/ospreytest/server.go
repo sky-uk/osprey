@@ -2,7 +2,6 @@ package ospreytest
 
 import (
 	"fmt"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/onsi/ginkgo"
@@ -18,7 +17,7 @@ const ospreyBinary = "osprey"
 
 // TestOsprey represents an Osprey server instance used for testing.
 type TestOsprey struct {
-	*clitest.AsyncCommandWrapper
+	clitest.AsyncTestCommand
 	Port         int32
 	Environment  string
 	APIServerURL string
@@ -73,9 +72,9 @@ func startOsprey(ospreyDir string, port int32, dex *dextest.TestDex) *TestOsprey
 		TestDir:      serverDir,
 	}
 	dex.RegisterClient(server.Environment, ospreySecret, fmt.Sprintf("%s/callback", ospreyURL), dex.Environment)
-	server.AsyncCommandWrapper = &clitest.AsyncCommandWrapper{Cmd: exec.Command(ospreyBinary, server.buildArgs()...)}
+	server.AsyncTestCommand = clitest.NewAsyncCommand(ospreyBinary, server.buildArgs()...)
 	ginkgo.By(fmt.Sprintf("Starting %s osprey at %s", dex.Environment, server.URL))
-	server.RunAsync()
+	server.Run()
 	server.AssertStillRunning()
 	return server
 }
@@ -102,7 +101,7 @@ func StopOsprey(server *TestOsprey) error {
 	if server == nil {
 		return nil
 	}
-	server.StopAsync()
+	server.Stop()
 	if !server.Successful() {
 		server.PrintOutput()
 	}
@@ -169,7 +168,12 @@ func BuildFullConfig(testDir, defaultGroup string, targetGroups map[string][]str
 	return testConfig, ospreyClient.SaveConfig(config, ospreyconfigFile)
 }
 
-// Client returns a CommandWrapper for the osprey binary with the provided args arguments.
-func Client(args ...string) *clitest.CommandWrapper {
-	return &clitest.CommandWrapper{Cmd: exec.Command(ospreyBinary, args...)}
+// Client returns a TestCommand for the osprey binary with the provided args arguments.
+func Client(args ...string) clitest.TestCommand {
+	return clitest.NewCommand(ospreyBinary, args...)
+}
+
+// Login returns a LoginCommand for the osprey binary with the provided args arguments.
+func Login(args ...string) clitest.LoginCommand {
+	return clitest.NewLoginCommand(ospreyBinary, args...)
 }

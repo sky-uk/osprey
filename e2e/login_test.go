@@ -13,7 +13,7 @@ import (
 )
 
 var _ = Describe("Login", func() {
-	var login *clitest.CommandWrapper
+	var login clitest.LoginCommand
 
 	BeforeEach(func() {
 		resetDefaults()
@@ -21,7 +21,7 @@ var _ = Describe("Login", func() {
 
 	JustBeforeEach(func() {
 		setupOspreyClientForEnvironments(environmentsToUse)
-		login = Client("user", "login", ospreyconfigFlag, targetGroupFlag)
+		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag)
 	})
 
 	AfterEach(func() {
@@ -55,7 +55,7 @@ var _ = Describe("Login", func() {
 		caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "")
 		Expect(err).To(BeNil(), "Creates the osprey config")
 		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
-		caDataLogin := Client("user", "login", caDataConfigFlag)
+		caDataLogin := Login("user", "login", caDataConfigFlag)
 
 		caDataLogin.LoginAndAssertSuccess("jane", "foo")
 	})
@@ -64,7 +64,7 @@ var _ = Describe("Login", func() {
 		caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "/road/to/nowhere")
 		Expect(err).To(BeNil(), "Creates the osprey config")
 		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
-		caDataLogin := Client("user", "login", caDataConfigFlag)
+		caDataLogin := Login("user", "login", caDataConfigFlag)
 
 		caDataLogin.LoginAndAssertSuccess("jane", "foo")
 	})
@@ -185,4 +185,10 @@ var _ = Describe("Login", func() {
 		})
 	})
 
+	Context("output", func() {
+		assertSharedOutputTest(func() clitest.TestCommand {
+			cmd := Login("user", "login", ospreyconfigFlag, targetGroupFlag)
+			return cmd.WithCredentials("jane", "foo")
+		})
+	})
 })
