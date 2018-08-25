@@ -83,6 +83,9 @@ func UpdateConfig(name string, aliases []string, tokenData *TokenInfo) error {
 	contexts := append(aliases, name)
 	for _, alias := range contexts {
 		context := clientgo.NewContext()
+		if oldContext, ok := config.Contexts[alias]; ok {
+			oldContext.DeepCopyInto(context)
+		}
 		context.Cluster = name
 		context.AuthInfo = name
 		config.Contexts[alias] = context
