@@ -84,6 +84,7 @@ osprey version dev-8c8751f (Tue 21 Aug 20:19:49 UTC 2018)
 - [groups](#groups)
 - [login](#login)
 - [logout](#logout)
+- [targets](#targets)
 - [user](#user)
 
 With a [configuration](#client-configuration) file like:
@@ -196,8 +197,37 @@ Osprey groups:
      foo.cluster | foo
 ```
 
+This command will not display targets that do not belong to any group,
+even if there are some.
+
 If the configuration specifies a default group, it will be highlighted
 with a `*` before its name, e.g. `* foobar`.
+
+### Targets
+Displays the list of defined targets within the client configuration.
+It allows displaying the list of targets per group and to target a specific
+group via flags.
+
+```
+$  osprey config targets --by-groups
+Osprey targets:
+* <ungrouped>
+    local.cluster
+  bar
+    bar.cluster
+  foo
+    foo.cluster | foo
+  foobar
+    bar.cluster
+    foo.cluster | foo
+```
+
+This command will display targets that do not belong to any group, if there
+are any, under the special group `<ungrouped>`.
+
+If the configuration specifies a default group, it will be highlighted
+with a `*` before its name, e.g. `* foobar`. If no default group is defined
+the special `<ungrouped>` grouping will be highlighted.
 
 ## Client configuration
 The client installation script gets the configuration supported by the

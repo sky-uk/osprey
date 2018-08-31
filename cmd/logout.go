@@ -11,11 +11,10 @@ import (
 )
 
 var logoutCmd = &cobra.Command{
-	Use:    "logout",
-	Short:  "Logout from the Kubernetes clusters",
-	Long:   `Logout will remove the clusters, contexts, and users referred to by the osprey config`,
-	PreRun: checkClientParams,
-	Run:    logout,
+	Use:   "logout",
+	Short: "Logout from the Kubernetes clusters",
+	Long:  `Logout will remove the clusters, contexts, and users referred to by the osprey config`,
+	Run:   logout,
 }
 
 func init() {
@@ -33,22 +32,24 @@ func logout(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to initialise kubeconfig: %v", err)
 	}
 
-	targetsInGroup := ospreyconfig.TargetsInGroup(group)
-	if len(targetsInGroup) == 0 {
-		log.Errorf("Group not found: %q", group)
+	targets := client.GetTargets(ospreyconfig)
+	groupName := ospreyconfig.GroupOrDefault(targetGroup)
+	group, ok := targets.GetGroup(groupName)
+	if !ok {
+		log.Errorf("Group not found: %q", groupName)
 		os.Exit(1)
 	}
 
-	displayActiveGroup(group, ospreyconfig.DefaultGroup)
+	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
 
 	success := true
-	for name := range targetsInGroup {
-		err = kubeconfig.Remove(name)
+	for _, target := range group.Members() {
+		err = kubeconfig.Remove(target.Name())
 		if err != nil {
-			log.Errorf("Failed to remove %s from kubeconfig: %v", name, err)
+			log.Errorf("Failed to remove %s from kubeconfig: %v", target.Name(), err)
 			success = false
 		} else {
-			log.Infof("Logged out from %s", name)
+			log.Infof("Logged out from %s", target.Name())
 		}
 	}
 

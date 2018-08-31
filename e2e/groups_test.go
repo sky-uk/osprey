@@ -51,7 +51,10 @@ var _ = Describe("Groups", func() {
 
 				trimmedOutput := strings.Trim(groups.GetOutput(), "\n")
 				outputLines := strings.Split(trimmedOutput, "\n")
-				Expect(outputLines).To(ConsistOf(expectedOutputLines))
+				Expect(len(outputLines)).To(BeNumerically(">", 0))
+				for i, expectedLine := range expectedOutputLines {
+					Expect(outputLines[i]).To(Equal(expectedLine))
+				}
 			})
 		}
 

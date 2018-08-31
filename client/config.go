@@ -154,17 +154,12 @@ func (c *Config) validate() error {
 	return nil
 }
 
-// Groups returns the list of groups defined in the Config
-func (c *Config) Groups() []string {
-	targetsByGroup := c.TargetsByGroup()
-	var groups []string
-	for group := range targetsByGroup {
-		if group == "" {
-			continue
-		}
-		groups = append(groups, group)
+// GroupOrDefault returns the group if it is not empty, or the Config.DefaultGroup if it is.
+func (c *Config) GroupOrDefault(group string) string {
+	if group != "" {
+		return group
 	}
-	return groups
+	return c.DefaultGroup
 }
 
 // TargetsInGroup retrieves the Osprey targets that match the group.
@@ -196,6 +191,16 @@ func (c *Config) TargetsByGroup() map[string]map[string]*Osprey {
 		}
 	}
 	return targetsByGroup
+}
+
+// IsInGroup returns true if the Osprey target belongs to the given group
+func (o *Osprey) IsInGroup(value string) bool {
+	for _, group := range o.Groups {
+		if group == value {
+			return true
+		}
+	}
+	return false
 }
 
 func homeDir() string {

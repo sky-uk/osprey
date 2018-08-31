@@ -53,6 +53,11 @@ func WithoutToken(authInfo *clientgo.AuthInfo) *clientgo.AuthInfo {
 	return clone
 }
 
+// OspreyTargetOutput returns the name and aliases output format for the environment.
+func OspreyTargetOutput(environment string) string {
+	return fmt.Sprintf("%s | %s", OspreyconfigTargetName(environment), OspreyconfigAliasName(environment))
+}
+
 // OspreyconfigTargetName returns the ospreyconfig target's name for the TestOsprey instance.
 func (o *TestOsprey) OspreyconfigTargetName() string {
 	return OspreyconfigTargetName(o.Environment)
@@ -63,9 +68,14 @@ func OspreyconfigTargetName(environment string) string {
 	return fmt.Sprintf("%s%s", targetNamePrefix, environment)
 }
 
+// OspreyconfigAliasName returns the ospreyconfig target's alias for the environment.
+func OspreyconfigAliasName(environment string) string {
+	return fmt.Sprintf("%s%s", targetAliasPrefix, OspreyconfigTargetName(environment))
+}
+
 // OspreyconfigAliasName returns the ospreyconfig target's alias for the TestOsprey instance.
 func (o *TestOsprey) OspreyconfigAliasName() string {
-	return fmt.Sprintf("%s%s", targetAliasPrefix, o.OspreyconfigTargetName())
+	return OspreyconfigAliasName(o.Environment)
 }
 
 // ToKubeconfigContext returns a *Context representation of the TestOsprey instance.
