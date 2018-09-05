@@ -19,12 +19,16 @@ var targetsCommand = &cobra.Command{
 	Run:              targets,
 }
 
-var byGroups bool
+var (
+	byGroups   bool
+	listGroups bool
+)
 
 func init() {
 	configCmd.AddCommand(targetsCommand)
-	persistentFlags := targetsCommand.PersistentFlags()
-	persistentFlags.BoolVarP(&byGroups, "by-groups", "b", false, "list targets by group")
+	flags := targetsCommand.Flags()
+	flags.BoolVarP(&byGroups, "by-groups", "b", false, "list targets by group")
+	flags.BoolVarP(&listGroups, "list-groups", "l", false, "list groups only")
 }
 
 func targets(_ *cobra.Command, _ []string) {
@@ -33,29 +37,34 @@ func targets(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to load ospreyconfig file %s: %v", ospreyconfigFile, err)
 	}
 
-	targets := client.GetSnapshot(ospreyconfig)
+	snapshot := client.GetSnapshot(ospreyconfig)
 
 	var outputLines []string
-	outputLines = append(outputLines, "Osprey targets:")
-	if byGroups {
-		outputLines = append(outputLines, displayGrouped(targets)...)
+	if listGroups {
+		outputLines = append(outputLines, "Osprey groups:")
+		outputLines = append(outputLines, displayGroups(snapshot, false)...)
 	} else {
-		outputLines = append(outputLines, displayUngrouped(targets)...)
+		outputLines = append(outputLines, "Osprey targets:")
+		if byGroups {
+			outputLines = append(outputLines, displayGroups(snapshot, true)...)
+		} else {
+			outputLines = append(outputLines, displayTargets(snapshot)...)
+		}
 	}
 	fmt.Println(strings.Join(outputLines, "\n"))
 
 }
 
-func displayGrouped(targets client.ConfigSnapshot) []string {
+func displayGroups(snapshot client.ConfigSnapshot, listTargets bool) []string {
 	var outputLines []string
 	var groups []client.Group
 	if targetGroup == "" {
-		if ungrouped, ok := targets.GetGroup(""); ok {
-			outputLines = displayGroup("<ungrouped>", ungrouped)
+		if ungrouped, ok := snapshot.GetGroup(targetGroup); ok {
+			outputLines = displayGroup(ungrouped, listTargets)
 		}
-		groups = targets.Groups()
+		groups = snapshot.Groups()
 	} else {
-		group, ok := targets.GetGroup(targetGroup)
+		group, ok := snapshot.GetGroup(targetGroup)
 		if !ok {
 			log.Errorf("Group not found: %q", targetGroup)
 			os.Exit(1)
@@ -65,31 +74,37 @@ func displayGrouped(targets client.ConfigSnapshot) []string {
 	}
 
 	for _, group := range groups {
-		outputLines = append(outputLines, displayGroup(group.Name(), group)...)
+		outputLines = append(outputLines, displayGroup(group, listTargets)...)
 	}
 	return outputLines
 }
 
-func displayGroup(name string, group client.Group) []string {
+func displayGroup(group client.Group, listTargets bool) []string {
 	var outputLines []string
 	highlight := " "
 	if group.IsDefault() {
 		highlight = "*"
 	}
+	name := group.Name()
+	if name == "" {
+		name = "<ungrouped>"
+	}
 	outputLines = append(outputLines, fmt.Sprintf("%s %s", highlight, name))
-	for _, target := range group.Targets() {
-		aliases := ""
-		if target.HasAliases() {
-			aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
+	if listTargets {
+		for _, target := range group.Targets() {
+			aliases := ""
+			if target.HasAliases() {
+				aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
+			}
+			outputLines = append(outputLines, fmt.Sprintf("    %s%s", target.Name(), aliases))
 		}
-		outputLines = append(outputLines, fmt.Sprintf("    %s%s", target.Name(), aliases))
 	}
 	return outputLines
 }
 
-func displayUngrouped(targets client.ConfigSnapshot) []string {
-	allTargets := targets.Targets()
-	defaultGroup := targets.DefaultGroup()
+func displayTargets(snapshot client.ConfigSnapshot) []string {
+	allTargets := snapshot.Targets()
+	defaultGroup := snapshot.DefaultGroup()
 	var outputLines []string
 	for _, target := range allTargets {
 		highlight := " "

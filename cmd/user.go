@@ -41,9 +41,9 @@ func user(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to initialise kubeconfig: %v", err)
 	}
 
-	targets := client.GetSnapshot(ospreyconfig)
 	groupName := ospreyconfig.GroupOrDefault(targetGroup)
-	group, ok := targets.GetGroup(groupName)
+	snapshot := client.GetSnapshot(ospreyconfig)
+	group, ok := snapshot.GetGroup(groupName)
 	if !ok {
 		log.Errorf("Group not found: %q", groupName)
 		os.Exit(1)
