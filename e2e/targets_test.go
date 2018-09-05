@@ -170,7 +170,7 @@ var _ = Describe("Targets", func() {
 			})
 		})
 
-		Context("with list groupssadfsadf", func() {
+		Context("with list groups", func() {
 			BeforeEach(func() {
 				byGroupsFlag = ""
 				listGroupsFlag = "--list-groups"

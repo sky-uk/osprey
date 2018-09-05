@@ -67,9 +67,8 @@ var _ = Describe("Logout", func() {
 				loggedOutConfig, err := kubeconfig.GetConfig()
 				Expect(err).To(BeNil(), "successfully updated kubeconfig")
 				for _, osprey := range loggedInEnvironments {
+					expectedAuthInfo := osprey.ToKubeconfigUserWithoutToken(ospreyconfig.Kubeconfig)
 					authInfoID := osprey.OspreyconfigTargetName()
-					expectedAuthInfo := osprey.ToKubeconfigUserWithoutToken()
-					expectedAuthInfo.LocationOfOrigin = ospreyconfig.Kubeconfig
 					Expect(loggedOutConfig.AuthInfos).To(HaveKey(authInfoID))
 					Expect(loggedOutConfig.AuthInfos[authInfoID]).To(WithTransform(WithoutToken, Equal(expectedAuthInfo)))
 					Expect(osprey.ToGroupClaims(loggedOutConfig.AuthInfos[authInfoID])).To(BeEquivalentTo([]string{"admins", "developers"}), "Is a valid token")
@@ -82,9 +81,8 @@ var _ = Describe("Logout", func() {
 				loggedOutConfig, err := kubeconfig.GetConfig()
 				Expect(err).To(BeNil(), "successfully updated kubeconfig")
 				for _, osprey := range targetedOspreys {
+					expectedAuthInfo := osprey.ToKubeconfigUserWithoutToken(ospreyconfig.Kubeconfig)
 					authInfoID := osprey.OspreyconfigTargetName()
-					expectedAuthInfo := osprey.ToKubeconfigUserWithoutToken()
-					expectedAuthInfo.LocationOfOrigin = ospreyconfig.Kubeconfig
 					Expect(loggedOutConfig.AuthInfos).To(HaveKey(authInfoID))
 					Expect(loggedOutConfig.AuthInfos[authInfoID]).To(Equal(expectedAuthInfo), "does not have a token")
 				}
