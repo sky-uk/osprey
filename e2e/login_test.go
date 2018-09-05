@@ -9,6 +9,7 @@ import (
 
 	"github.com/sky-uk/osprey/client/kubeconfig"
 	"github.com/sky-uk/osprey/e2e/clitest"
+	"k8s.io/client-go/tools/clientcmd"
 	clientgo "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -134,7 +135,55 @@ var _ = Describe("Login", func() {
 				// Each alias has a corresponding context
 				Expect(len(generatedConfig.Contexts)).To(Equal(len(targetedOspreys)*2), "expected number of alias")
 			})
+
 		}
+
+		Context("context with configured namespace ", func() {
+			JustBeforeEach(func() {
+				existingConfig := clientgo.NewConfig()
+				for _, osprey := range targetedOspreys {
+					kcontext := osprey.ToKubeconfigContext()
+					kcontext.LocationOfOrigin = ospreyconfig.Kubeconfig
+					kcontext.Namespace = kcontext.Cluster + "-namespace"
+					target := osprey.OspreyconfigTargetName()
+					targetAlias := osprey.OspreyconfigAliasName()
+					existingConfig.Contexts[target] = kcontext
+					existingConfig.Contexts[targetAlias] = kcontext
+
+				}
+				clientcmd.WriteToFile(*existingConfig, ospreyconfig.Kubeconfig)
+
+				login.LoginAndAssertSuccess("jane", "foo")
+				err := kubeconfig.LoadConfig(ospreyconfig.Kubeconfig)
+				Expect(err).To(BeNil(), "successfully creates a kubeconfig")
+				generatedConfig, err = kubeconfig.GetConfig()
+				Expect(err).To(BeNil(), "successfully creates a kubeconfig")
+			})
+
+			It("namespace preserved per context", func() {
+				for _, osprey := range targetedOspreys {
+					kcontext := osprey.ToKubeconfigContext()
+					kcontext.LocationOfOrigin = ospreyconfig.Kubeconfig
+					kcontext.Namespace = kcontext.Cluster + "-namespace"
+					target := osprey.OspreyconfigTargetName()
+					Expect(generatedConfig.Contexts).To(HaveKeyWithValue(target, kcontext))
+				}
+				// Each context has an alias
+				Expect(len(generatedConfig.Contexts)).To(Equal(len(targetedOspreys)*2), "expected number of contexts")
+			})
+
+			It("namespace preserved per alias", func() {
+				for _, osprey := range targetedOspreys {
+					kcontext := osprey.ToKubeconfigContext()
+					kcontext.LocationOfOrigin = ospreyconfig.Kubeconfig
+					kcontext.Namespace = kcontext.Cluster + "-namespace"
+					targetAlias := osprey.OspreyconfigAliasName()
+					Expect(generatedConfig.Contexts).To(HaveKeyWithValue(targetAlias, kcontext))
+				}
+				// Each alias has a corresponding context
+				Expect(len(generatedConfig.Contexts)).To(Equal(len(targetedOspreys)*2), "expected number of alias")
+			})
+		})
 
 		Context("no group provided", func() {
 			Context("no default group", func() {
