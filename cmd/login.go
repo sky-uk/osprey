@@ -44,7 +44,7 @@ func login(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to initialise kubeconfig: %v", err)
 	}
 
-	targets := client.GetTargets(ospreyconfig)
+	targets := client.GetSnapshot(ospreyconfig)
 	groupName := ospreyconfig.GroupOrDefault(targetGroup)
 	group, ok := targets.GetGroup(groupName)
 	if !ok {
@@ -60,7 +60,7 @@ func login(_ *cobra.Command, _ []string) {
 	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
 
 	success := true
-	for _, target := range group.Members() {
+	for _, target := range group.Targets() {
 		c := client.NewClient(target.Server(), ospreyconfig.CertificateAuthorityData, target.CertificateAuthorityData())
 		tokenData, err := c.GetAccessToken(credentials)
 		if err != nil {

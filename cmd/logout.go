@@ -32,7 +32,7 @@ func logout(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to initialise kubeconfig: %v", err)
 	}
 
-	targets := client.GetTargets(ospreyconfig)
+	targets := client.GetSnapshot(ospreyconfig)
 	groupName := ospreyconfig.GroupOrDefault(targetGroup)
 	group, ok := targets.GetGroup(groupName)
 	if !ok {
@@ -43,7 +43,7 @@ func logout(_ *cobra.Command, _ []string) {
 	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
 
 	success := true
-	for _, target := range group.Members() {
+	for _, target := range group.Targets() {
 		err = kubeconfig.Remove(target.Name())
 		if err != nil {
 			log.Errorf("Failed to remove %s from kubeconfig: %v", target.Name(), err)

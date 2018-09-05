@@ -13,7 +13,7 @@ import (
 
 var targetsCommand = &cobra.Command{
 	Use:              "targets",
-	Short:            "Targets commands for osprey.",
+	Short:            "ConfigSnapshot commands for osprey.",
 	Long:             "Returns the list of targets sorted alphabetically.",
 	PersistentPreRun: checkClientParams,
 	Run:              targets,
@@ -33,7 +33,7 @@ func targets(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to load ospreyconfig file %s: %v", ospreyconfigFile, err)
 	}
 
-	targets := client.GetTargets(ospreyconfig)
+	targets := client.GetSnapshot(ospreyconfig)
 
 	var outputLines []string
 	outputLines = append(outputLines, "Osprey targets:")
@@ -46,7 +46,7 @@ func targets(_ *cobra.Command, _ []string) {
 
 }
 
-func displayGrouped(targets client.Targets) []string {
+func displayGrouped(targets client.ConfigSnapshot) []string {
 	var outputLines []string
 	var groups []client.Group
 	if targetGroup == "" {
@@ -77,7 +77,7 @@ func displayGroup(name string, group client.Group) []string {
 		highlight = "*"
 	}
 	outputLines = append(outputLines, fmt.Sprintf("%s %s", highlight, name))
-	for _, target := range group.Members() {
+	for _, target := range group.Targets() {
 		aliases := ""
 		if target.HasAliases() {
 			aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
@@ -87,8 +87,8 @@ func displayGroup(name string, group client.Group) []string {
 	return outputLines
 }
 
-func displayUngrouped(targets client.Targets) []string {
-	allTargets := targets.Members()
+func displayUngrouped(targets client.ConfigSnapshot) []string {
+	allTargets := targets.Targets()
 	defaultGroup := targets.DefaultGroup()
 	var outputLines []string
 	for _, target := range allTargets {

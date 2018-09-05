@@ -41,7 +41,7 @@ func user(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to initialise kubeconfig: %v", err)
 	}
 
-	targets := client.GetTargets(ospreyconfig)
+	targets := client.GetSnapshot(ospreyconfig)
 	groupName := ospreyconfig.GroupOrDefault(targetGroup)
 	group, ok := targets.GetGroup(groupName)
 	if !ok {
@@ -52,7 +52,7 @@ func user(_ *cobra.Command, _ []string) {
 	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
 
 	success := true
-	for _, target := range group.Members() {
+	for _, target := range group.Targets() {
 		userData, err := kubeconfig.GetUser(target.Name())
 		if err != nil {
 			log.Errorf("Failed to retrieve user for %s from kubeconfig: %v", target.Name(), err)

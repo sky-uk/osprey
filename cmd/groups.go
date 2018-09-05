@@ -34,7 +34,7 @@ func groups(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to load ospreyconfig file %s: %v", ospreyconfigFile, err)
 	}
 
-	targets := client.GetTargets(ospreyconfig)
+	targets := client.GetSnapshot(ospreyconfig)
 	if !targets.HaveGroups() {
 		log.Error("There are no groups defined")
 		os.Exit(1)
@@ -63,7 +63,7 @@ func groups(_ *cobra.Command, _ []string) {
 		outputLines = append(outputLines, fmt.Sprintf("%s %s", highlight, group.Name()))
 
 		if listTargets {
-			for _, target := range group.Members() {
+			for _, target := range group.Targets() {
 				aliases := ""
 				if target.HasAliases() {
 					aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), ", "))

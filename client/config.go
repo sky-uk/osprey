@@ -45,7 +45,7 @@ type Config struct {
 	// DefaultGroup specifies the group to log in to if none provided.
 	// +optional
 	DefaultGroup string `yaml:"default-group,omitempty"`
-	// Targets is a map of referenceable names to osprey configs
+	// ConfigSnapshot is a map of referenceable names to osprey configs
 	Targets map[string]*Osprey `yaml:"targets"`
 }
 
