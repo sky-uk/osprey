@@ -6,9 +6,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"fmt"
-	"strings"
-
 	"os"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -45,9 +44,11 @@ func login(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to initialise kubeconfig: %v", err)
 	}
 
-	targetsInGroup := ospreyconfig.TargetsInGroup(group)
-	if len(targetsInGroup) == 0 {
-		log.Errorf("Group not found: %q", group)
+	groupName := ospreyconfig.GroupOrDefault(targetGroup)
+	snapshot := client.GetSnapshot(ospreyconfig)
+	group, ok := snapshot.GetGroup(groupName)
+	if !ok {
+		log.Errorf("Group not found: %q", groupName)
 		os.Exit(1)
 	}
 
@@ -56,35 +57,33 @@ func login(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to get credentials: %v", err)
 	}
 
-	displayActiveGroup(group, ospreyconfig.DefaultGroup)
+	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
 
 	success := true
-	for name, target := range targetsInGroup {
-		c := client.NewClient(target.Server, ospreyconfig.CertificateAuthorityData, target.CertificateAuthorityData)
+	for _, target := range group.Targets() {
+		c := client.NewClient(target.Server(), ospreyconfig.CertificateAuthorityData, target.CertificateAuthorityData())
 		tokenData, err := c.GetAccessToken(credentials)
 		if err != nil {
 			if state, ok := status.FromError(err); ok && state.Code() == codes.Unauthenticated {
-				log.Fatalf("Failed to log in to %s: %v", name, state.Message())
+				log.Fatalf("Failed to log in to %s: %v", target.Name(), state.Message())
 			}
-			msg := fmt.Sprintf("Failed to log in to %s: %v", name, err)
 			success = false
-			log.Error(msg)
+			log.Errorf("Failed to log in to %s: %v", target.Name(), err)
 			continue
 		}
 
-		err = kubeconfig.UpdateConfig(name, target.Aliases, tokenData)
+		err = kubeconfig.UpdateConfig(target.Name(), target.Aliases(), tokenData)
 		if err != nil {
-			log.Errorf("Failed to update config for %s: %v", name, err)
+			log.Errorf("Failed to update config for %s: %v", target.Name(), err)
 		}
 		aliases := ""
-		if len(target.Aliases) > 0 {
-			aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases, " | "))
+		if target.HasAliases() {
+			aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
 		}
-		log.Infof("Logged in to: %s%s", name, aliases)
-
+		log.Infof("Logged in to: %s%s", target.Name(), aliases)
 	}
 
 	if !success {
-		log.Fatal("Failed to update credentials for some targets.")
+		log.Fatal("Failed to update credentials for some snapshot.")
 	}
 }
