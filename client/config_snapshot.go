@@ -142,8 +142,14 @@ func (t *ConfigSnapshot) GetGroup(name string) (Group, bool) {
 // Targets returns all the targets in the configuration in alphabetical order.
 func (t *ConfigSnapshot) Targets() []Target {
 	var targets []Target
+	set := make(map[string]*interface{})
 	for _, group := range t.groupsByName {
-		targets = append(targets, group.targets...)
+		for _, target := range group.targets {
+			if _, ok := set[target.name]; !ok {
+				set[target.name] = nil
+				targets = append(targets, target)
+			}
+		}
 	}
 	return sortTargets(targets)
 }

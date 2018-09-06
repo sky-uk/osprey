@@ -1,13 +1,13 @@
 package e2e
 
 import (
-	"strings"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/sky-uk/osprey/e2e/ospreytest"
 
 	"fmt"
+
+	"strings"
 
 	"github.com/sky-uk/osprey/e2e/clitest"
 )
@@ -53,12 +53,7 @@ var _ = Describe("Targets", func() {
 			It("displays the targets in alphabetical order", func() {
 				targets.RunAndAssertSuccess()
 
-				trimmedOutput := strings.Trim(targets.GetOutput(), "\n")
-				outputLines := strings.Split(trimmedOutput, "\n")
-				Expect(len(outputLines)).To(BeNumerically(">", 0))
-				for i, expectedLine := range expectedOutputLines {
-					Expect(outputLines[i]).To(Equal(expectedLine))
-				}
+				Expect(targets.GetOutput()).To(ContainSubstring(strings.Join(expectedOutputLines, "\n")))
 			})
 		}
 
@@ -69,6 +64,21 @@ var _ = Describe("Targets", func() {
 					fmt.Sprintf("* %s", OspreyTargetOutput("local")),
 					fmt.Sprintf("  %s", OspreyTargetOutput("prod")),
 					fmt.Sprintf("  %s", OspreyTargetOutput("sandbox")),
+					fmt.Sprintf("  %s", OspreyTargetOutput("stage")),
+				}
+			})
+
+			AssertTargetsSuccessfulOutput()
+		})
+
+		Context("with a target in multiple groups", func() {
+			BeforeEach(func() {
+				environmentsToUse = map[string][]string{
+					"dev":   {"development", "dev"},
+					"stage": {"development"},
+				}
+				expectedOutputLines = []string{"Osprey targets:",
+					fmt.Sprintf("  %s", OspreyTargetOutput("dev")),
 					fmt.Sprintf("  %s", OspreyTargetOutput("stage")),
 				}
 			})

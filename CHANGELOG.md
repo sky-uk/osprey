@@ -1,3 +1,7 @@
+# Release 1.3.0
+- Fixes displaying a target multiple times if the targets existed in
+  multiple groups.
+
 # Release 1.2.0
 - Handles `groups` for targets, allowing client commands to target a
   specific group.
@@ -5,6 +9,7 @@
 - All actions and outputs are now done against targets in alphabetical
   order.
 - Adds osprey `--version` flag to provide build information.
+- Keep custom context information after login. ([#17](https://github.com/sky-uk/osprey/issues/17))
 
 # Release 1.1.0
 - Adds support for `certificate-authority-data` in client config.
