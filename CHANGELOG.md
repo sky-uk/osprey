@@ -1,3 +1,5 @@
+- Fix `latest` artifacts publishing
+
 # Release 1.3.0
 - Fixes displaying a target multiple times if the targets existed in
   multiple groups.

@@ -1,0 +1,24 @@
+{
+  "package": {
+    "name": "osprey",
+    "repo": "oss-generic",
+    "subject": "sky-uk",
+    "desc": "Osprey: Kubernetes CLI OIDC Authentication Client",
+    "vcs_url": "https://github.com/sky-uk/osprey",
+    "licenses": ["BSD 3-Clause"],
+    "labels": ["Osprey", "kubernetes", "oidc", "authentication", "client"]
+  },
+  "version": {
+    "name": "latest",
+    "released": "@release_date",
+    "vcs_tag": "@version"
+  },
+  "files":
+  [
+    { "includePattern": "dist/latest/(.*)/osprey\\.(.*)",
+      "uploadPattern": "osprey/latest/osprey-latest_$1.$2",
+      "matrixParams": { "override": 1 }
+    }
+  ],
+  "publish": @publish
+}
