@@ -16,6 +16,8 @@ type LoginCredentials struct {
 	Username string
 	// Password the password for user
 	Password string
+	// Connector id of the connector to authenticate with
+	Connector string
 }
 
 // GetCredentials loads the credentials from the terminal or stdin.
@@ -24,6 +26,11 @@ func GetCredentials() (*LoginCredentials, error) {
 		return consumeCredentials(hiddenInput)
 	}
 	return consumeCredentials(input)
+}
+
+// ForConnector returns a copy of the credentials with the additional connector value.
+func (l *LoginCredentials) ForConnector(connector string) *LoginCredentials {
+	return &LoginCredentials{Username: l.Username, Password: l.Password, Connector: connector}
 }
 
 func consumeCredentials(pwdInputFunc func(string, *bufio.Reader) (string, error)) (credentials *LoginCredentials, err error) {

@@ -26,6 +26,18 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/antchfx/htmlquery"
+  packages = ["."]
+  revision = "496ad84c8a0c36a9570ffc6e05b3b974891d39ff"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/antchfx/xpath"
+  packages = ["."]
+  revision = "077bca4d2caaf391ee780136adae00f59153dcd2"
+
+[[projects]]
+  branch = "master"
   name = "github.com/beevik/etree"
   packages = ["."]
   revision = "af219c0c7ea1b67ec263c0b1b1b96d284a9181ce"
@@ -548,6 +560,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4c0c68a34f9752a296970acf7877c8ca437026df463dd3aedc8a8c43259f2bb7"
+  inputs-digest = "277356b4cf28bf4dc0cfde1ecea7163e82e636a2c718c81224f60b70139941d2"
   solver-name = "gps-cdcl"
   solver-version = 1

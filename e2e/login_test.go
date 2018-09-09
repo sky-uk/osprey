@@ -14,18 +14,21 @@ import (
 
 var _ = Describe("Login", func() {
 	var login clitest.LoginCommand
+	var connectorFlag string
 
 	BeforeEach(func() {
 		resetDefaults()
+		connectorFlag = ""
 	})
 
 	JustBeforeEach(func() {
 		setupOspreyClientForEnvironments(environmentsToUse)
-		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag)
+		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag, connectorFlag)
 	})
 
 	AfterEach(func() {
 		cleanup()
+		connectorFlag = ""
 	})
 
 	It("fails to login with invalid credentials", func() {
@@ -67,6 +70,21 @@ var _ = Describe("Login", func() {
 		caDataLogin := Login("user", "login", caDataConfigFlag)
 
 		caDataLogin.LoginAndAssertSuccess("jane", "foo")
+	})
+
+	Context("with multiple connector options", func() {
+		BeforeEach(func() { connectorFlag = "--connector=ldap_mx" })
+
+		It("uses the correct connector and succeeds", func() {
+			login.LoginAndAssertSuccess("juan", "foobar")
+		})
+
+		It("uses the wrong connector and fails", func() {
+			login.LoginAndAssertFailure("jane", "foo")
+
+			Expect(login.GetOutput()).To(ContainSubstring("invalid credentials"))
+		})
+
 	})
 
 	Context("kubeconfig file", func() {

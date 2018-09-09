@@ -29,8 +29,11 @@ The connection to the osprey servers is via HTTPS.
 	Run: login,
 }
 
+var connector string
+
 func init() {
 	userCmd.AddCommand(loginCmd)
+	loginCmd.Flags().StringVarP(&connector, "connector", "c", "", "ID of the connector to use for authentication.")
 }
 
 func login(_ *cobra.Command, _ []string) {
@@ -62,7 +65,13 @@ func login(_ *cobra.Command, _ []string) {
 	success := true
 	for _, target := range group.Targets() {
 		c := client.NewClient(target.Server(), ospreyconfig.CertificateAuthorityData, target.CertificateAuthorityData())
-		tokenData, err := c.GetAccessToken(credentials)
+
+		targetConnector := target.Connector()
+		if connector != "" {
+			targetConnector = connector
+		}
+
+		tokenData, err := c.GetAccessToken(credentials.ForConnector(targetConnector))
 		if err != nil {
 			if state, ok := status.FromError(err); ok && state.Code() == codes.Unauthenticated {
 				log.Fatalf("Failed to log in to %s: %v", target.Name(), state.Message())
@@ -84,6 +93,6 @@ func login(_ *cobra.Command, _ []string) {
 	}
 
 	if !success {
-		log.Fatal("Failed to update credentials for some snapshot.")
+		log.Fatal("Failed to update credentials for some targets.")
 	}
 }

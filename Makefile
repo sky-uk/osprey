@@ -139,7 +139,7 @@ image := skycirrus/osprey
 
 docker : build
 	@echo "== docker"
-	docker build -t $(image):latest .
+	docker build -t local/osprey:latest .
 
 release-docker : docker
 ifeq ($(strip $(git_tag)),)
@@ -148,9 +148,10 @@ else
 	@echo "== release docker"
 	@echo "releasing $(image):$(git_tag)"
 	@docker login -u $(DOCKER_USERNAME) -p $(DOCKER_PASSWORD)
-	docker tag $(image):latest $(image):$(git_tag)
+	docker tag local/opsrey:latest $(image):$(git_tag)
 	docker push $(image):$(git_tag)
 	@if [ "$(git_rev)" = "$(latest_git_rev)" ]; then \
+		docker tag $(image):$(git_tag) $(image):latest
 		echo "updating latest image"; \
 		echo docker push $(image):latest ; \
 	fi;

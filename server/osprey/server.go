@@ -5,30 +5,35 @@ import (
 	"fmt"
 
 	"encoding/base64"
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 
 	"github.com/coreos/go-oidc"
 	"github.com/sirupsen/logrus"
 	"github.com/sky-uk/osprey/common/pb"
+	"github.com/sky-uk/osprey/server/connector"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-var log = logrus.New().WithFields(logrus.Fields{"logger": "osprey-server"})
+var log = logrus.New()
+
+func init() {
+	log.WithFields(logrus.Fields{"logger": "osprey-server"})
+	log.SetLevel(logrus.DebugLevel)
+}
 
 type osprey struct {
 	environment     string
 	secret          string
 	issuerHost      string
 	issuerPath      string
+	issuerCAData    string
+	issuerConnector string
 	redirectURL     string
 	apiServerURL    string
 	apiServerCAData string
-	issuerCAData    string
 	provider        *oidc.Provider
 	verifier        *oidc.IDTokenVerifier
 	client          *http.Client
@@ -39,13 +44,13 @@ const ospreyState = "as78*sadf$212"
 // Osprey defines behaviour to initiate and handle an oauth2 flow
 type Osprey interface {
 	// GetAccessToken will return an OIDC token if the request is valid
-	GetAccessToken(ctx context.Context, username, password string) (*pb.LoginResponse, error)
+	GetAccessToken(ctx context.Context, username, password, connector string) (*pb.LoginResponse, error)
 	// Authorise handles the authorisation redirect callback from OAuth2 auth flow
 	Authorise(ctx context.Context, code, state, failure string) (*pb.LoginResponse, error)
 }
 
 // NewServer returns a new osprey server
-func NewServer(environment, secret, redirectURL, issuerHost, issuerPath, issuerCA, apiServerURL, apiServerCA string, client *http.Client) (Osprey, error) {
+func NewServer(environment, secret, redirectURL, issuerHost, issuerPath, issuerCA, issuerConnector, apiServerURL, apiServerCA string, client *http.Client) (Osprey, error) {
 	apiServerCAData, err := ReadAndEncodeFile(apiServerCA)
 	if err != nil {
 		return nil, err
@@ -64,6 +69,7 @@ func NewServer(environment, secret, redirectURL, issuerHost, issuerPath, issuerC
 		issuerHost:      issuerHost,
 		issuerPath:      issuerPath,
 		issuerCAData:    issuerCAData,
+		issuerConnector: issuerConnector,
 	}
 	ctx := oidc.ClientContext(context.Background(), client)
 	provider, err := oidc.NewProvider(ctx, o.issuerURL())
@@ -83,51 +89,35 @@ func (o *osprey) issuerURL() string {
 	return o.issuerHost
 }
 
-func (o *osprey) GetAccessToken(ctx context.Context, username, password string) (*pb.LoginResponse, error) {
-	loginForm, err := o.requestAuth(ctx, username, password)
+func (o *osprey) GetAccessToken(ctx context.Context, username, password, connector string) (*pb.LoginResponse, error) {
+	targetConnector := o.issuerConnector
+	if connector != "" {
+		targetConnector = connector
+	}
+	provider, err := o.createProvider(ctx, targetConnector)
 	if err != nil {
 		return nil, err
 	}
-	response, err := o.login(loginForm)
+
+	if err = provider.Connect(); err != nil {
+		return nil, err
+	}
+
+	response, err := provider.Login(username, password)
 	if err != nil {
 		return nil, err
 	}
 	return response, nil
 }
 
-func (o *osprey) requestAuth(ctx context.Context, username, password string) (*loginForm, error) {
-	if username == "" || password == "" {
-		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
-	}
-
+func (o *osprey) createProvider(ctx context.Context, connectorID string) (*connector.LoginFlow, error) {
 	oauthConfig, err := o.oauth2Config(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create oauth config: %v", err))
 	}
 	authCodeURL := oauthConfig.AuthCodeURL(ospreyState)
-
-	authResponse, err := o.client.Get(authCodeURL)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("failed to request auth: %v", err))
-	}
-	form := &loginForm{LoginValue: username, PasswordValue: password}
-	return consumeAuthResponse(form, authResponse)
-}
-
-func (o *osprey) login(form *loginForm) (*pb.LoginResponse, error) {
-	target := fmt.Sprintf("%s%s", o.issuerHost, form.Action)
-	response, err := o.client.PostForm(target, url.Values{
-		form.LoginField:    {form.LoginValue},
-		form.PasswordField: {form.PasswordValue},
-	})
-	if err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to post credentials: %v", err))
-	}
-	if response.Header.Get("Content-Type") != "application/octet-stream" {
-		_, err = consumeAuthResponse(form, response)
-		return nil, err
-	}
-	return pb.ConsumeLoginResponse(response)
+	provider := connector.NewLoginFlow(o.client, o.issuerHost, authCodeURL, connectorID)
+	return provider, nil
 }
 
 func (o *osprey) Authorise(ctx context.Context, code, state, failure string) (*pb.LoginResponse, error) {
@@ -181,27 +171,6 @@ func (o *osprey) Authorise(ctx context.Context, code, state, failure string) (*p
 	}, nil
 }
 
-func consumeAuthResponse(form *loginForm, response *http.Response) (*loginForm, error) {
-	defer response.Body.Close()
-
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to read auth response: %v", err))
-	}
-
-	if response.StatusCode == http.StatusOK {
-		if err := json.Unmarshal(body, form); err != nil {
-			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to parse auth response: %v", err))
-		}
-		if form.Invalid == true {
-			return nil, status.Error(codes.Unauthenticated, fmt.Sprintf("invalid credentials"))
-		}
-		return form, nil
-	}
-	err = pb.HandleErrorResponse(body, response)
-	return nil, status.Errorf(codes.Unknown, err.Error())
-}
-
 func (o *osprey) oauth2Config(ctx context.Context) (*oauth2.Config, error) {
 	if o.provider == nil {
 		provider, err := oidc.NewProvider(ctx, o.issuerURL())
@@ -235,13 +204,4 @@ type claims struct {
 	Email  string   `json:"email"`
 	Groups []string `json:"groups"`
 	Name   string   `json:"name"`
-}
-
-type loginForm struct {
-	Action        string `json:"action"`
-	LoginField    string `json:"login"`
-	LoginValue    string `json:"-"`
-	PasswordField string `json:"password"`
-	PasswordValue string `json:"-"`
-	Invalid       bool   `json:"invalid,omitempty"`
 }

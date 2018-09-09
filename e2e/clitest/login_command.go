@@ -9,7 +9,7 @@ import (
 // NewLoginCommand creates a LoginCommand
 func NewLoginCommand(name string, args ...string) LoginCommand {
 	return &loginCommandWrapper{
-		commandWrapper: &commandWrapper{Name: name, Args: args},
+		commandWrapper: &commandWrapper{Name: name, Args: append([]string{"--debug"}, args...)},
 	}
 }
 

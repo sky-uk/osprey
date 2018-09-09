@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/sirupsen/logrus"
 	"github.com/sky-uk/osprey/client/kubeconfig"
 	"github.com/sky-uk/osprey/common/pb"
 	webClient "github.com/sky-uk/osprey/common/web"
@@ -65,6 +66,13 @@ func createAccessTokenRequest(host string, credentials *LoginCredentials) (*http
 	authToken := basicAuth(credentials)
 	req.Header.Add("Authorization", fmt.Sprintf("Basic %s", authToken))
 	req.Header.Add("Accept", "application/octet-stream")
+
+	if credentials.Connector != "" {
+		logrus.Debugf("Overriding connector with %s", credentials.Connector)
+		query := req.URL.Query()
+		query.Add("connector", credentials.Connector)
+		req.URL.RawQuery = query.Encode()
+	}
 
 	return req, nil
 }

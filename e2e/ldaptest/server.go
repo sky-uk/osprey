@@ -26,7 +26,7 @@ const (
 // TestLDAP holds the info about the running process and its configuration
 type TestLDAP struct {
 	clitest.AsyncTestCommand
-	DexConfig *dex_ldap.Config
+	DexConfig func(dc string) *dex_ldap.Config
 	TLSCert   string
 }
 
@@ -79,28 +79,30 @@ func Stop(server *TestLDAP) {
 }
 
 // newLDAPConfig returns a default LDAP configuration for dex
-func newLDAPConfig(slapdConfig *SLAPDConfig) *dex_ldap.Config {
-	config := &dex_ldap.Config{}
-	config.RootCA = slapdConfig.TLSCertPath
-	config.Host = host()
-	config.InsecureSkipVerify = true
-	config.InsecureNoSSL = true
-	config.BindDN = rootDN
-	config.BindPW = rootPwd
+func newLDAPConfig(slapdConfig *SLAPDConfig) func(ou string) *dex_ldap.Config {
+	return func(ou string) *dex_ldap.Config {
+		config := &dex_ldap.Config{}
+		config.RootCA = slapdConfig.TLSCertPath
+		config.Host = host()
+		config.InsecureSkipVerify = true
+		config.InsecureNoSSL = true
+		config.BindDN = rootDN
+		config.BindPW = rootPwd
 
-	config.UserSearch.BaseDN = "ou=People,dc=example,dc=org"
-	config.UserSearch.Filter = "(objectClass=person)"
-	config.UserSearch.Username = "cn"
-	config.UserSearch.IDAttr = "DN"
-	config.UserSearch.EmailAttr = "mail"
-	config.UserSearch.NameAttr = "cn"
+		config.UserSearch.BaseDN = "ou=" + ou + ",ou=People,dc=example,dc=org"
+		config.UserSearch.Filter = "(objectClass=person)"
+		config.UserSearch.Username = "cn"
+		config.UserSearch.IDAttr = "DN"
+		config.UserSearch.EmailAttr = "mail"
+		config.UserSearch.NameAttr = "cn"
 
-	config.GroupSearch.BaseDN = "ou=Groups,dc=example,dc=org"
-	config.GroupSearch.Filter = "(objectClass=groupOfNames)"
-	config.GroupSearch.UserAttr = "DN"
-	config.GroupSearch.GroupAttr = "member"
-	config.GroupSearch.NameAttr = "cn"
-	return config
+		config.GroupSearch.BaseDN = "ou=" + ou + ",ou=Groups,dc=example,dc=org"
+		config.GroupSearch.Filter = "(objectClass=groupOfNames)"
+		config.GroupSearch.UserAttr = "DN"
+		config.GroupSearch.GroupAttr = "member"
+		config.GroupSearch.NameAttr = "cn"
+		return config
+	}
 }
 
 func validateBinaries(binaries ...string) error {

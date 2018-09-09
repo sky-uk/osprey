@@ -102,6 +102,11 @@ func (m *Target) CertificateAuthorityData() string {
 	return m.osprey.CertificateAuthorityData
 }
 
+// Connector returns the connector to authenticate with
+func (m *Target) Connector() string {
+	return m.osprey.Connector
+}
+
 // Groups returns all defined groups sorted alphabetically by name.
 func (t *ConfigSnapshot) Groups() []Group {
 	var groups []Group

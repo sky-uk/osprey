@@ -45,6 +45,10 @@ type Config struct {
 	// DefaultGroup specifies the group to log in to if none provided.
 	// +optional
 	DefaultGroup string `yaml:"default-group,omitempty"`
+	// DefaultConnector defines the connector to use from Osprey if none provided.
+	// If none provided, it will use the default for the target Osprey server
+	// +optional
+	Connector string `yaml:"connector,omitempty"`
 	// Targets is a map of referenceable names to osprey configs
 	Targets map[string]*Osprey `yaml:"targets"`
 }
@@ -66,6 +70,10 @@ type Osprey struct {
 	// Groups is a list of names that can be used to group different osprey servers.
 	// +optional
 	Groups []string `yaml:"groups,omitempty"`
+	// Connector defines the connector to use from Osprey.
+	// Overrides the default value from this config, if provided.
+	// +optional
+	Connector string `yaml:"connector,omitempty"`
 }
 
 // NewConfig is a convenience function that returns a new Config object with non-nil maps

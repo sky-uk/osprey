@@ -38,7 +38,7 @@ echo "== Generating config file from template"
 sed "${sedScript}" ${examplesLocalDir}/dex/config.template.yml > ${dexRuntime}/config.yml
 
 echo "== Copying Dex templates"
-cp -r ${examplesLocalDir}/../../e2e/dextest/web ${dexRuntime}/
+#cp -r ${examplesLocalDir}/../../e2e/dextest/web ${dexRuntime}/
 
 echo "== Starting Dex"
 cmd="docker run --name ${dexContainer} -d \

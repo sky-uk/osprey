@@ -8,43 +8,73 @@ dn: ou=People,dc=example,dc=org
 objectClass: organizationalUnit
 ou: People
 
-dn: cn=juan,ou=People,dc=example,dc=org
-objectClass: person
-objectClass: inetOrgPerson
-sn: perez
-cn: juan
-mail: juanperez@example.com
-userpassword: foobar
-
-dn: cn=jane,ou=People,dc=example,dc=org
-objectClass: person
-objectClass: inetOrgPerson
-sn: doe
-cn: jane
-mail: janedoe@example.com
-userpassword: foo
-
-dn: cn=john,ou=People,dc=example,dc=org
-objectClass: person
-objectClass: inetOrgPerson
-sn: doe
-cn: john
-mail: johndoe@example.com
-userpassword: bar
-
-# Group definitions.
-
 dn: ou=Groups,dc=example,dc=org
 objectClass: organizationalUnit
 ou: Groups
 
-dn: cn=admins,ou=Groups,dc=example,dc=org
+########
+#   UK
+########
+
+dn: ou=uk,ou=People,dc=example,dc=org
+objectClass: organizationalUnit
+ou: uk
+
+dn: cn=jane,ou=uk,ou=People,dc=example,dc=org
+objectClass: person
+objectClass: inetOrgPerson
+sn: doe
+cn: jane
+mail: janedoe@example.co.uk
+userpassword: foo
+
+dn: cn=john,ou=uk,ou=People,dc=example,dc=org
+objectClass: person
+objectClass: inetOrgPerson
+sn: doe
+cn: john
+mail: johndoe@example.co.uk
+userpassword: bar
+
+# Group definitions.
+
+dn: ou=uk,ou=Groups,dc=example,dc=org
+objectClass: organizationalUnit
+ou: uk
+
+dn: cn=admins,ou=uk,ou=Groups,dc=example,dc=org
 objectClass: groupOfNames
 cn: admins
-member: cn=john,ou=People,dc=example,dc=org
-member: cn=jane,ou=People,dc=example,dc=org
+member: cn=jane,ou=uk,ou=People,dc=example,dc=org
 
-dn: cn=developers,ou=Groups,dc=example,dc=org
+dn: cn=developers,ou=uk,ou=Groups,dc=example,dc=org
 objectClass: groupOfNames
 cn: developers
-member: cn=jane,ou=People,dc=example,dc=org
+member: cn=jane,ou=uk,ou=People,dc=example,dc=org
+
+########
+#   MX
+########
+
+dn: ou=mx,ou=People,dc=example,dc=org
+objectClass: organizationalUnit
+ou: mx
+
+dn: cn=juan,ou=mx,ou=People,dc=example,dc=org
+objectClass: person
+objectClass: inetOrgPerson
+sn: perez
+cn: juan
+mail: juanperez@example.com.mx
+userpassword: foobar
+
+# Group definitions.
+
+dn: ou=mx,ou=Groups,dc=example,dc=org
+objectClass: organizationalUnit
+ou: mx
+
+dn: cn=admins,ou=mx,ou=Groups,dc=example,dc=org
+objectClass: groupOfNames
+cn: admins
+member: cn=juan,ou=mx,ou=People,dc=example,dc=org

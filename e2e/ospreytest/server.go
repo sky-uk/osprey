@@ -18,18 +18,19 @@ const ospreyBinary = "osprey"
 // TestOsprey represents an Osprey server instance used for testing.
 type TestOsprey struct {
 	clitest.AsyncTestCommand
-	Port         int32
-	Environment  string
-	APIServerURL string
-	APIServerCA  string
-	Secret       string
-	URL          string
-	IssuerURL    string
-	IssuerPath   string
-	IssuerCA     string
-	KeyFile      string
-	CertFile     string
-	TestDir      string
+	Port            int32
+	Environment     string
+	APIServerURL    string
+	APIServerCA     string
+	Secret          string
+	URL             string
+	IssuerURL       string
+	IssuerPath      string
+	IssuerCA        string
+	IssuerConnector string
+	KeyFile         string
+	CertFile        string
+	TestDir         string
 }
 
 // TestConfig represents an Osprey client configuration file used for testing.
@@ -59,17 +60,18 @@ func startOsprey(ospreyDir string, port int32, dex *dextest.TestDex) *TestOsprey
 	apiServerURL := fmt.Sprintf("https://%s", apiServerCN)
 	issuerHost := dex.URL()
 	server := &TestOsprey{
-		Port:         port,
-		Environment:  dex.Environment,
-		Secret:       ospreySecret,
-		APIServerURL: apiServerURL,
-		APIServerCA:  apiServerCert,
-		URL:          ospreyURL,
-		IssuerURL:    issuerHost,
-		IssuerCA:     dex.DexCA,
-		KeyFile:      ospreyKey,
-		CertFile:     ospreyCert,
-		TestDir:      serverDir,
+		Port:            port,
+		Environment:     dex.Environment,
+		Secret:          ospreySecret,
+		APIServerURL:    apiServerURL,
+		APIServerCA:     apiServerCert,
+		URL:             ospreyURL,
+		IssuerURL:       issuerHost,
+		IssuerCA:        dex.DexCA,
+		IssuerConnector: "ldap_uk",
+		KeyFile:         ospreyKey,
+		CertFile:        ospreyCert,
+		TestDir:         serverDir,
 	}
 	dex.RegisterClient(server.Environment, ospreySecret, fmt.Sprintf("%s/callback", ospreyURL), dex.Environment)
 	server.AsyncTestCommand = clitest.NewAsyncCommand(ospreyBinary, server.buildArgs()...)
@@ -88,11 +90,12 @@ func (o *TestOsprey) buildArgs() []string {
 	redirectURLFlag := "--redirectURL=" + fmt.Sprintf("%s/callback", o.URL)
 	issuerURLFlag := "--issuerURL=" + o.IssuerURL
 	issuerCAFlag := "--issuerCA=" + o.IssuerCA
+	issuerConnectorFlag := "--issuerConnector=" + o.IssuerConnector
 	tlsKeyFlag := "--tls-key=" + o.KeyFile
 	tlsCertFlag := "--tls-cert=" + o.CertFile
 	return []string{"serve", "-X",
 		portFlag, envFlag, secretFlag, apiServerURLFlag, apiServerCAFlag, redirectURLFlag,
-		issuerURLFlag, issuerCAFlag, tlsKeyFlag, tlsCertFlag}
+		issuerURLFlag, issuerCAFlag, issuerConnectorFlag, tlsKeyFlag, tlsCertFlag}
 }
 
 // StopOsprey stops the TestOsprey server.
@@ -102,9 +105,9 @@ func StopOsprey(server *TestOsprey) error {
 		return nil
 	}
 	server.Stop()
-	if !server.Successful() {
-		server.PrintOutput()
-	}
+	//if !server.Successful() {
+	server.PrintOutput()
+	//}
 	return server.Error()
 }
 

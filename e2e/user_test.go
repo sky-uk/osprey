@@ -11,8 +11,10 @@ import (
 )
 
 var _ = Describe("User", func() {
-	var user, logout clitest.TestCommand
-	var login clitest.LoginCommand
+	var (
+		user, logout clitest.TestCommand
+		login        clitest.LoginCommand
+	)
 
 	BeforeEach(func() {
 		resetDefaults()
@@ -58,19 +60,19 @@ var _ = Describe("User", func() {
 				output := user.GetOutput()
 				for _, osprey := range expectedEnvironments {
 					target := OspreyconfigTargetName(osprey)
-					Expect(output).To(ContainSubstring("%s: janedoe@example.com [admins, developers]", target), "No users exists")
+					Expect(output).To(ContainSubstring("%s: janedoe@example.co.uk [admins, developers]", target), "No users exists")
 				}
 			})
 
 			It("shows empty LDAP groups when user has no LDAP groups", func() {
-				login.LoginAndAssertSuccess("juan", "foobar")
+				login.LoginAndAssertSuccess("john", "bar")
 
 				user.RunAndAssertSuccess()
 
 				output := user.GetOutput()
 				for _, osprey := range expectedEnvironments {
 					target := OspreyconfigTargetName(osprey)
-					Expect(output).To(ContainSubstring("%s: juanperez@example.com []", target), "No users exists")
+					Expect(output).To(ContainSubstring("%s: johndoe@example.co.uk []", target), "No users exists")
 				}
 			})
 

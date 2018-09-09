@@ -46,7 +46,6 @@ func (d *TestDex) URL() string {
 // StartDexes creates one dex test server per environment provided, using the same ldap instance as a connector
 // It will stop creating any more dex servers on the firs error encountered, and return the created ones so far.
 func StartDexes(testDir string, ldap *ldaptest.TestLDAP, environments []string, portsFrom int32) ([]*TestDex, error) {
-
 	var dexes []*TestDex
 	for i, env := range environments {
 		port := portsFrom + int32(i)
@@ -67,7 +66,8 @@ func StartDexes(testDir string, ldap *ldaptest.TestLDAP, environments []string, 
 func start(testDir string, port int32, environment string, ldap *ldaptest.TestLDAP) (*TestDex, error) {
 	dexDir := filepath.Join(testDir, "dex")
 	return newServer(context.Background(), dexDir, port, environment, func(dexConfig *dex.Config) {
-		createLdapConnector(ldap.DexConfig, dexConfig)
+		createLdapConnector("ldap_uk", ldap.DexConfig("uk"), dexConfig)
+		createLdapConnector("ldap_mx", ldap.DexConfig("mx"), dexConfig)
 	})
 }
 
@@ -102,21 +102,34 @@ func newServer(ctx context.Context, dexDir string, port int32, environment strin
 	return testDex, nil
 }
 
-func createLdapConnector(ldapConfig *dex_ldap.Config, config *dex.Config) error {
+func createLdapConnector(id string, ldapConfig *dex_ldap.Config, config *dex.Config) error {
 	ldapConfigBytes, err := json.Marshal(ldapConfig)
 	if err != nil {
 		return fmt.Errorf("failed to mashal ldapConfig: %v", err)
 	}
 	connector := dex_storage.Connector{
-		ID:     "ldap",
+		ID:     id,
 		Type:   "ldap",
-		Name:   "OpenLDAP",
+		Name:   id,
 		Config: ldapConfigBytes,
 	}
 	if err = config.Storage.CreateConnector(connector); err != nil {
 		return fmt.Errorf("failed to create ldap connector: %v", err)
 	}
 	return nil
+}
+
+// ListConnectors returns the IDs of the available connectors
+func (d *TestDex) ListConnectors() []string {
+	connectors, err := d.config.Storage.ListConnectors()
+	if err != nil {
+		log.Fatalf("Unable to list the dex %s connectors: %v", d.Environment, err)
+	}
+	var IDs []string
+	for _, connector := range connectors {
+		IDs = append(IDs, connector.ID)
+	}
+	return IDs
 }
 
 // RegisterClient adds a new client to the Dex server.

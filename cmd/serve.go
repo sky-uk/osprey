@@ -31,6 +31,7 @@ var (
 	issuerURL           string
 	issuerPath          string
 	issuerCA            string
+	issuerConnector     string
 	apiServerURL        string
 	apiServerCA         string
 	shutdownGracePeriod time.Duration
@@ -38,22 +39,23 @@ var (
 
 func init() {
 	RootCmd.AddCommand(serveCmd)
-
-	serveCmd.Flags().Int32VarP(&port, "port", "p", 8080, "port of the osprey server")
-	serveCmd.Flags().StringVarP(&environment, "environment", "e", "", "name of the environment")
-	serveCmd.Flags().StringVarP(&secret, "secret", "s", "", "secret to be shared with the issuer")
-	serveCmd.Flags().StringVarP(&apiServerURL, "apiServerURL", "l", "", "URL of the apiserver in the environment (https://host:port)")
-	serveCmd.Flags().StringVarP(&apiServerCA, "apiServerCA", "r", "", "path to th root certificate authorities for the apiserver in the environment")
-	serveCmd.Flags().StringVarP(&redirectURL, "redirectURL", "u", "", "callback URL for OAuth2 responses (https://host:port)")
-	serveCmd.Flags().StringVarP(&issuerURL, "issuerURL", "i", "", "host of the OpenId Connect issuer (https://host:port)")
-	serveCmd.Flags().StringVarP(&issuerPath, "issuerPath", "a", "", "path of the OpenId Connect issuer with no leading slash")
-	serveCmd.Flags().StringVarP(&issuerCA, "issuerCA", "c", "", "path to the root certificate authorities for the OpenId Connect issuer. Defaults to system certs")
-	serveCmd.Flags().StringVarP(&tlsCert, "tls-cert", "C", "", "path to the x509 cert file to present when serving TLS")
-	serveCmd.Flags().StringVarP(&tlsKey, "tls-key", "K", "", "path to the private key for the TLS cert")
-	serveCmd.Flags().DurationVarP(&shutdownGracePeriod, "grace-shutdown-period", "t", defaultGraceShutdownPeriod, "time to allow for in flight requests to be completed")
+	flags := serveCmd.Flags()
+	flags.Int32VarP(&port, "port", "p", 8080, "port of the osprey server")
+	flags.StringVarP(&environment, "environment", "e", "", "name of the environment")
+	flags.StringVarP(&secret, "secret", "s", "", "secret to be shared with the issuer")
+	flags.StringVarP(&apiServerURL, "apiServerURL", "l", "", "URL of the apiserver in the environment (https://host:port)")
+	flags.StringVarP(&apiServerCA, "apiServerCA", "r", "", "path to th root certificate authorities for the apiserver in the environment")
+	flags.StringVarP(&redirectURL, "redirectURL", "u", "", "callback URL for OAuth2 responses (https://host:port)")
+	flags.StringVarP(&issuerURL, "issuerURL", "i", "", "host of the OpenId Connect issuer (https://host:port)")
+	flags.StringVarP(&issuerPath, "issuerPath", "a", "", "path of the OpenId Connect issuer with no leading slash")
+	flags.StringVarP(&issuerCA, "issuerCA", "c", "", "path to the root certificate authorities for the OpenId Connect issuer. Defaults to system certs")
+	flags.StringVarP(&issuerConnector, "issuerConnector", "n", "", "ID of the connector to use from the Dex Backend. Required if Dex is configured with multiple connectors")
+	flags.StringVarP(&tlsCert, "tls-cert", "C", "", "path to the x509 cert file to present when serving TLS")
+	flags.StringVarP(&tlsKey, "tls-key", "K", "", "path to the private key for the TLS cert")
+	flags.DurationVarP(&shutdownGracePeriod, "grace-shutdown-period", "t", defaultGraceShutdownPeriod, "time to allow for in flight requests to be completed")
 }
 
-func serve(cmd *cobra.Command, args []string) {
+func serve(_ *cobra.Command, _ []string) {
 	var err error
 	issuerCAData, err := webClient.LoadTLSCert(issuerCA)
 	if err != nil {
@@ -70,7 +72,7 @@ func serve(cmd *cobra.Command, args []string) {
 		log.Fatal("Failed to create http client")
 	}
 
-	service, err := osprey.NewServer(environment, secret, redirectURL, issuerURL, issuerPath, issuerCA, apiServerURL, apiServerCA, httpClient)
+	service, err := osprey.NewServer(environment, secret, redirectURL, issuerURL, issuerPath, issuerCA, issuerConnector, apiServerURL, apiServerCA, httpClient)
 	if err != nil {
 		log.Fatalf("Failed to create osprey server: %v", err)
 	}
@@ -82,7 +84,7 @@ func serve(cmd *cobra.Command, args []string) {
 	}
 }
 
-func checkServeParams(cmd *cobra.Command, args []string) {
+func checkServeParams(_ *cobra.Command, _ []string) {
 	checkRequired(environment, "environment")
 	checkRequired(secret, "secret")
 	checkRequired(apiServerURL, "apiServerURL")

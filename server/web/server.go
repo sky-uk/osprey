@@ -92,7 +92,8 @@ func handleAccessToken(osprey osprey.Osprey) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/octet-stream")
 		username, password, _ := r.BasicAuth()
-		response, err := osprey.GetAccessToken(context.Background(), username, password)
+		connector := r.URL.Query().Get("connector")
+		response, err := osprey.GetAccessToken(context.Background(), username, password, connector)
 		handleResponse(w, response, err)
 	}
 }
