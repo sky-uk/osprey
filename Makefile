@@ -122,6 +122,7 @@ else
 				;; \
 		esac ;\
 		if [ "$(git_rev)" = "$(latest_git_rev)" ]; then \
+			sed 's/@version/$(git_tag)/g; s/@release_date/$(release_date)/g; s/@publish/$(BINTRAY_PUBLISH)/g' .bintray.latest.template > $(dist_dir)/bintray.latest.json
 			echo "updating latest distribution"; \
 			latest=$(dist_dir)/latest/$$distribution; \
 			mkdir -p $$latest; \

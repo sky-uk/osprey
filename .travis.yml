@@ -25,6 +25,13 @@ deploy:
   key: $BINTRAY_API_KEY
   on:
     tags: true
+- provider: bintray
+  skip_cleanup: true
+  file: dist/bintray.latest.json
+  user: $BINTRAY_USER
+  key: $BINTRAY_API_KEY
+  on:
+    condition: -e dist/bintray.latest.json
 - provider: script
   script: make release-docker
   skip_cleanup: true
