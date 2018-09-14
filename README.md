@@ -50,7 +50,7 @@ To install for Mac OS replace `linux` for `darwin`
 **Windows**
 ```
   mkdir c:\osprey
-  Invoke-WebRequest -method Get -uri https://dl.bintray.com/sky-uk/oss-generic/osprey/latest/osprey-latest_windows_amd64.tar.gz -OutFile c:\osprey\osprey.zip
+  Invoke-WebRequest -method Get -uri https://dl.bintray.com/sky-uk/oss-generic/osprey/latest/osprey-latest_windows_amd64.zip -OutFile c:\osprey\osprey.zip
 
   Unzip c:\osprey\osprey.zip c:\osprey
 
