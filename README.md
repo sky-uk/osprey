@@ -127,6 +127,10 @@ $ osprey user login
 user: someone
 password: ***
 Logged in to local.cluster
+
+# Alternatively, you may provide username and password as CLI arguments
+$ osprey user login someone $MY_PASSWORD
+Logged in to local.cluster
 ```
 
 It will generate the kubeconfig file creating a `cluster` and `user` entry

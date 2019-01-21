@@ -19,7 +19,10 @@ type LoginCredentials struct {
 }
 
 // GetCredentials loads the credentials from the terminal or stdin.
-func GetCredentials() (*LoginCredentials, error) {
+func GetCredentials(args []string) (*LoginCredentials, error) {
+	if len(args) == 2 {
+		return &LoginCredentials{Username: strings.TrimSpace(args[0]), Password: strings.TrimSpace(args[1])}, nil
+	}
 	if terminal.IsTerminal(int(syscall.Stdin)) {
 		return consumeCredentials(hiddenInput)
 	}

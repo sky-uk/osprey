@@ -33,7 +33,7 @@ func init() {
 	userCmd.AddCommand(loginCmd)
 }
 
-func login(_ *cobra.Command, _ []string) {
+func login(_ *cobra.Command, args []string) {
 	ospreyconfig, err := client.LoadConfig(ospreyconfigFile)
 	if err != nil {
 		log.Fatalf("Failed to load ospreyconfig file %s: %v", ospreyconfigFile, err)
@@ -52,7 +52,7 @@ func login(_ *cobra.Command, _ []string) {
 		os.Exit(1)
 	}
 
-	credentials, err := client.GetCredentials()
+	credentials, err := client.GetCredentials(args)
 	if err != nil {
 		log.Fatalf("Failed to get credentials: %v", err)
 	}
