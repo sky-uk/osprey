@@ -11,7 +11,10 @@ import (
 	webServer "github.com/sky-uk/osprey/server/web"
 )
 
-const defaultGraceShutdownPeriod = 15 * time.Second
+const (
+	defaultGraceShutdownPeriod = 15 * time.Second
+	defaultAPIServerCAPath     = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+)
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
@@ -22,18 +25,19 @@ var serveCmd = &cobra.Command{
 }
 
 var (
-	port                int32
-	environment         string
-	secret              string
-	redirectURL         string
-	tlsCert             string
-	tlsKey              string
-	issuerURL           string
-	issuerPath          string
-	issuerCA            string
-	apiServerURL        string
-	apiServerCA         string
-	shutdownGracePeriod time.Duration
+	port                 int32
+	environment          string
+	secret               string
+	redirectURL          string
+	tlsCert              string
+	tlsKey               string
+	issuerURL            string
+	issuerPath           string
+	issuerCA             string
+	apiServerURL         string
+	apiServerCA          string
+	serveClusterInfoOnly bool
+	shutdownGracePeriod  time.Duration
 )
 
 func init() {
@@ -43,7 +47,7 @@ func init() {
 	serveCmd.Flags().StringVarP(&environment, "environment", "e", "", "name of the environment")
 	serveCmd.Flags().StringVarP(&secret, "secret", "s", "", "secret to be shared with the issuer")
 	serveCmd.Flags().StringVarP(&apiServerURL, "apiServerURL", "l", "", "URL of the apiserver in the environment (https://host:port)")
-	serveCmd.Flags().StringVarP(&apiServerCA, "apiServerCA", "r", "", "path to th root certificate authorities for the apiserver in the environment")
+	serveCmd.Flags().StringVarP(&apiServerCA, "apiServerCA", "r", defaultAPIServerCAPath, "path to th root certificate authorities for the apiserver in the environment")
 	serveCmd.Flags().StringVarP(&redirectURL, "redirectURL", "u", "", "callback URL for OAuth2 responses (https://host:port)")
 	serveCmd.Flags().StringVarP(&issuerURL, "issuerURL", "i", "", "host of the OpenId Connect issuer (https://host:port)")
 	serveCmd.Flags().StringVarP(&issuerPath, "issuerPath", "a", "", "path of the OpenId Connect issuer with no leading slash")
@@ -51,30 +55,41 @@ func init() {
 	serveCmd.Flags().StringVarP(&tlsCert, "tls-cert", "C", "", "path to the x509 cert file to present when serving TLS")
 	serveCmd.Flags().StringVarP(&tlsKey, "tls-key", "K", "", "path to the private key for the TLS cert")
 	serveCmd.Flags().DurationVarP(&shutdownGracePeriod, "grace-shutdown-period", "t", defaultGraceShutdownPeriod, "time to allow for in flight requests to be completed")
+	serveCmd.Flags().BoolVarP(&serveClusterInfoOnly, "serve-cluster-info-only", "q", false, "expose the kubernetes api-server URL and CA only. Do not provide any OpenID Connect functionality")
 }
 
 func serve(cmd *cobra.Command, args []string) {
+	var service osprey.Osprey
 	var err error
-	issuerCAData, err := webClient.LoadTLSCert(issuerCA)
-	if err != nil {
-		log.Fatalf("Failed to load issuerCA: %v", err)
-	}
+	httpClient, err := webClient.NewTLSClient()
+	if serveClusterInfoOnly {
+		service, err = osprey.NewServer(environment, secret, redirectURL, issuerURL, issuerPath, issuerCA, apiServerURL, apiServerCA, serveClusterInfoOnly, httpClient)
+		if err != nil {
+			log.Fatalf("Failed to create osprey server: %v", err)
+		}
+	} else {
+		var err error
+		issuerCAData, err := webClient.LoadTLSCert(issuerCA)
+		if err != nil {
+			log.Fatalf("Failed to load issuerCA: %v", err)
+		}
 
-	tlsCertData, err := webClient.LoadTLSCert(tlsCert)
-	if err != nil {
-		log.Fatalf("Failed to load tls-cert: %v", err)
-	}
+		tlsCertData, err := webClient.LoadTLSCert(tlsCert)
+		if err != nil {
+			log.Fatalf("Failed to load tls-cert: %v", err)
+		}
 
-	httpClient, err := webClient.NewTLSClient(issuerCAData, tlsCertData)
-	if err != nil {
-		log.Fatal("Failed to create http client")
-	}
+		httpClient, err := webClient.NewTLSClient(issuerCAData, tlsCertData)
+		if err != nil {
+			log.Fatal("Failed to create http client")
+		}
 
-	service, err := osprey.NewServer(environment, secret, redirectURL, issuerURL, issuerPath, issuerCA, apiServerURL, apiServerCA, httpClient)
-	if err != nil {
-		log.Fatalf("Failed to create osprey server: %v", err)
+		service, err = osprey.NewServer(environment, secret, redirectURL, issuerURL, issuerPath, issuerCA, apiServerURL, apiServerCA, serveClusterInfoOnly, httpClient)
+		if err != nil {
+			log.Fatalf("Failed to create osprey server: %v", err)
+		}
 	}
-	s := webServer.NewServer(port, tlsCert, tlsKey, shutdownGracePeriod)
+	s := webServer.NewServer(port, tlsCert, tlsKey, shutdownGracePeriod, serveClusterInfoOnly)
 	s.RegisterService(service)
 	err = s.Start()
 	if err != nil {
@@ -83,17 +98,21 @@ func serve(cmd *cobra.Command, args []string) {
 }
 
 func checkServeParams(cmd *cobra.Command, args []string) {
-	checkRequired(environment, "environment")
-	checkRequired(secret, "secret")
 	checkRequired(apiServerURL, "apiServerURL")
 	checkRequired(apiServerCA, "apiServerCA")
-	checkRequired(issuerURL, "issuerURL")
-	checkRequired(issuerCA, "issuerCA")
-	checkRequired(redirectURL, "redirectURL")
 	checkURL(apiServerURL, "apiServerURL")
-	checkURL(issuerURL, "issuerURL")
-	checkURL(redirectURL, "redirectURL")
-	checkCerts()
+	checkFile(apiServerCA, "apiServerCA")
+
+	if !serveClusterInfoOnly {
+		checkRequired(environment, "environment")
+		checkRequired(secret, "secret")
+		checkRequired(issuerURL, "issuerURL")
+		checkRequired(issuerCA, "issuerCA")
+		checkRequired(redirectURL, "redirectURL")
+		checkURL(issuerURL, "issuerURL")
+		checkURL(redirectURL, "redirectURL")
+		checkCerts()
+	}
 }
 
 func checkCerts() {
@@ -101,6 +120,5 @@ func checkCerts() {
 		checkFile(tlsCert, "tlsCert")
 		checkFile(tlsKey, "tlsKey")
 	}
-	checkFile(apiServerCA, "apiServerCA")
 	checkFile(issuerCA, "issuerCA")
 }

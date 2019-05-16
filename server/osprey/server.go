@@ -44,34 +44,49 @@ type Osprey interface {
 	GetAccessToken(ctx context.Context, username, password string) (*pb.LoginResponse, error)
 	// Authorise handles the authorisation redirect callback from OAuth2 auth flow
 	Authorise(ctx context.Context, code, state, failure string) (*pb.LoginResponse, error)
+	// GetClusterInfo will return the api-server URL and CA
+	GetClusterInfo(ctx context.Context) (*pb.ClusterInfoResponse, error)
 	// Ready returns false if the oidcProvider has not been created
 	Ready(ctx context.Context) error
 }
 
 // NewServer returns a new osprey server
-func NewServer(environment, secret, redirectURL, issuerHost, issuerPath, issuerCA, apiServerURL, apiServerCA string, client *http.Client) (Osprey, error) {
+func NewServer(environment, secret, redirectURL, issuerHost, issuerPath, issuerCA, apiServerURL, apiServerCA string, clusterInfoOnly bool, client *http.Client) (Osprey, error) {
+	var o *osprey
 	apiServerCAData, err := ReadAndEncodeFile(apiServerCA)
 	if err != nil {
 		return nil, err
 	}
-	issuerCAData, err := ReadAndEncodeFile(issuerCA)
-	if err != nil {
-		return nil, err
-	}
-	o := &osprey{
-		client:          client,
-		secret:          secret,
-		environment:     environment,
-		apiServerURL:    apiServerURL,
-		apiServerCAData: apiServerCAData,
-		redirectURL:     redirectURL,
-		issuerHost:      issuerHost,
-		issuerPath:      issuerPath,
-		issuerCAData:    issuerCAData,
-	}
-	_, err = o.getOrCreateOidcProvider()
-	if err != nil {
-		log.Warnf("unable to create oidc provider %q: %v", o.issuerURL(), err)
+	if clusterInfoOnly {
+		o = &osprey{
+			apiServerURL:    apiServerURL,
+			apiServerCAData: apiServerCAData,
+		}
+		return o, nil
+	} else {
+		issuerCAData, err := ReadAndEncodeFile(issuerCA)
+		if err != nil {
+			return nil, err
+		}
+		o := &osprey{
+			client:          client,
+			secret:          secret,
+			environment:     environment,
+			apiServerURL:    apiServerURL,
+			apiServerCAData: apiServerCAData,
+			redirectURL:     redirectURL,
+			issuerHost:      issuerHost,
+			issuerPath:      issuerPath,
+			issuerCAData:    issuerCAData,
+		}
+		ctx := oidc.ClientContext(context.Background(), client)
+		provider, err := oidc.NewProvider(ctx, o.issuerURL())
+		if err != nil {
+			log.Warnf("unable to create oidc provider %q: %v", o.issuerURL(), err)
+		} else {
+			o.provider = provider
+			o.verifier = provider.Verifier(&oidc.Config{ClientID: environment})
+		}
 	}
 	return o, nil
 }
@@ -135,6 +150,15 @@ func (o *osprey) login(form *loginForm) (*pb.LoginResponse, error) {
 		return nil, err
 	}
 	return pb.ConsumeLoginResponse(response)
+}
+
+func (o *osprey) GetClusterInfo(ctx context.Context) (*pb.ClusterInfoResponse, error) {
+	return &pb.ClusterInfoResponse{
+		Cluster: &pb.Cluster{
+			ApiServerURL: o.apiServerURL,
+			ApiServerCA:  o.apiServerCAData,
+		},
+	}, nil
 }
 
 func (o *osprey) Authorise(ctx context.Context, code, state, failure string) (*pb.LoginResponse, error) {

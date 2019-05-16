@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/sky-uk/osprey/client"
+
 	"github.com/onsi/ginkgo"
-	ospreyClient "github.com/sky-uk/osprey/client"
 	"github.com/sky-uk/osprey/common/web"
 	"github.com/sky-uk/osprey/e2e/clitest"
 	"github.com/sky-uk/osprey/e2e/dextest"
@@ -15,8 +16,8 @@ import (
 
 const ospreyBinary = "osprey"
 
-// TestOsprey represents an Osprey server instance used for testing.
-type TestOsprey struct {
+// TestTargetEntry represents an TargetEntry server instance used for testing.
+type TestTargetEntry struct {
 	clitest.AsyncTestCommand
 	Port         int32
 	Environment  string
@@ -32,16 +33,16 @@ type TestOsprey struct {
 	TestDir      string
 }
 
-// TestConfig represents an Osprey client configuration file used for testing.
+// TestConfig represents an TargetEntry client configuration file used for testing.
 type TestConfig struct {
-	*ospreyClient.Config
+	*client.Config
 	ConfigFile string
 }
 
-// StartOspreys creates one Osprey test server per TestDex provided, using ports starting from portsFrom.
-// The Osprey directory will be testDir/dex.Environment.
-func StartOspreys(testDir string, dexes []*dextest.TestDex, portsFrom int32) ([]*TestOsprey, error) {
-	var servers []*TestOsprey
+// StartOspreys creates one TargetEntry test server per TestDex provided, using ports starting from portsFrom.
+// The TargetEntry directory will be testDir/dex.Environment.
+func StartOspreys(testDir string, dexes []*dextest.TestDex, portsFrom int32) ([]*TestTargetEntry, error) {
+	var servers []*TestTargetEntry
 	for i, dex := range dexes {
 		servers = append(servers, Start(testDir, true, portsFrom+int32(i), dex))
 	}
@@ -50,7 +51,7 @@ func StartOspreys(testDir string, dexes []*dextest.TestDex, portsFrom int32) ([]
 
 // Start creates one Osprey test server for the dex Server.
 // Its directory will be testDir/dex.Environment
-func Start(testDir string, useTLS bool, port int32, dex *dextest.TestDex) *TestOsprey {
+func Start(testDir string, useTLS bool, port int32, dex *dextest.TestDex) *TestTargetEntry {
 	ospreyDir := fmt.Sprintf("%s/%s", testDir, dex.Environment)
 	serverDir := filepath.Join(ospreyDir, "osprey")
 	ospreyCert, ospreyKey := ssltest.CreateCertificates("localhost", serverDir)
@@ -60,7 +61,7 @@ func Start(testDir string, useTLS bool, port int32, dex *dextest.TestDex) *TestO
 	apiServerCert, _ := ssltest.CreateCertificates(apiServerCN, serverDir)
 	apiServerURL := fmt.Sprintf("https://%s", apiServerCN)
 	issuerHost := dex.URL()
-	server := &TestOsprey{
+	server := &TestTargetEntry{
 		Port:         port,
 		Environment:  dex.Environment,
 		Secret:       ospreySecret,
@@ -83,7 +84,7 @@ func Start(testDir string, useTLS bool, port int32, dex *dextest.TestDex) *TestO
 	return server
 }
 
-func (o *TestOsprey) buildArgs() []string {
+func (o *TestTargetEntry) buildArgs() []string {
 	portFlag := fmt.Sprintf("--port=%d", o.Port)
 	envFlag := "--environment=" + o.Environment
 	secretFlag := "--secret=" + o.Secret
@@ -99,9 +100,9 @@ func (o *TestOsprey) buildArgs() []string {
 		issuerURLFlag, issuerCAFlag, tlsKeyFlag, tlsCertFlag}
 }
 
-// Stop stops the TestOsprey server.
+// Stop stops the TestTargetEntry server.
 // Returns an error if any happened.
-func Stop(server *TestOsprey) error {
+func Stop(server *TestTargetEntry) error {
 	if server == nil {
 		return nil
 	}
@@ -114,23 +115,29 @@ func Stop(server *TestOsprey) error {
 
 // BuildConfig creates an ospreyconfig file using the groups provided for the targets.
 // It uses testDir as the home for the .kube and .osprey folders.
-func BuildConfig(testDir, defaultGroup string, targetGroups map[string][]string, servers []*TestOsprey) (*TestConfig, error) {
-	return BuildFullConfig(testDir, defaultGroup, targetGroups, servers, false, "")
+func BuildConfig(testDir, providerName, defaultGroup string, targetGroups map[string][]string, servers []*TestTargetEntry, clientID string) (*TestConfig, error) {
+	return BuildFullConfig(testDir, providerName, defaultGroup, targetGroups, servers, false, "", clientID)
 }
 
 // BuildCADataConfig creates an ospreyconfig file with as many targets as servers are provided.
 // It uses testDir as the home for the .kube and .osprey folders.
 // It also base64 encodes the CA data instead of using the file path.
-func BuildCADataConfig(testDir string, servers []*TestOsprey, caData bool, caPath string) (*TestConfig, error) {
-	return BuildFullConfig(testDir, "", map[string][]string{}, servers, caData, caPath)
+func BuildCADataConfig(testDir, providerName string, servers []*TestTargetEntry, caData bool, caPath string, clientID string) (*TestConfig, error) {
+	return BuildFullConfig(testDir, providerName, "", map[string][]string{}, servers, caData, caPath, clientID)
 }
 
 // BuildFullConfig creates an ospreyconfig file with as many targets as servers are provided. The targets will contain
 // the groups that have been specified.
 // It uses testDir as the home for the .kube and .osprey folders.
 // If caData is true, it base64 encodes the CA data instead of using the file path.
-func BuildFullConfig(testDir, defaultGroup string, targetGroups map[string][]string, servers []*TestOsprey, caData bool, caPath string) (*TestConfig, error) {
-	config := ospreyClient.NewConfig()
+func BuildFullConfig(testDir, providerName, defaultGroup string, targetGroups map[string][]string, servers []*TestTargetEntry, caData bool, caPath string, clientID string) (*TestConfig, error) {
+	config := client.NewConfig()
+	config.Providers = map[string]*client.Provider{
+		providerName: {
+			CertificateAuthority: caPath,
+			Targets:              make(map[string]*client.TargetEntry),
+		},
+	}
 	config.Kubeconfig = fmt.Sprintf("%s/.kube/config", testDir)
 	ospreyconfigFile := fmt.Sprintf("%s/.osprey/config", testDir)
 
@@ -144,7 +151,7 @@ func BuildFullConfig(testDir, defaultGroup string, targetGroups map[string][]str
 		}
 		targetName := osprey.OspreyconfigTargetName()
 
-		target := &ospreyClient.Osprey{
+		target := &client.TargetEntry{
 			Server:  osprey.URL,
 			Aliases: []string{osprey.OspreyconfigAliasName()},
 		}
@@ -165,14 +172,25 @@ func BuildFullConfig(testDir, defaultGroup string, targetGroups map[string][]str
 		if groups, ok := targetGroups[osprey.Environment]; ok {
 			target.Groups = groups
 		}
-
-		config.Targets[targetName] = target
+		config.Providers[providerName].Targets[targetName] = target
 	}
+
+	// If provider is Azure, create some fake oAuth client configuration
+	if providerName == "azure" {
+		config.Providers[providerName].ClientID = clientID
+		config.Providers[providerName].ClientSecret = "some-client-secret"
+		config.Providers[providerName].RedirectURI = "http://localhost:65525/auth/callback"
+		config.Providers[providerName].Scopes = []string{"api://some-dummy-scope"}
+		config.Providers[providerName].AzureTenantId = "some-tenant-id"
+		config.Providers[providerName].ServerApplicationID = "some-server-application-id"
+		config.Providers[providerName].IssuerURL = "http://localhost:14980"
+	}
+
 	testConfig := &TestConfig{Config: config, ConfigFile: ospreyconfigFile}
-	return testConfig, ospreyClient.SaveConfig(config, ospreyconfigFile)
+	return testConfig, client.SaveConfig(config, ospreyconfigFile)
 }
 
-// Client returns a TestCommand for the osprey binary with the provided args arguments.
+// ProviderType returns a TestCommand for the osprey binary with the provided args arguments.
 func Client(args ...string) clitest.TestCommand {
 	return clitest.NewCommand(ospreyBinary, args...)
 }

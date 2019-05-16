@@ -29,8 +29,11 @@ The connection to the osprey servers is via HTTPS.
 	Run: login,
 }
 
+var interactive bool
+
 func init() {
 	userCmd.AddCommand(loginCmd)
+	loginCmd.Flags().BoolVarP(&interactive, "interactive", "i", true, "set to false if not using a GUI (requires copy and pasting of tokens)")
 }
 
 func login(_ *cobra.Command, _ []string) {
@@ -52,17 +55,23 @@ func login(_ *cobra.Command, _ []string) {
 		os.Exit(1)
 	}
 
-	credentials, err := client.GetCredentials()
+	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
+	ospreyconfig.Interactive = interactive
+	retrieverFactory, err := client.NewProviderFactory(ospreyconfig)
 	if err != nil {
-		log.Fatalf("Failed to get credentials: %v", err)
+		log.Fatalf("unable to initialise providers: %v", err)
 	}
 
-	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
-
 	success := true
+
 	for _, target := range group.Targets() {
-		c := client.NewClient(target.Server(), ospreyconfig.CertificateAuthorityData, target.CertificateAuthorityData())
-		tokenData, err := c.GetAccessToken(credentials)
+		retriever, err := retrieverFactory.GetRetriever(target.ProviderType())
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+
+		tokenData, err := retriever.RetrieveClusterDetailsAndAuthTokens(target)
+
 		if err != nil {
 			if state, ok := status.FromError(err); ok && state.Code() == codes.Unauthenticated {
 				log.Fatalf("Failed to log in to %s: %v", target.Name(), state.Message())
@@ -71,19 +80,22 @@ func login(_ *cobra.Command, _ []string) {
 			log.Errorf("Failed to log in to %s: %v", target.Name(), err)
 			continue
 		}
-
-		err = kubeconfig.UpdateConfig(target.Name(), target.Aliases(), tokenData)
-		if err != nil {
-			log.Errorf("Failed to update config for %s: %v", target.Name(), err)
-		}
-		aliases := ""
-		if target.HasAliases() {
-			aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
-		}
-		log.Infof("Logged in to: %s%s", target.Name(), aliases)
+		updateKubeconfig(err, target, tokenData)
 	}
 
 	if !success {
 		log.Fatal("Failed to update credentials for some targets.")
 	}
+}
+
+func updateKubeconfig(err error, target client.Target, tokenData *client.ClusterInfo) {
+	err = kubeconfig.UpdateConfig(target.Name(), target.Aliases(), tokenData)
+	if err != nil {
+		log.Errorf("Failed to update config for %s: %v", target.Name(), err)
+	}
+	aliases := ""
+	if target.HasAliases() {
+		aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
+	}
+	log.Infof("Logged in to: %s%s", target.Name(), aliases)
 }

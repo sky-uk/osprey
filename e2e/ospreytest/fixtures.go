@@ -20,7 +20,7 @@ const targetAliasPrefix = "alias."
 
 //AddCustomNamespaceToContexts adds a namespace to each context in the kubeconfig file
 // the name of the namespace will be
-func AddCustomNamespaceToContexts(namespaceSuffix, kubeconfig string, targetedOspreys []*TestOsprey) error {
+func AddCustomNamespaceToContexts(namespaceSuffix, kubeconfig string, targetedOspreys []*TestTargetEntry) error {
 	existingConfig, err := clientcmd.LoadFromFile(kubeconfig)
 	if err != nil {
 		return fmt.Errorf("unable to load kubeconfig file %s: %v", kubeconfig, err)
@@ -39,8 +39,8 @@ func AddCustomNamespaceToContexts(namespaceSuffix, kubeconfig string, targetedOs
 	return nil
 }
 
-// ToKubeconfigCluster returns a *Cluster representation of the TestOsprey instance.
-func (o *TestOsprey) ToKubeconfigCluster(locationOfOrigin string) *clientgo.Cluster {
+// ToKubeconfigCluster returns a *Cluster representation of the TestTargetEntry instance.
+func (o *TestTargetEntry) ToKubeconfigCluster(locationOfOrigin string) *clientgo.Cluster {
 	apiServer := fmt.Sprintf("https://apiserver.%s.cluster", o.Environment)
 	caData, _ := ioutil.ReadFile(o.APIServerCA)
 	expectedCluster := clientgo.NewCluster()
@@ -50,16 +50,17 @@ func (o *TestOsprey) ToKubeconfigCluster(locationOfOrigin string) *clientgo.Clus
 	return expectedCluster
 }
 
-// ToKubeconfigUserWithoutToken returns an *AuthInfo representation, with an empty id-token, of the TestOsprey instance.
-func (o *TestOsprey) ToKubeconfigUserWithoutToken(locationOfOrigin string) *clientgo.AuthInfo {
+// ToKubeconfigUserWithoutToken returns an *AuthInfo representation, with an empty id-token, of the TestTargetEntry instance.
+func (o *TestTargetEntry) ToKubeconfigUserWithoutToken(locationOfOrigin string) *clientgo.AuthInfo {
 	caData, _ := osprey.ReadAndEncodeFile(o.IssuerCA)
 	authInfo := clientgo.NewAuthInfo()
 	authProviderConfig := make(map[string]string)
-	authProviderConfig["client-id"] = o.Environment
 	authProviderConfig["client-secret"] = o.Secret
 	authProviderConfig["id-token"] = ""
 	authProviderConfig["idp-certificate-authority-data"] = caData
 	authProviderConfig["idp-issuer-url"] = o.IssuerURL
+	authProviderConfig["access-token"] = ""
+	authProviderConfig["client-id"] = o.Environment
 	authInfo.ImpersonateUserExtra = nil
 	authInfo.LocationOfOrigin = locationOfOrigin
 	authInfo.AuthProvider = &clientgo.AuthProviderConfig{
@@ -81,8 +82,8 @@ func OspreyTargetOutput(environment string) string {
 	return fmt.Sprintf("%s | %s", OspreyconfigTargetName(environment), OspreyconfigAliasName(environment))
 }
 
-// OspreyconfigTargetName returns the ospreyconfig target's name for the TestOsprey instance.
-func (o *TestOsprey) OspreyconfigTargetName() string {
+// OspreyconfigTargetName returns the ospreyconfig target's name for the TestTargetEntry instance.
+func (o *TestTargetEntry) OspreyconfigTargetName() string {
 	return OspreyconfigTargetName(o.Environment)
 }
 
@@ -96,13 +97,13 @@ func OspreyconfigAliasName(environment string) string {
 	return fmt.Sprintf("%s%s", targetAliasPrefix, OspreyconfigTargetName(environment))
 }
 
-// OspreyconfigAliasName returns the ospreyconfig target's alias for the TestOsprey instance.
-func (o *TestOsprey) OspreyconfigAliasName() string {
+// OspreyconfigAliasName returns the ospreyconfig target's alias for the TestTargetEntry instance.
+func (o *TestTargetEntry) OspreyconfigAliasName() string {
 	return OspreyconfigAliasName(o.Environment)
 }
 
-// ToKubeconfigContext returns a *Context representation of the TestOsprey instance.
-func (o *TestOsprey) ToKubeconfigContext(locationOfOrigin string) *clientgo.Context {
+// ToKubeconfigContext returns a *Context representation of the TestTargetEntry instance.
+func (o *TestTargetEntry) ToKubeconfigContext(locationOfOrigin string) *clientgo.Context {
 	targetName := o.OspreyconfigTargetName()
 
 	kubeconfigCtx := clientgo.NewContext()
@@ -114,18 +115,18 @@ func (o *TestOsprey) ToKubeconfigContext(locationOfOrigin string) *clientgo.Cont
 }
 
 // CustomTargetNamespace returns the name for a namespace appending the suffix to the osprey's target name.
-func (o *TestOsprey) CustomTargetNamespace(suffix string) string {
+func (o *TestTargetEntry) CustomTargetNamespace(suffix string) string {
 	return o.OspreyconfigTargetName() + suffix
 }
 
 // CustomAliasNamespace returns the name for a namespace appending the suffix to the osprey's alias name.
-func (o *TestOsprey) CustomAliasNamespace(suffix string) string {
+func (o *TestTargetEntry) CustomAliasNamespace(suffix string) string {
 	return o.OspreyconfigAliasName() + suffix
 }
 
 // ToGroupClaims returns the groups contained in the groups claim of the id-token for the authInfo.
 // If no tokens exists it returns an empty slice.
-func (o *TestOsprey) ToGroupClaims(authInfo *clientgo.AuthInfo) ([]string, error) {
+func (o *TestTargetEntry) ToGroupClaims(authInfo *clientgo.AuthInfo) ([]string, error) {
 	var groups []string
 	tokenString := authInfo.AuthProvider.Config["id-token"]
 	token, err := jws.ParseJWT([]byte(tokenString))
@@ -136,7 +137,7 @@ func (o *TestOsprey) ToGroupClaims(authInfo *clientgo.AuthInfo) ([]string, error
 }
 
 // CallHealthcheck returns the current status of osprey's healthcheck as an http response and error
-func (o *TestOsprey) CallHealthcheck() (*http.Response, error) {
+func (o *TestTargetEntry) CallHealthcheck() (*http.Response, error) {
 	certData, _ := web.LoadTLSCert(o.CertFile)
 	httpClient, err := web.NewTLSClient(certData)
 	if err != nil {
@@ -153,8 +154,8 @@ func (o *TestOsprey) CallHealthcheck() (*http.Response, error) {
 // CreateCustom
 
 // GetOspreysByGroup returns the ospreys matching by group or default group given the environmentGroups definition.
-func GetOspreysByGroup(group, defaultGroup string, environmentGroups map[string][]string, ospreys []*TestOsprey) []*TestOsprey {
-	var targetedOspreys []*TestOsprey
+func GetOspreysByGroup(group, defaultGroup string, environmentGroups map[string][]string, ospreys []*TestTargetEntry) []*TestTargetEntry {
+	var targetedOspreys []*TestTargetEntry
 	actualGroup := group
 	if actualGroup == "" {
 		actualGroup = defaultGroup

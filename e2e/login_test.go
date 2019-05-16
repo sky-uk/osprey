@@ -1,14 +1,13 @@
 package e2e
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	. "github.com/sky-uk/osprey/e2e/ospreytest"
-
 	"os"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/sky-uk/osprey/client/kubeconfig"
 	"github.com/sky-uk/osprey/e2e/clitest"
+	. "github.com/sky-uk/osprey/e2e/ospreytest"
 	clientgo "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -20,7 +19,7 @@ var _ = Describe("Login", func() {
 	})
 
 	JustBeforeEach(func() {
-		setupOspreyClientForEnvironments(environmentsToUse)
+		setupClientForEnvironments("osprey", environmentsToUse, "")
 		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag)
 	})
 
@@ -43,7 +42,7 @@ var _ = Describe("Login", func() {
 	})
 
 	It("logs in with certificate-authority-data", func() {
-		caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "")
+		caDataConfig, err := BuildCADataConfig(testDir, "osprey", ospreys, true, "", "")
 		Expect(err).To(BeNil(), "Creates the osprey config")
 		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
 		caDataLogin := Login("user", "login", caDataConfigFlag)
@@ -52,7 +51,7 @@ var _ = Describe("Login", func() {
 	})
 
 	It("logs in overriding certificate-authority with certificate-authority-data", func() {
-		caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "/road/to/nowhere")
+		caDataConfig, err := BuildCADataConfig(testDir, "osprey", ospreys, true, dexes[0].DexCA, "")
 		Expect(err).To(BeNil(), "Creates the osprey config")
 		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
 		caDataLogin := Login("user", "login", caDataConfigFlag)

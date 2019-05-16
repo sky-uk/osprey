@@ -9,7 +9,7 @@ import (
 	"text/template"
 	"time"
 
-	dex_ldap "github.com/coreos/dex/connector/ldap"
+	dex_ldap "github.com/dexidp/dex/connector/ldap"
 	"github.com/sky-uk/osprey/e2e/clitest"
 	"github.com/sky-uk/osprey/e2e/ssltest"
 	"github.com/sky-uk/osprey/e2e/util"
@@ -198,7 +198,7 @@ func loadSchemaData() error {
 	schemaPath := filepath.Join(td, "schema.ldap")
 	var ldapAdd clitest.TestCommand
 	// Try a few times to connect to the LDAP server. Sometimes it can take a while for it to come up.
-	wait := 100 * time.Millisecond
+	wait := 500 * time.Millisecond
 	for i := 0; i < 10; i++ {
 		time.Sleep(wait)
 		ldapAdd = clitest.NewCommand("ldapadd",

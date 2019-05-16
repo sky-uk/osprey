@@ -64,8 +64,8 @@ func (c *asyncCommandWrapper) Run() {
 	c.output = &buf
 	c.cmd.Stdout = &buf
 	c.cmd.Stderr = &buf
-	buf.Write([]byte("*** SERVER STARTED\n"))
-	buf.Write([]byte(fmt.Sprintf("%s", c.cmd.Args)))
+	buf.Write([]byte("*** ASYNC COMMAND STARTED\n"))
+	buf.Write([]byte(fmt.Sprintf("%s\n", c.cmd.Args)))
 	err := c.cmd.Start()
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
@@ -77,7 +77,7 @@ func (c *asyncCommandWrapper) Run() {
 		c.stopFlag.Wait()
 		c.cmd.Process.Signal(syscall.SIGTERM)
 		c.finishedFlag.Wait()
-		buf.Write([]byte("*** SERVER STOPPED\n"))
+		buf.Write([]byte("*** ASYNC COMMAND STOPPED\n"))
 	}()
 
 	// process watcher
@@ -105,6 +105,7 @@ func (c *asyncCommandWrapper) Stop() {
 	c.stopFlag.Done()
 	// wait for it to finish
 	c.finishedFlag.Wait()
+	c.PrintOutput()
 }
 
 func (c *asyncCommandWrapper) AssertStoppedRunning() {
@@ -117,6 +118,7 @@ func (c *asyncCommandWrapper) AssertStoppedRunning() {
 func (c *asyncCommandWrapper) AssertSuccess() {
 	c.Lock()
 	defer c.Unlock()
+	print(c.GetOutput())
 	assertNoExitError(c.GetOutput(), c.error)
 	gomega.Expect(c.finished).To(gomega.BeTrue(), "should have finished running")
 }

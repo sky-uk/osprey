@@ -29,10 +29,10 @@ func GetCredentials() (*LoginCredentials, error) {
 func consumeCredentials(pwdInputFunc func(string, *bufio.Reader) (string, error)) (credentials *LoginCredentials, err error) {
 	var username, password string
 	reader := bufio.NewReader(os.Stdin)
-	if username, err = read("username", "Username:", reader, input); err != nil {
+	if username, err = read("username", "Username: ", reader, input); err != nil {
 		return nil, err
 	}
-	if password, err = read("password", "Password:", reader, pwdInputFunc); err != nil {
+	if password, err = read("password", "Password: ", reader, pwdInputFunc); err != nil {
 		return nil, err
 	}
 	return &LoginCredentials{Username: username, Password: password}, nil

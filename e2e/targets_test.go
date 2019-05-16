@@ -28,7 +28,7 @@ var _ = Describe("Targets", func() {
 	})
 
 	JustBeforeEach(func() {
-		setupOspreyClientForEnvironments(environmentsToUse)
+		setupClientForEnvironments("osprey", environmentsToUse, "")
 		targets = Client("config", "targets", ospreyconfigFlag, targetGroupFlag, byGroupsFlag, listGroupsFlag)
 	})
 

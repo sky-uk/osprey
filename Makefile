@@ -94,7 +94,7 @@ test :
 
 proto :
 	@echo "== compiling proto files"
-	@docker run -v `pwd`/pb:/pb -w / grpc/go:1.0 protoc -I /pb /pb/osgsprey.proto --go_out=plugins=grpc:pb
+	@docker run -v `pwd`/common/pb:/pb -w / grpc/go:1.0 protoc -I /pb /pb/osprey.proto --go_out=plugins=grpc:pb
 
 prepare-release-bintray :
 ifeq ($(strip $(SKIP_PREPARE_RELEASE_BINTRAY)), )
