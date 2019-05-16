@@ -38,7 +38,7 @@ const ospreyState = "as78*sadf$212"
 
 // Osprey defines behaviour to initiate and handle an oauth2 flow
 type Osprey interface {
-	// GetAccessToken will return an OIDC token if the request is valid
+	// RetrieveClusterDetailsAndAuthTokens will return an OIDC token if the request is valid
 	GetAccessToken(ctx context.Context, username, password string) (*pb.LoginResponse, error)
 	// Authorise handles the authorisation redirect callback from OAuth2 auth flow
 	Authorise(ctx context.Context, code, state, failure string) (*pb.LoginResponse, error)

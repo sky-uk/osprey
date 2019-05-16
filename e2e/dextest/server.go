@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 	"time"
 
-	dex_ldap "github.com/coreos/dex/connector/ldap"
-	dex "github.com/coreos/dex/server"
-	dex_storage "github.com/coreos/dex/storage"
-	dex_memory "github.com/coreos/dex/storage/memory"
+	dex_ldap "github.com/dexidp/dex/connector/ldap"
+	dex "github.com/dexidp/dex/server"
+	dex_storage "github.com/dexidp/dex/storage"
+	dex_memory "github.com/dexidp/dex/storage/memory"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/sky-uk/osprey/e2e/ldaptest"

@@ -50,15 +50,41 @@ func user(_ *cobra.Command, _ []string) {
 	}
 
 	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
+	retrieverFactory, err := client.NewFactory(ospreyconfig)
+	if err != nil {
+		log.Fatalf("unable to initialise providers: %v", err)
+	}
 
 	success := true
 	for _, target := range group.Targets() {
-		userData, err := kubeconfig.GetUser(target.Name())
+
+		authInfo, err := kubeconfig.GetAuthInfo(target)
 		if err != nil {
-			log.Errorf("Failed to retrieve user for %s from kubeconfig: %v", target.Name(), err)
 			success = false
+			log.Errorf("unable to get auth info for user %s: %v", target.Name(), err)
 		}
-		log.Infof("%s: %s", target.Name(), userData)
+
+		retriever, err := retrieverFactory.GetRetriever(target.ProviderType())
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		if authInfo != nil {
+			userInfo, err := retriever.RetrieveUserDetails(target, *authInfo)
+			if err != nil {
+				success = false
+				log.Errorf("%s: %v", target.Name(), err)
+			}
+			if userInfo != nil {
+				switch target.ProviderType() {
+				case "azure":
+					log.Infof("%s: %s", target.Name(), userInfo.Username)
+				case "google":
+					log.Infof("%s: %s", target.Name(), userInfo.Username)
+				case "osprey":
+					log.Infof("%s: %s %s", target.Name(), userInfo.Username, userInfo.Roles)
+				}
+			}
+		}
 	}
 
 	if !success {

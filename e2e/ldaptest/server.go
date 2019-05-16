@@ -9,7 +9,7 @@ import (
 	"text/template"
 	"time"
 
-	dex_ldap "github.com/coreos/dex/connector/ldap"
+	dex_ldap "github.com/dexidp/dex/connector/ldap"
 	"github.com/sky-uk/osprey/e2e/clitest"
 	"github.com/sky-uk/osprey/e2e/ssltest"
 	"github.com/sky-uk/osprey/e2e/util"

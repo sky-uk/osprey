@@ -2,10 +2,10 @@ package ospreytest
 
 import (
 	"fmt"
+	"github.com/sky-uk/osprey/client"
 	"path/filepath"
 
 	"github.com/onsi/ginkgo"
-	ospreyClient "github.com/sky-uk/osprey/client"
 	"github.com/sky-uk/osprey/common/web"
 	"github.com/sky-uk/osprey/e2e/clitest"
 	"github.com/sky-uk/osprey/e2e/dextest"
@@ -15,7 +15,7 @@ import (
 
 const ospreyBinary = "osprey"
 
-// TestOsprey represents an Osprey server instance used for testing.
+// TestOsprey represents an TargetEntry server instance used for testing.
 type TestOsprey struct {
 	clitest.AsyncTestCommand
 	Port         int32
@@ -32,14 +32,14 @@ type TestOsprey struct {
 	TestDir      string
 }
 
-// TestConfig represents an Osprey client configuration file used for testing.
+// TestConfig represents an TargetEntry client configuration file used for testing.
 type TestConfig struct {
-	*ospreyClient.Config
+	*client.Config
 	ConfigFile string
 }
 
-// StartOspreys creates one Osprey test server per TestDex provided, using ports starting from portsFrom.
-// The Osprey directory will be testDir/dex.Environment.
+// StartOspreys creates one TargetEntry test server per TestDex provided, using ports starting from portsFrom.
+// The TargetEntry directory will be testDir/dex.Environment.
 func StartOspreys(testDir string, dexes []*dextest.TestDex, portsFrom int32) ([]*TestOsprey, error) {
 	var servers []*TestOsprey
 	for i, dex := range dexes {
@@ -130,7 +130,7 @@ func BuildCADataConfig(testDir string, servers []*TestOsprey, caData bool, caPat
 // It uses testDir as the home for the .kube and .osprey folders.
 // If caData is true, it base64 encodes the CA data instead of using the file path.
 func BuildFullConfig(testDir, defaultGroup string, targetGroups map[string][]string, servers []*TestOsprey, caData bool, caPath string) (*TestConfig, error) {
-	config := ospreyClient.NewConfig()
+	config := client.NewConfig()
 	config.Kubeconfig = fmt.Sprintf("%s/.kube/config", testDir)
 	ospreyconfigFile := fmt.Sprintf("%s/.osprey/config", testDir)
 
@@ -144,7 +144,7 @@ func BuildFullConfig(testDir, defaultGroup string, targetGroups map[string][]str
 		}
 		targetName := osprey.OspreyconfigTargetName()
 
-		target := &ospreyClient.Osprey{
+		target := &config.TargetEntry{
 			Server:  osprey.URL,
 			Aliases: []string{osprey.OspreyconfigAliasName()},
 		}
@@ -166,13 +166,13 @@ func BuildFullConfig(testDir, defaultGroup string, targetGroups map[string][]str
 			target.Groups = groups
 		}
 
-		config.Targets[targetName] = target
+		config.Dex.Targets[targetName] = target
 	}
 	testConfig := &TestConfig{Config: config, ConfigFile: ospreyconfigFile}
-	return testConfig, ospreyClient.SaveConfig(config, ospreyconfigFile)
+	return testConfig, config.SaveConfig(config, ospreyconfigFile)
 }
 
-// Client returns a TestCommand for the osprey binary with the provided args arguments.
+// ProviderType returns a TestCommand for the osprey binary with the provided args arguments.
 func Client(args ...string) clitest.TestCommand {
 	return clitest.NewCommand(ospreyBinary, args...)
 }

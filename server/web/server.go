@@ -74,7 +74,7 @@ type Server struct {
 }
 
 // RegisterService binds the http endpoints to the Osprey services
-// "/access-token" -> Osprey.GetAccessToken()
+// "/access-token" -> Osprey.RetrieveClusterDetailsAndAuthTokens()
 func (s *Server) RegisterService(service osprey.Osprey) {
 	s.mux.Handle("/access-token", handleAccessToken(service))
 	s.mux.Handle("/callback", handleCallback(service))

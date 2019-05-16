@@ -37,4 +37,4 @@
 - Requires Dex `skipApprovalScreen` to be true.
 - Only supports a single-connector Dex configuration.
   Tested with:
-  - [LDAP](https://github.com/coreos/dex/blob/master/Documentation/connectors/ldap.md)
+  - [LDAP](https://github.com/dexidp/dex/blob/master/Documentation/connectors/ldap.md)

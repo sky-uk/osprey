@@ -11,7 +11,7 @@ It has these top-level messages:
 	LoginRequest
 	ConsumeLoginResponse
 	Cluster
-	AuthProvider
+	ProviderType
 	User
 */
 package pb
@@ -171,7 +171,7 @@ func init() {
 	proto.RegisterType((*LoginRequest)(nil), "pb.LoginRequest")
 	proto.RegisterType((*LoginResponse)(nil), "pb.ConsumeLoginResponse")
 	proto.RegisterType((*Cluster)(nil), "pb.Cluster")
-	proto.RegisterType((*AuthProvider)(nil), "pb.AuthProvider")
+	proto.RegisterType((*AuthProvider)(nil), "pb.ProviderType")
 	proto.RegisterType((*User)(nil), "pb.User")
 }
 

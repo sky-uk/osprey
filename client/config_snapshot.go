@@ -1,105 +1,10 @@
 package client
 
-import (
-	"sort"
-)
-
-// GetSnapshot creates a snapshot view of the provided Config
-func GetSnapshot(config *Config) ConfigSnapshot {
-	groupsByName := make(map[string]Group)
-	var groups []Group
-
-	for key, osprey := range config.Targets {
-		ospreyGroups := osprey.Groups
-		if len(ospreyGroups) == 0 {
-			ospreyGroups = []string{""}
-		}
-
-		target := Target{name: key, osprey: *osprey}
-		for _, groupName := range ospreyGroups {
-			group, ok := groupsByName[groupName]
-			if !ok {
-				isDefault := groupName == config.DefaultGroup
-				group = Group{name: groupName, isDefault: isDefault}
-				groups = append(groups, group)
-			}
-			group.targets = append(group.targets, target)
-			groupsByName[groupName] = group
-		}
-	}
-
-	return ConfigSnapshot{groupsByName: groupsByName, defaultGroupName: config.DefaultGroup}
-}
-
 // ConfigSnapshot is a snapshot view of the configuration to organize the targets per group.
 // It does not reflect changes to the configuration after it has been taken.
 type ConfigSnapshot struct {
 	defaultGroupName string
 	groupsByName     map[string]Group
-}
-
-// Group organizes the osprey targets
-type Group struct {
-	name      string
-	isDefault bool
-	targets   []Target
-}
-
-// IsDefault returns true if this is the default group in the configuration
-func (g *Group) IsDefault() bool {
-	return g.isDefault
-}
-
-// Targets returns the list of targets belonging to this group
-func (g *Group) Targets() []Target {
-	return sortTargets(g.targets)
-}
-
-// Name returns the name of the group
-func (g *Group) Name() string {
-	return g.name
-}
-
-//Contains returns true if it contains the target
-func (g *Group) Contains(target Target) bool {
-	for _, current := range g.targets {
-		if target.name == current.name {
-			return true
-		}
-	}
-	return false
-}
-
-// Target has the information of an Osprey target server
-type Target struct {
-	name   string
-	osprey Osprey
-}
-
-// Aliases returns the list of aliases of the Target alphabetically sorted
-func (m *Target) Aliases() []string {
-	sort.Strings(m.osprey.Aliases)
-	return m.osprey.Aliases
-}
-
-// HasAliases returns true if the Target has at least one alias
-func (m *Target) HasAliases() bool {
-	return len(m.osprey.Aliases) > 0
-}
-
-// Name returns the main name of the Target
-func (m *Target) Name() string {
-	return m.name
-}
-
-// Server returns the server of the Target
-func (m *Target) Server() string {
-	return m.osprey.Server
-}
-
-// CertificateAuthorityData returns the CertificateAuthorityData of the Target
-func (m *Target) CertificateAuthorityData() string {
-	return m.osprey.CertificateAuthorityData
 }
 
 // Groups returns all defined groups sorted alphabetically by name.
@@ -117,20 +22,6 @@ func (t *ConfigSnapshot) Groups() []Group {
 func (t *ConfigSnapshot) HaveGroups() bool {
 	// the special group "" does not count as a group
 	return len(t.groupsByName) > 1
-}
-
-func sortGroups(groups []Group) []Group {
-	sort.Slice(groups, func(i, j int) bool {
-		return groups[i].name < groups[j].name
-	})
-	return groups
-}
-
-func sortTargets(targets []Target) []Target {
-	sort.Slice(targets, func(i, j int) bool {
-		return targets[i].name < targets[j].name
-	})
-	return targets
 }
 
 // GetGroup returns a valid group and true if it exists, an empty group and false if it doesn't.
@@ -159,4 +50,50 @@ func (t *ConfigSnapshot) Targets() []Target {
 func (t *ConfigSnapshot) DefaultGroup() Group {
 	defaultGroup, _ := t.GetGroup(t.defaultGroupName)
 	return defaultGroup
+}
+
+// GetSnapshot creates a snapshot view of the provided Config
+func GetSnapshot(config *Config) ConfigSnapshot {
+	defaultGroup := config.DefaultGroup
+	groupsByName := make(map[string]Group)
+
+	for providerType, providerConfig := range config.Providers {
+		for groupName, group := range groupTargets(providerConfig.Targets, defaultGroup, providerType) {
+			if existingGroup, ok := groupsByName[groupName]; ok {
+				existingGroup.targets = append(existingGroup.targets, group.targets...)
+				groupsByName[groupName] = existingGroup
+			} else {
+				groupsByName[groupName] = group
+			}
+		}
+	}
+
+	return ConfigSnapshot{
+		groupsByName:     groupsByName,
+		defaultGroupName: defaultGroup,
+	}
+}
+
+func groupTargets(targetEntries map[string]*TargetEntry, defaultGroup string, providerType string) map[string]Group {
+	groupsByName := make(map[string]Group)
+	var groups []Group
+	for key, targetEntry := range targetEntries {
+		targetEntryGroups := targetEntry.Groups
+		if len(targetEntryGroups) == 0 {
+			targetEntryGroups = []string{""}
+		}
+
+		target := Target{name: key, targetEntry: *targetEntry, providerType: providerType}
+		for _, groupName := range targetEntryGroups {
+			group, ok := groupsByName[groupName]
+			if !ok {
+				isDefault := groupName == defaultGroup
+				group = Group{name: groupName, isDefault: isDefault}
+				groups = append(groups, group)
+			}
+			group.targets = append(group.targets, target)
+			groupsByName[groupName] = group
+		}
+	}
+	return groupsByName
 }
