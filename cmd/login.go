@@ -84,6 +84,6 @@ func login(_ *cobra.Command, _ []string) {
 	}
 
 	if !success {
-		log.Fatal("Failed to update credentials for some snapshot.")
+		log.Fatal("Failed to update credentials for some targets.")
 	}
 }
