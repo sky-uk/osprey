@@ -37,7 +37,7 @@ endif
 
 setup:
 	@echo "== setup"
-	go get -v github.com/golang/lint/golint
+	go get -v golang.org/x/lint/golint
 	go get golang.org/x/tools/cmd/goimports
 	go get github.com/golang/dep/cmd/dep
 	dep ensure

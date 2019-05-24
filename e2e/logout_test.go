@@ -42,7 +42,6 @@ var _ = Describe("Logout", func() {
 	})
 
 	Context("after login", func() {
-		var expectedEnvironments []string
 
 		AssertLogsOutFromTargets := func() {
 			JustBeforeEach(func() {
@@ -93,7 +92,6 @@ var _ = Describe("Logout", func() {
 			Context("no default group", func() {
 				BeforeEach(func() {
 					defaultGroup = ""
-					expectedEnvironments = []string{"local"}
 				})
 
 				AssertLogsOutFromTargets()
@@ -106,7 +104,6 @@ var _ = Describe("Logout", func() {
 						"dev":  {"development"},
 					}
 					defaultGroup = "production"
-					expectedEnvironments = []string{"prod"}
 				})
 
 				AssertLogsOutFromTargets()
@@ -117,7 +114,6 @@ var _ = Describe("Logout", func() {
 		Context("group provided", func() {
 			BeforeEach(func() {
 				targetGroup = "sandbox"
-				expectedEnvironments = []string{"sandbox"}
 			})
 
 			AssertLogsOutFromTargets()

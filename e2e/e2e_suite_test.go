@@ -3,11 +3,10 @@ package e2e
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/sky-uk/osprey/e2e/ospreytest"
+	"github.com/sky-uk/osprey/e2e/ospreytest"
 
 	"io/ioutil"
 	"os"
-
 	"testing"
 
 	"github.com/sky-uk/osprey/e2e/dextest"
@@ -21,7 +20,8 @@ func TestOspreySuite(t *testing.T) {
 }
 
 const (
-	dexPortsFrom = int32(11980)
+	dexPortsFrom    = int32(11980)
+	ospreyPortsFrom = int32(12980)
 )
 
 var (
@@ -35,7 +35,7 @@ var (
 	}
 
 	// Suite variables instantiated once
-	ospreys    []*TestOsprey
+	ospreys    []*ospreytest.TestOsprey
 	dexes      []*dextest.TestDex
 	ldapServer *ldaptest.TestLDAP
 	testDir    string
@@ -43,9 +43,9 @@ var (
 	// Suite variables modifiable per test scenario
 	err               error
 	environmentsToUse map[string][]string
-	targetedOspreys   []*TestOsprey
+	targetedOspreys   []*ospreytest.TestOsprey
+	ospreyconfig      *ospreytest.TestConfig
 	ospreyconfigFlag  string
-	ospreyconfig      *TestConfig
 	defaultGroup      string
 	targetGroup       string
 	targetGroupFlag   string
@@ -70,13 +70,13 @@ var _ = BeforeSuite(func() {
 	dexes, err = dextest.StartDexes(testDir, ldapServer, envs, dexPortsFrom)
 	Expect(err).To(BeNil(), "Starts the dex servers")
 
-	ospreys, err = StartOspreys(testDir, dexes, dexPortsFrom+int32(len(dexes)))
+	ospreys, err = ospreytest.StartOspreys(testDir, dexes, ospreyPortsFrom)
 	Expect(err).To(BeNil(), "Starts the osprey servers")
 })
 
 var _ = AfterSuite(func() {
 	for _, osprey := range ospreys {
-		StopOsprey(osprey)
+		ospreytest.Stop(osprey)
 	}
 	for _, aDex := range dexes {
 		dextest.Stop(aDex)
@@ -86,7 +86,7 @@ var _ = AfterSuite(func() {
 })
 
 func setupOspreyClientForEnvironments(envs map[string][]string) {
-	ospreyconfig, err = BuildConfig(testDir, defaultGroup, envs, ospreys)
+	ospreyconfig, err = ospreytest.BuildConfig(testDir, defaultGroup, envs, ospreys)
 	Expect(err).To(BeNil(), "Creates the osprey config with groups")
 	ospreyconfigFlag = "--ospreyconfig=" + ospreyconfig.ConfigFile
 
@@ -94,7 +94,7 @@ func setupOspreyClientForEnvironments(envs map[string][]string) {
 		targetGroupFlag = "--group=" + targetGroup
 	}
 
-	targetedOspreys = GetOspreysByGroup(targetGroup, defaultGroup, envs, ospreys)
+	targetedOspreys = ospreytest.GetOspreysByGroup(targetGroup, defaultGroup, envs, ospreys)
 }
 
 func resetDefaults() {

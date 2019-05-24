@@ -1,4 +1,9 @@
-- Fix `latest` artifacts publishing
+# Release 1.4.0
+- Update Alpine to 3.9 - fix vulnerability https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-5021.
+- Update golint dependency to golang.org/x/lint/golint.
+- Update error message during login.
+- Fix broken functionally to allow osprey server to start without TLS.
+- Fix `latest` artifacts publishing.
 
 # Release 1.3.0
 - Fixes displaying a target multiple times if the targets existed in

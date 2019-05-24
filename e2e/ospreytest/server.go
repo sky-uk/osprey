@@ -43,13 +43,15 @@ type TestConfig struct {
 func StartOspreys(testDir string, dexes []*dextest.TestDex, portsFrom int32) ([]*TestOsprey, error) {
 	var servers []*TestOsprey
 	for i, dex := range dexes {
-		ospreyDir := fmt.Sprintf("%s/%s", testDir, dex.Environment)
-		servers = append(servers, startOsprey(ospreyDir, portsFrom+int32(i), dex))
+		servers = append(servers, Start(testDir, true, portsFrom+int32(i), dex))
 	}
 	return servers, nil
 }
 
-func startOsprey(ospreyDir string, port int32, dex *dextest.TestDex) *TestOsprey {
+// Start creates one Osprey test server for the dex Server.
+// Its directory will be testDir/dex.Environment
+func Start(testDir string, useTLS bool, port int32, dex *dextest.TestDex) *TestOsprey {
+	ospreyDir := fmt.Sprintf("%s/%s", testDir, dex.Environment)
 	serverDir := filepath.Join(ospreyDir, "osprey")
 	ospreyCert, ospreyKey := ssltest.CreateCertificates("localhost", serverDir)
 	ospreySecret := util.RandomString(15)
@@ -67,9 +69,11 @@ func startOsprey(ospreyDir string, port int32, dex *dextest.TestDex) *TestOsprey
 		URL:          ospreyURL,
 		IssuerURL:    issuerHost,
 		IssuerCA:     dex.DexCA,
-		KeyFile:      ospreyKey,
-		CertFile:     ospreyCert,
 		TestDir:      serverDir,
+	}
+	if useTLS {
+		server.KeyFile = ospreyKey
+		server.CertFile = ospreyCert
 	}
 	dex.RegisterClient(server.Environment, ospreySecret, fmt.Sprintf("%s/callback", ospreyURL), dex.Environment)
 	server.AsyncTestCommand = clitest.NewAsyncCommand(ospreyBinary, server.buildArgs()...)
@@ -95,9 +99,9 @@ func (o *TestOsprey) buildArgs() []string {
 		issuerURLFlag, issuerCAFlag, tlsKeyFlag, tlsCertFlag}
 }
 
-// StopOsprey stops the TestOsprey server.
+// Stop stops the TestOsprey server.
 // Returns an error if any happened.
-func StopOsprey(server *TestOsprey) error {
+func Stop(server *TestOsprey) error {
 	if server == nil {
 		return nil
 	}

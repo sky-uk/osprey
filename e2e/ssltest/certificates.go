@@ -23,7 +23,7 @@ func CreateCertificates(cn, destDir string) (certFile, keyFile string) {
 			panic(fmt.Sprintf("Failed to create certificates dir %s: %v", destDir, err))
 		}
 		template := &x509.Certificate{
-			IsCA: true,
+			IsCA:                  true,
 			BasicConstraintsValid: true,
 			SerialNumber:          big.NewInt(1),
 			Subject: pkix.Name{
