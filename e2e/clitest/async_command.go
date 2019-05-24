@@ -111,7 +111,7 @@ func (c *asyncCommandWrapper) AssertStoppedRunning() {
 	c.Lock()
 	defer c.Unlock()
 	assertNoExitError(c.GetOutput(), c.error)
-	gomega.Expect(c.finished).To(gomega.BeFalse(), "Server should be running")
+	gomega.Expect(c.finished).To(gomega.BeTrue(), "Server should have stopped")
 }
 
 func (c *asyncCommandWrapper) AssertSuccess() {

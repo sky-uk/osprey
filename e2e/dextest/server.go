@@ -46,12 +46,10 @@ func (d *TestDex) URL() string {
 // StartDexes creates one dex test server per environment provided, using the same ldap instance as a connector
 // It will stop creating any more dex servers on the firs error encountered, and return the created ones so far.
 func StartDexes(testDir string, ldap *ldaptest.TestLDAP, environments []string, portsFrom int32) ([]*TestDex, error) {
-
 	var dexes []*TestDex
 	for i, env := range environments {
 		port := portsFrom + int32(i)
-		dexDir := fmt.Sprintf("%s/%s", testDir, env)
-		aDex, err := start(dexDir, port, env, ldap)
+		aDex, err := Start(testDir, port, env, ldap)
 		if aDex != nil {
 			dexes = append(dexes, aDex)
 		}
@@ -62,10 +60,10 @@ func StartDexes(testDir string, ldap *ldaptest.TestLDAP, environments []string, 
 	return dexes, nil
 }
 
-// start starts a new dex server using the osprey server to configure its known clients.
+// Start starts a new dex server using the osprey server to configure its known clients.
 // It uses the ldapConfig to setup its connector.
-func start(testDir string, port int32, environment string, ldap *ldaptest.TestLDAP) (*TestDex, error) {
-	dexDir := filepath.Join(testDir, "dex")
+func Start(testDir string, port int32, environment string, ldap *ldaptest.TestLDAP) (*TestDex, error) {
+	dexDir := filepath.Join(testDir, environment, "dex")
 	return newServer(context.Background(), dexDir, port, environment, func(dexConfig *dex.Config) {
 		createLdapConnector(ldap.DexConfig, dexConfig)
 	})
