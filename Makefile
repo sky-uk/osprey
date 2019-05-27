@@ -103,7 +103,7 @@ ifeq ($(strip $(git_tag)),)
 	@echo "no tag on $(git_rev), skipping bintray release"
 else
 	mkdir -p $(dist_dir)
-	sed 's/@version/$(git_tag)/g; s/@release_date/$(release_date)/g; s/@publish/$(BINTRAY_PUBLISH)/g' .bintray.template > $(dist_dir)/bintray.json
+	sed 's/@version/$(git_tag)/g; s/@release_date/$(release_date)/g; s/@publish/$(BINTRAY_PUBLISH)/g' $(cwd)/.bintray.template > $(dist_dir)/bintray.json
 	@for distribution in `ls $(build_dir)`; do \
 		echo "== $$distribution"; \
 		release=$(dist_dir)/$(git_tag)/$$distribution; \
@@ -122,7 +122,7 @@ else
 				;; \
 		esac ;\
 		if [ "$(git_rev)" = "$(latest_git_rev)" ]; then \
-			sed 's/@version/$(git_tag)/g; s/@release_date/$(release_date)/g; s/@publish/$(BINTRAY_PUBLISH)/g' .bintray.latest.template > $(dist_dir)/bintray.latest.json \
+			sed 's/@version/$(git_tag)/g; s/@release_date/$(release_date)/g; s/@publish/$(BINTRAY_PUBLISH)/g' $(cwd)/.bintray.latest.template > $(dist_dir)/bintray.latest.json; \
 			echo "updating latest distribution"; \
 			latest=$(dist_dir)/latest/$$distribution; \
 			mkdir -p $$latest; \
