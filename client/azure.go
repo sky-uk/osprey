@@ -40,12 +40,6 @@ type azureRetriever struct {
 	stopCh      chan struct{}
 }
 
-//type azureUserInfoResponse struct {
-//	Email string `json:"value,omitempty"`
-//}
-
-//const azureProfileUrl = "https://graph.microsoft.com/v1.0/me/userPrincipalName"
-
 func (r *azureRetriever) RetrieveUserDetails(target Target, authInfo api.AuthInfo) (*UserInfo, error) {
 	jwt, err := jws.ParseJWT([]byte(authInfo.Token))
 	if err != nil {
@@ -76,7 +70,8 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Cl
 	}
 
 	return &ClusterInfo{
-		AccessToken: r.accessToken,
+		AccessToken:         r.accessToken,
+		ClusterAPIServerURL: target.Server(),
 	}, nil
 }
 
