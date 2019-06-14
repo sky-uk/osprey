@@ -1,16 +1,15 @@
 package e2e
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/sky-uk/osprey/e2e/ospreytest"
-
 	"io/ioutil"
 	"os"
 	"testing"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/sky-uk/osprey/e2e/dextest"
 	"github.com/sky-uk/osprey/e2e/ldaptest"
+	"github.com/sky-uk/osprey/e2e/ospreytest"
 	"github.com/sky-uk/osprey/e2e/util"
 )
 
@@ -61,7 +60,6 @@ var _ = BeforeSuite(func() {
 
 	ldapServer, err = ldaptest.Start(testDir) //uses the ldaptest/testdata/schema.ldap
 	Expect(err).To(BeNil(), "Starts the ldap server")
-
 	var envs []string
 	for env := range environments {
 		envs = append(envs, env)

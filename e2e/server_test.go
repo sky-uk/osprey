@@ -33,7 +33,7 @@ var _ = Describe("Server", func() {
 		osprey := ospreytest.Start(testDir, false, ospreyPort, localDex)
 		osprey.AssertStillRunning()
 
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 
 		osprey.Stop()
 		osprey.AssertStoppedRunning()
@@ -45,7 +45,7 @@ var _ = Describe("Server", func() {
 		osprey := ospreytest.Start(testDir, true, ospreyPort, localDex)
 		osprey.AssertStillRunning()
 
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 
 		osprey.Stop()
 		osprey.AssertStoppedRunning()

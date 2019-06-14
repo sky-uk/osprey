@@ -71,7 +71,6 @@ func user(_ *cobra.Command, _ []string) {
 		if authInfo != nil {
 			userInfo, err := retriever.RetrieveUserDetails(target, *authInfo)
 			if err != nil {
-				success = false
 				log.Errorf("%s: %v", target.Name(), err)
 			}
 			if userInfo != nil {
@@ -84,6 +83,8 @@ func user(_ *cobra.Command, _ []string) {
 					log.Infof("%s: %s %s", target.Name(), userInfo.Username, userInfo.Roles)
 				}
 			}
+		} else {
+			log.Infof("%s: none", target.Name())
 		}
 	}
 

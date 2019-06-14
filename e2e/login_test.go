@@ -61,7 +61,7 @@ var _ = Describe("Login", func() {
 	})
 
 	It("logs in overriding certificate-authority with certificate-authority-data", func() {
-		caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "/road/to/nowhere")
+		caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, dexes[0].DexCA)
 		Expect(err).To(BeNil(), "Creates the osprey config")
 		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
 		caDataLogin := Login("user", "login", caDataConfigFlag)

@@ -113,29 +113,30 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	if config.Providers["osprey"] != nil {
-		if config.Providers["osprey"].CertificateAuthorityData == "" {
-			if config.Providers["osprey"].CertificateAuthority != "" {
-				certData, err := web.LoadTLSCert(config.Providers["osprey"].CertificateAuthority)
-				if err != nil {
-					return nil, fmt.Errorf("failed to load global CA certificate: %v", err)
-				}
-				config.Providers["osprey"].CertificateAuthorityData = certData
+		var ospreyCertData string
+		if config.Providers["osprey"].CertificateAuthority != "" && config.Providers["osprey"].CertificateAuthorityData == "" {
+			ospreyCertData, err = web.LoadTLSCert(config.Providers["osprey"].CertificateAuthority)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load global CA certificate: %v", err)
 			}
-		} else {
+			config.Providers["osprey"].CertificateAuthorityData = ospreyCertData
+		} else if config.Providers["osprey"].CertificateAuthorityData != "" {
 			// CA is overridden if CAData is present
 			config.Providers["osprey"].CertificateAuthority = ""
 		}
 
 		for name, target := range config.Providers["osprey"].Targets {
-			if target.CertificateAuthorityData == "" {
-				if target.CertificateAuthority != "" {
-					certData, err := web.LoadTLSCert(target.CertificateAuthority)
-					if err != nil {
-						return nil, fmt.Errorf("failed to load CA certificate for target %s: %v", name, err)
-					}
-					target.CertificateAuthorityData = certData
+			if target.CertificateAuthority == "" && target.CertificateAuthorityData == "" {
+				target.CertificateAuthorityData = ospreyCertData
+				// CA is overridden if CAData is present
+				target.CertificateAuthority = ""
+			} else if target.CertificateAuthority != "" && target.CertificateAuthorityData == "" {
+				certData, err := web.LoadTLSCert(target.CertificateAuthority)
+				if err != nil {
+					return nil, fmt.Errorf("failed to load global CA certificate for target %s: %v", name, err)
 				}
-			} else {
+				target.CertificateAuthorityData = certData
+			} else if target.CertificateAuthorityData != "" {
 				// CA is overridden if CAData is present
 				target.CertificateAuthority = ""
 			}

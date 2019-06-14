@@ -1,19 +1,20 @@
 package client
 
 import (
-	container "cloud.google.com/go/container/apiv1"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+
+	container "cloud.google.com/go/container/apiv1"
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/osprey/client/oidc"
 	"golang.org/x/oauth2"
 	googleoidc "golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	containerpb "google.golang.org/genproto/googleapis/container/v1"
-	"io/ioutil"
 	"k8s.io/client-go/tools/clientcmd/api"
-	"net/http"
 )
 
 const googleUserInfoEndpoint = "https://openidconnect.googleapis.com/v1/userinfo"

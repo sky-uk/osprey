@@ -31,7 +31,8 @@
 
 [[constraint]]
   name = "github.com/dexidp/dex"
-  version = "2.16.0"
+  version = "2.9.0"
+
 
 [[constraint]]
   branch = "master"

@@ -3,11 +3,12 @@ package oidc
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
+
 	"github.com/pkg/browser"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
-	"net/http"
-	"net/url"
 )
 
 const (

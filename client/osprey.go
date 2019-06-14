@@ -3,12 +3,13 @@ package client
 import (
 	"encoding/base64"
 	"fmt"
+	"net/http"
+
 	"github.com/SermoDigital/jose/jws"
+	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/osprey/common/pb"
 	webClient "github.com/sky-uk/osprey/common/web"
 	"k8s.io/client-go/tools/clientcmd/api"
-	"log"
-	"net/http"
 )
 
 // NewFactory creates a new ProviderType
@@ -32,7 +33,7 @@ func (r *ospreyRetriever) RetrieveUserDetails(target Target, authInfo api.AuthIn
 
 	idToken := authInfo.AuthProvider.Config["id-token"]
 	if idToken == "" {
-		return nil, fmt.Errorf("no %s id-token for target %s", authInfo.AuthProvider.Name, target.Name())
+		return nil, fmt.Errorf("none")
 	}
 
 	jwt, err := jws.ParseJWT([]byte(idToken))

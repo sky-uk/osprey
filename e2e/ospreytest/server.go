@@ -2,8 +2,9 @@ package ospreytest
 
 import (
 	"fmt"
-	"github.com/sky-uk/osprey/client"
 	"path/filepath"
+
+	"github.com/sky-uk/osprey/client"
 
 	"github.com/onsi/ginkgo"
 	"github.com/sky-uk/osprey/common/web"
@@ -131,6 +132,12 @@ func BuildCADataConfig(testDir string, servers []*TestOsprey, caData bool, caPat
 // If caData is true, it base64 encodes the CA data instead of using the file path.
 func BuildFullConfig(testDir, defaultGroup string, targetGroups map[string][]string, servers []*TestOsprey, caData bool, caPath string) (*TestConfig, error) {
 	config := client.NewConfig()
+	config.Providers = map[string]*client.Provider{
+		"osprey": {
+			CertificateAuthority: caPath,
+			Targets:              make(map[string]*client.TargetEntry),
+		},
+	}
 	config.Kubeconfig = fmt.Sprintf("%s/.kube/config", testDir)
 	ospreyconfigFile := fmt.Sprintf("%s/.osprey/config", testDir)
 
@@ -144,7 +151,7 @@ func BuildFullConfig(testDir, defaultGroup string, targetGroups map[string][]str
 		}
 		targetName := osprey.OspreyconfigTargetName()
 
-		target := &config.TargetEntry{
+		target := &client.TargetEntry{
 			Server:  osprey.URL,
 			Aliases: []string{osprey.OspreyconfigAliasName()},
 		}
@@ -165,11 +172,10 @@ func BuildFullConfig(testDir, defaultGroup string, targetGroups map[string][]str
 		if groups, ok := targetGroups[osprey.Environment]; ok {
 			target.Groups = groups
 		}
-
-		config.Dex.Targets[targetName] = target
+		config.Providers["osprey"].Targets[targetName] = target
 	}
 	testConfig := &TestConfig{Config: config, ConfigFile: ospreyconfigFile}
-	return testConfig, config.SaveConfig(config, ospreyconfigFile)
+	return testConfig, client.SaveConfig(config, ospreyconfigFile)
 }
 
 // ProviderType returns a TestCommand for the osprey binary with the provided args arguments.

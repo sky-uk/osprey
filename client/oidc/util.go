@@ -4,9 +4,10 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/oauth2"
 	"os"
 	"strings"
+
+	"golang.org/x/oauth2"
 )
 
 func consumeToken() (token string, err error) {

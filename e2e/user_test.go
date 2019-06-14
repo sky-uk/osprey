@@ -58,7 +58,7 @@ var _ = Describe("User", func() {
 				output := user.GetOutput()
 				for _, osprey := range expectedEnvironments {
 					target := OspreyconfigTargetName(osprey)
-					Expect(output).To(ContainSubstring("%s: janedoe@example.com [admins, developers]", target), "No users exists")
+					Expect(output).To(ContainSubstring("%s: janedoe@example.com [admins developers]", target), "No users exists")
 				}
 			})
 

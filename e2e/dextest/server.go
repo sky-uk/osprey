@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	dex_ldap "github.com/dexidp/dex/connector/ldap"
 	dex "github.com/dexidp/dex/server"
 	dex_storage "github.com/dexidp/dex/storage"
@@ -57,6 +59,7 @@ func StartDexes(testDir string, ldap *ldaptest.TestLDAP, environments []string, 
 			return dexes, fmt.Errorf("failed to create dex server for environment %s (port: %d): %v", env, port, err)
 		}
 	}
+
 	return dexes, nil
 }
 
@@ -140,6 +143,7 @@ func newDexConfig(port int32, updateConfig func(c *dex.Config)) *dex.Config {
 		// Don't prompt for approval, just immediately redirect with code.
 		SkipApprovalScreen: true,
 		Now:                func() time.Time { return time.Now().UTC() },
+		PrometheusRegistry: prometheus.NewRegistry(),
 	}
 	if updateConfig != nil {
 		updateConfig(config)

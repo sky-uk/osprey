@@ -3,12 +3,13 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/SermoDigital/jose/jws"
 	"github.com/sky-uk/osprey/client/oidc"
 	"golang.org/x/oauth2"
 	azure "golang.org/x/oauth2/microsoft"
 	"k8s.io/client-go/tools/clientcmd/api"
-	"net/http"
 )
 
 // NewFactory creates new client
@@ -17,8 +18,8 @@ func NewAzureRetriever(provider *Provider) Retriever {
 		ClientID:     provider.ClientID,
 		ClientSecret: provider.ClientSecret,
 		RedirectURL:  provider.RedirectURI,
-		Scopes: provider.Scopes,
-		Endpoint: azure.AzureADEndpoint(provider.AzureTenantId),
+		Scopes:       provider.Scopes,
+		Endpoint:     azure.AzureADEndpoint(provider.AzureTenantId),
 	}
 
 	return &azureRetriever{
