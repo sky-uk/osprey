@@ -28,7 +28,7 @@ type DeviceFlowAuth struct {
 func (c *Client) AuthWithDeviceFlow(ctx context.Context) (*oauth2.Token, error) {
 	c.oAuthConfig.RedirectURL = ""
 	// devicecode URL is not exposed by the Azure https://login.microsoftonline.com/<tenant-id>/.well-known/openid-configuration endpoint
-	deviceAuthUrl := strings.Replace(c.oAuthConfig.AuthCodeURL(ospreyState), "/authorize", "/devicecode", 1)
+	deviceAuthUrl := strings.Replace(c.oAuthConfig.AuthCodeURL(ospreyState), "/authorize", "/v2.0/devicecode", 1)
 	urlParams := url.Values{
 		"client_id": {c.oAuthConfig.ClientID},
 	}
@@ -91,8 +91,7 @@ func (c *Client) poll(ctx context.Context, df *DeviceFlowAuth) (*oauth2.Token, e
 
 	for {
 		time.Sleep(time.Duration(interval) * time.Second)
-
-		tok, err := c.oAuthConfig.Exchange(ctx, df.UserCode,
+		tok, err := c.oAuthConfig.Exchange(ctx, df.DeviceCode,
 			oauth2.SetAuthURLParam("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
 			oauth2.SetAuthURLParam("device_code", df.DeviceCode))
 		if err == nil {

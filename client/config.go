@@ -62,6 +62,9 @@ type Provider struct {
 	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
 	// AzureTenantId
 	AzureTenantId string `yaml:"tenant-id,omitempty"`
+	// IssuerURL is the URL of the OpenID server. This is mainly used for testing.
+	// +optional
+	IssuerURL string `yaml:"issuer-url,omitempty"`
 	// Targets
 	Targets map[string]*TargetEntry `yaml:"targets"`
 }

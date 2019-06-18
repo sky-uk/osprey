@@ -11,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/osprey/client/oidc"
 	"golang.org/x/oauth2"
-	googleoidc "golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	containerpb "google.golang.org/genproto/googleapis/container/v1"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -19,9 +18,18 @@ import (
 
 const googleUserInfoEndpoint = "https://openidconnect.googleapis.com/v1/userinfo"
 
-// NewFactory creates new client
+// NewProviderFactory creates new client
 func NewGoogleRetriever(provider *Provider) Retriever {
-	config := oauth2.Config{
+	var config = oauth2.Config{}
+	if provider.IssuerURL == "" {
+		oidcEndpoint, err := oidc.GetWellKnownConfig("https://accounts.google.com/")
+		if err != nil {
+			log.Errorf("unable to query well-knon oidc config: %v", err)
+		}
+		config.Endpoint = oidcEndpoint
+	}
+
+	config = oauth2.Config{
 		ClientID:     provider.ClientID,
 		ClientSecret: provider.ClientSecret,
 		RedirectURL:  provider.RedirectURI,
@@ -31,7 +39,6 @@ func NewGoogleRetriever(provider *Provider) Retriever {
 			"https://www.googleapis.com/auth/userinfo.profile",
 			"https://www.googleapis.com/auth/cloud-platform",
 		},
-		Endpoint: googleoidc.Endpoint,
 	}
 
 	return &googleRetriever{

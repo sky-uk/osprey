@@ -12,7 +12,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-// NewFactory creates a new ProviderType
+// NewProviderFactory creates a new ProviderType
 func NewOspreyRetriever(provider *Provider) Retriever {
 	return &ospreyRetriever{serverCertificateAuthorityData: provider.CertificateAuthorityData}
 }

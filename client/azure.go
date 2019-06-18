@@ -8,24 +8,30 @@ import (
 	"github.com/SermoDigital/jose/jws"
 	"github.com/sky-uk/osprey/client/oidc"
 	"golang.org/x/oauth2"
-	azure "golang.org/x/oauth2/microsoft"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-// NewFactory creates new client
-func NewAzureRetriever(provider *Provider) Retriever {
-	config := oauth2.Config{
+// NewProviderFactory creates new client
+func NewAzureRetriever(provider *Provider) (Retriever, error) {
+	var config = oauth2.Config{}
+	if provider.IssuerURL == "" {
+		oidcEndpoint, err := oidc.GetWellKnownConfig(fmt.Sprintf("https://login.microsoftonline.com/%s/.well-known/openid-configuration", provider.AzureTenantId))
+		if err != nil {
+			return nil, fmt.Errorf("unable to query well-knon oidc config: %v", err)
+		}
+		config.Endpoint = oidcEndpoint
+	}
+	config = oauth2.Config{
 		ClientID:     provider.ClientID,
 		ClientSecret: provider.ClientSecret,
 		RedirectURL:  provider.RedirectURI,
 		Scopes:       provider.Scopes,
-		Endpoint:     azure.AzureADEndpoint(provider.AzureTenantId),
 	}
 
 	return &azureRetriever{
 		oidc:     oidc.New(config),
 		tenantId: provider.AzureTenantId,
-	}
+	}, nil
 }
 
 func (r *azureRetriever) Shutdown() {

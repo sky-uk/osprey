@@ -4,12 +4,13 @@ import (
 	"fmt"
 )
 
-func NewFactory(config *Config) (*factory, error) {
+func NewProviderFactory(config *Config) (*factory, error) {
 	retrievers := make(map[string]Retriever)
+	var err error
 	for provider := range config.Providers {
 		switch provider {
 		case "azure":
-			retrievers[provider] = NewAzureRetriever(config.Providers[provider])
+			retrievers[provider], err = NewAzureRetriever(config.Providers[provider])
 		case "google":
 			retrievers[provider] = NewGoogleRetriever(config.Providers[provider])
 		case "osprey":
@@ -18,6 +19,9 @@ func NewFactory(config *Config) (*factory, error) {
 			return nil, fmt.Errorf("unsupported provider: %s", provider)
 		}
 		retrievers[provider].SetInteractive(config.Interactive)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	return &factory{

@@ -11,7 +11,10 @@ import (
 	webServer "github.com/sky-uk/osprey/server/web"
 )
 
-const defaultGraceShutdownPeriod = 15 * time.Second
+const (
+	defaultGraceShutdownPeriod = 15 * time.Second
+	defaultAPIServerCAPath     = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+)
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
@@ -43,7 +46,7 @@ func init() {
 	serveCmd.Flags().StringVarP(&environment, "environment", "e", "", "name of the environment")
 	serveCmd.Flags().StringVarP(&secret, "secret", "s", "", "secret to be shared with the issuer")
 	serveCmd.Flags().StringVarP(&apiServerURL, "apiServerURL", "l", "", "URL of the apiserver in the environment (https://host:port)")
-	serveCmd.Flags().StringVarP(&apiServerCA, "apiServerCA", "r", "", "path to th root certificate authorities for the apiserver in the environment")
+	serveCmd.Flags().StringVarP(&apiServerCA, "apiServerCA", "r", defaultAPIServerCAPath, "path to th root certificate authorities for the apiserver in the environment")
 	serveCmd.Flags().StringVarP(&redirectURL, "redirectURL", "u", "", "callback URL for OAuth2 responses (https://host:port)")
 	serveCmd.Flags().StringVarP(&issuerURL, "issuerURL", "i", "", "host of the OpenId Connect issuer (https://host:port)")
 	serveCmd.Flags().StringVarP(&issuerPath, "issuerPath", "a", "", "path of the OpenId Connect issuer with no leading slash")

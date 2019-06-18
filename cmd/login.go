@@ -57,8 +57,7 @@ func login(_ *cobra.Command, _ []string) {
 
 	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
 	ospreyconfig.Interactive = interactive
-
-	retrieverFactory, err := client.NewFactory(ospreyconfig)
+	retrieverFactory, err := client.NewProviderFactory(ospreyconfig)
 	if err != nil {
 		log.Fatalf("unable to initialise providers: %v", err)
 	}

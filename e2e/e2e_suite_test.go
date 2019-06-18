@@ -34,7 +34,7 @@ var (
 	}
 
 	// Suite variables instantiated once
-	ospreys    []*ospreytest.TestOsprey
+	ospreys    []*ospreytest.TestTargetEntry
 	dexes      []*dextest.TestDex
 	ldapServer *ldaptest.TestLDAP
 	testDir    string
@@ -42,7 +42,7 @@ var (
 	// Suite variables modifiable per test scenario
 	err               error
 	environmentsToUse map[string][]string
-	targetedOspreys   []*ospreytest.TestOsprey
+	targetedOspreys   []*ospreytest.TestTargetEntry
 	ospreyconfig      *ospreytest.TestConfig
 	ospreyconfigFlag  string
 	defaultGroup      string

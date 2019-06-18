@@ -50,7 +50,7 @@ func user(_ *cobra.Command, _ []string) {
 	}
 
 	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
-	retrieverFactory, err := client.NewFactory(ospreyconfig)
+	retrieverFactory, err := client.NewProviderFactory(ospreyconfig)
 	if err != nil {
 		log.Fatalf("unable to initialise providers: %v", err)
 	}
@@ -75,12 +75,10 @@ func user(_ *cobra.Command, _ []string) {
 			}
 			if userInfo != nil {
 				switch target.ProviderType() {
-				case "azure":
-					log.Infof("%s: %s", target.Name(), userInfo.Username)
-				case "google":
-					log.Infof("%s: %s", target.Name(), userInfo.Username)
 				case "osprey":
 					log.Infof("%s: %s %s", target.Name(), userInfo.Username, userInfo.Roles)
+				default:
+					log.Infof("%s: %s", target.Name(), userInfo.Username)
 				}
 			}
 		} else {
