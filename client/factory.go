@@ -12,9 +12,9 @@ func NewProviderFactory(config *Config) (*factory, error) {
 		case "azure":
 			retrievers[provider], err = NewAzureRetriever(config.Providers[provider])
 		case "google":
-			retrievers[provider] = NewGoogleRetriever(config.Providers[provider])
+			retrievers[provider], err = NewGoogleRetriever(config.Providers[provider])
 		case "osprey":
-			retrievers[provider] = NewOspreyRetriever(config.Providers[provider])
+			retrievers[provider], err = NewOspreyRetriever(config.Providers[provider])
 		default:
 			return nil, fmt.Errorf("unsupported provider: %s", provider)
 		}

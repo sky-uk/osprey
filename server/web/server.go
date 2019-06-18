@@ -19,13 +19,14 @@ import (
 var signals chan os.Signal
 
 // NewServer creates a new Server definition with an empty ServeMux
-func NewServer(port int32, tlsCertFile, tlsKeyFile string, shutdownGracePeriod time.Duration) *Server {
+func NewServer(port int32, tlsCertFile, tlsKeyFile string, shutdownGracePeriod time.Duration, clusterInfoOnly bool) *Server {
 	return &Server{
 		addr:                fmt.Sprintf("0.0.0.0:%d", port),
 		shutdownGracePeriod: shutdownGracePeriod,
 		tlsCertFile:         tlsCertFile,
 		tlsCertKey:          tlsKeyFile,
 		mux:                 http.NewServeMux(),
+		clusterInfoOnly:     clusterInfoOnly,
 	}
 }
 
@@ -71,14 +72,18 @@ type Server struct {
 	tlsCertFile         string
 	tlsCertKey          string
 	mux                 *http.ServeMux
+	clusterInfoOnly    bool
 }
 
 // RegisterService binds the http endpoints to the Osprey services
 // "/access-token" -> Osprey.RetrieveClusterDetailsAndAuthTokens()
 func (s *Server) RegisterService(service osprey.Osprey) {
-	s.mux.Handle("/access-token", handleAccessToken(service))
-	s.mux.Handle("/callback", handleCallback(service))
 	s.mux.Handle("/healthz", handleHealthcheck())
+	s.mux.Handle("/cluster-info", handleClusterInfo(service))
+	if !s.clusterInfoOnly {
+		s.mux.Handle("/access-token", handleAccessToken(service))
+		s.mux.Handle("/callback", handleCallback(service))
+	}
 }
 
 func setup(server *Server) *http.Server {
@@ -120,10 +125,23 @@ func handleCallback(osprey osprey.Osprey) http.HandlerFunc {
 	}
 }
 
+func handleClusterInfo(osprey osprey.Osprey) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var response proto.Message
+		var err error
+		switch r.Method {
+		case http.MethodGet:
+			response, err = osprey.GetClusterInfo(r.Context())
+		default:
+			err = status.Error(codes.InvalidArgument, "Method not implemented")
+		}
+		handleResponse(w, response, err)
+	}
+}
+
 func handleHealthcheck() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "Health check passed!")
 	}
 }
 

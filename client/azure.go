@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/sky-uk/osprey/common/pb"
 	"net/http"
 
 	"github.com/SermoDigital/jose/jws"
@@ -13,20 +14,23 @@ import (
 
 // NewProviderFactory creates new client
 func NewAzureRetriever(provider *Provider) (Retriever, error) {
-	var config = oauth2.Config{}
-	if provider.IssuerURL == "" {
-		oidcEndpoint, err := oidc.GetWellKnownConfig(fmt.Sprintf("https://login.microsoftonline.com/%s/.well-known/openid-configuration", provider.AzureTenantId))
-		if err != nil {
-			return nil, fmt.Errorf("unable to query well-knon oidc config: %v", err)
-		}
-		config.Endpoint = oidcEndpoint
-	}
-	config = oauth2.Config{
+	config := oauth2.Config{
 		ClientID:     provider.ClientID,
 		ClientSecret: provider.ClientSecret,
 		RedirectURL:  provider.RedirectURI,
 		Scopes:       provider.Scopes,
 	}
+	if provider.IssuerURL == "" {
+		provider.IssuerURL = fmt.Sprintf("https://login.microsoftonline.com/%s/.well-known/openid-configuration", provider.AzureTenantId)
+	} else {
+		provider.IssuerURL = fmt.Sprintf("%s/.well-known/openid-configuration", provider.IssuerURL)
+	}
+
+	oidcEndpoint, err := oidc.GetWellKnownConfig(provider.IssuerURL)
+	if err != nil {
+		return nil, fmt.Errorf("unable to query well-knon oidc config: %v", err)
+	}
+	config.Endpoint = oidcEndpoint
 
 	return &azureRetriever{
 		oidc:     oidc.New(config),
@@ -60,9 +64,10 @@ func (r *azureRetriever) RetrieveUserDetails(target Target, authInfo api.AuthInf
 }
 
 func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*ClusterInfo, error) {
+	client := http.DefaultClient
 	ctx := context.TODO()
-	if !r.oidc.Authenticated() {
 
+	if !r.oidc.Authenticated() {
 		switch r.interactive {
 		case true:
 			oauthToken, _ := r.oidc.AuthWithOIDCCallback(ctx)
@@ -76,9 +81,23 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Cl
 		}
 	}
 
+	req, err := createClusterInfoRequest(target.Server())
+	if err != nil {
+		return nil, fmt.Errorf("unable to create access-token request: %v", err)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve access-token: %v", err)
+	}
+	clusterInfo, err := pb.ConsumeClusterInfoResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ClusterInfo{
 		AccessToken:         r.accessToken,
-		ClusterAPIServerURL: target.Server(),
+		ClusterAPIServerURL: clusterInfo.Cluster.ApiServerURL,
+		ClusterCA:           clusterInfo.Cluster.ApiServerCA,
 	}, nil
 }
 

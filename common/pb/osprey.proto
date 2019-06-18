@@ -10,6 +10,12 @@ message LoginResponse {
   User user = 3;
 }
 
+message ClusterInfoRequest {}
+
+message ClusterInfoResponse {
+  Cluster cluster = 1;
+}
+
 message Cluster {
   string name = 1;
   string apiServerURL = 2;

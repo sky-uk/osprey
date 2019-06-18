@@ -13,8 +13,8 @@ import (
 )
 
 // NewProviderFactory creates a new ProviderType
-func NewOspreyRetriever(provider *Provider) Retriever {
-	return &ospreyRetriever{serverCertificateAuthorityData: provider.CertificateAuthorityData}
+func NewOspreyRetriever(provider *Provider) (Retriever, error) {
+	return &ospreyRetriever{serverCertificateAuthorityData: provider.CertificateAuthorityData}, nil
 }
 
 type ospreyRetriever struct {
@@ -102,6 +102,17 @@ func createAccessTokenRequest(host string, credentials *LoginCredentials) (*http
 	}
 	authToken := basicAuth(credentials)
 	req.Header.Add("Authorization", fmt.Sprintf("Basic %s", authToken))
+	req.Header.Add("Accept", "application/octet-stream")
+
+	return req, nil
+}
+
+func createClusterInfoRequest(host string) (*http.Request, error) {
+	url := fmt.Sprintf("%s/cluster-info", host)
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create access-token request: %v", err)
+	}
 	req.Header.Add("Accept", "application/octet-stream")
 
 	return req, nil

@@ -19,17 +19,8 @@ import (
 const googleUserInfoEndpoint = "https://openidconnect.googleapis.com/v1/userinfo"
 
 // NewProviderFactory creates new client
-func NewGoogleRetriever(provider *Provider) Retriever {
-	var config = oauth2.Config{}
-	if provider.IssuerURL == "" {
-		oidcEndpoint, err := oidc.GetWellKnownConfig("https://accounts.google.com/")
-		if err != nil {
-			log.Errorf("unable to query well-knon oidc config: %v", err)
-		}
-		config.Endpoint = oidcEndpoint
-	}
-
-	config = oauth2.Config{
+func NewGoogleRetriever(provider *Provider) (Retriever, error) {
+	config := oauth2.Config{
 		ClientID:     provider.ClientID,
 		ClientSecret: provider.ClientSecret,
 		RedirectURL:  provider.RedirectURI,
@@ -40,10 +31,20 @@ func NewGoogleRetriever(provider *Provider) Retriever {
 			"https://www.googleapis.com/auth/cloud-platform",
 		},
 	}
+	if provider.IssuerURL == "" {
+		provider.IssuerURL = "https://accounts.google.com/.well-known/openid-configuration"
+	} else {
+		provider.IssuerURL = fmt.Sprintf("%s/.well-known/openid-configuration", provider.IssuerURL)
+	}
+	oidcEndpoint, err := oidc.GetWellKnownConfig(provider.IssuerURL)
+	if err != nil {
+		return nil, fmt.Errorf("unable to query well-knon oidc config: %v", err)
+	}
+	config.Endpoint = oidcEndpoint
 
 	return &googleRetriever{
 		oidc: oidc.New(config),
-	}
+	}, nil
 }
 
 func (r *googleRetriever) Shutdown() {

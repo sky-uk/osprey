@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/pkg/browser"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 )
@@ -69,10 +68,7 @@ func (c *Client) AuthWithOIDCCallback(ctx context.Context) (*oauth2.Token, error
 			log.Info(err)
 		}
 	}()
-
-	if err := browser.OpenURL(authUrl); err != nil {
-		fmt.Printf("Visit the URL to login:\n%v", authUrl)
-	}
+	fmt.Printf("To sign in, use a web browser to open the page %s", authUrl)
 
 	<-stopCh
 	h.Shutdown(ctx)
