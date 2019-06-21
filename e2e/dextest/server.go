@@ -33,9 +33,12 @@ func init() {
 type TestDex struct {
 	webServer   *httptest.Server
 	dexServer   *dex.Server
+	ldapServer  *ldaptest.TestLDAP
 	config      *dex.Config
 	Environment string
 	DexCA       string
+	dexKey      string
+	dexPort     int32
 }
 
 // URL returns the base URL of the Dex server.
@@ -60,37 +63,56 @@ func StartDexes(testDir string, ldap *ldaptest.TestLDAP, environments []string, 
 	return dexes, nil
 }
 
-// Start starts a new dex server using the osprey server to configure its known clients.
+// Start starts a new dex server.
 // It uses the ldapConfig to setup its connector.
 func Start(testDir string, port int32, environment string, ldap *ldaptest.TestLDAP) (*TestDex, error) {
 	dexDir := filepath.Join(testDir, environment, "dex")
-	return newServer(context.Background(), dexDir, port, environment, func(dexConfig *dex.Config) {
-		createLdapConnector(ldap.DexConfig, dexConfig)
-	})
+	return newServer(context.Background(), dexDir, port, environment, ldap)
 }
 
 // Stop shuts down the server and blocks until all outstanding
 // requests on this server have completed.
 func Stop(server *TestDex) {
+	server.webServer.CloseClientConnections()
 	server.webServer.Close()
 }
 
+// Restart starts a new dex server using the provided server for configuration.
+func Restart(server *TestDex) (*TestDex, error) {
+	return newServerWithTLS(context.Background(), server.DexCA, server.dexKey, server.dexPort, server.Environment, server.ldapServer)
+}
+
 // newServer creates a Dex local server on the specified port with a default configuration.
-// The configuration can be overridden by providing an updateConfig function.
-func newServer(ctx context.Context, dexDir string, port int32, environment string, updateConfig func(c *dex.Config)) (*TestDex, error) {
+func newServer(ctx context.Context, dexDir string, port int32, environment string, ldap *ldaptest.TestLDAP) (*TestDex, error) {
+	certFile, keyFile := ssltest.CreateCertificates("localhost", dexDir)
+	return newServerWithTLS(ctx, certFile, keyFile, port, environment, ldap)
+}
+
+func newServerWithTLS(ctx context.Context, dexCA, dexKey string, port int32, environment string, ldap *ldaptest.TestLDAP) (*TestDex, error) {
 	var server *dex.Server
 	var config *dex.Config
 	var err error
 
-	config = newDexConfig(port, updateConfig)
+	config = newDexConfig(port, func(dexConfig *dex.Config) {
+		_=createLdapConnector(ldap.DexConfig, dexConfig)
+	})
+
 	server, err = dex.NewServer(ctx, *config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start server: %v", err)
 	}
 
-	certFile, keyFile := ssltest.CreateCertificates("localhost", dexDir)
-	httpServer, err := setupHTTPS(certFile, keyFile, port, server)
-	testDex := &TestDex{webServer: httpServer, Environment: environment, DexCA: certFile, config: config, dexServer: server}
+	httpServer, err := setupHTTPS(dexCA, dexKey, port, server)
+	testDex := &TestDex{
+		webServer:   httpServer,
+		Environment: environment,
+		ldapServer:  ldap,
+		dexPort:     port,
+		DexCA:       dexCA,
+		dexKey:      dexKey,
+		config:      config,
+		dexServer:   server,
+	}
 	if err != nil {
 		return testDex, err
 	}
