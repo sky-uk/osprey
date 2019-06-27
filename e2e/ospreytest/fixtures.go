@@ -137,13 +137,17 @@ func (o *TestOsprey) ToGroupClaims(authInfo *clientgo.AuthInfo) ([]string, error
 
 // CallHealthcheck returns the current status of osprey's healthcheck as an http response and error
 func (o *TestOsprey) CallHealthcheck() (*http.Response, error) {
-	ospreyHealthCheckURL := fmt.Sprintf("%s/healthz", o.URL)
-	req, err := http.NewRequest(http.MethodGet, ospreyHealthCheckURL, nil)
 	certData, _ := web.LoadTLSCert(o.CertFile)
 	httpClient, err := web.NewTLSClient(certData)
-
-	resp, err := httpClient.Do(req)
-	return resp, err
+	if err != nil {
+		return nil, err
+	}
+	ospreyHealthCheckURL := fmt.Sprintf("%s/healthz", o.URL)
+	req, err := http.NewRequest(http.MethodGet, ospreyHealthCheckURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	return httpClient.Do(req)
 }
 
 // CreateCustom

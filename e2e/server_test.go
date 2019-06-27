@@ -1,6 +1,8 @@
 package e2e
 
 import (
+	"fmt"
+	"net/http"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -16,7 +18,8 @@ var _ = Describe("Server", func() {
 	)
 
 	var (
-		localDex *dextest.TestDex
+		localDex    *dextest.TestDex
+		localOsprey *ospreytest.TestOsprey
 	)
 
 	BeforeEach(func() {
@@ -29,28 +32,76 @@ var _ = Describe("Server", func() {
 		dextest.Stop(localDex)
 	})
 
-	It("starts and stops an osprey without TLS", func() {
-		osprey := ospreytest.Start(testDir, false, ospreyPort, localDex)
-		osprey.AssertStillRunning()
-
+	startLocalOsprey := func(useTLS bool) {
+		localOsprey = ospreytest.Start(testDir, useTLS, ospreyPort, localDex)
 		time.Sleep(100 * time.Millisecond)
+		localOsprey.AssertStillRunning()
+	}
 
-		osprey.Stop()
-		osprey.AssertStoppedRunning()
+	Context("Start and stop osprey", func() {
+		AfterEach(func() {
+			localOsprey.Stop()
+			localOsprey.AssertStoppedRunning()
+			localOsprey.AssertSuccess()
+		})
 
-		osprey.AssertSuccess()
+		Specify("With TLS", func() {
+			startLocalOsprey(true)
+		})
+
+		Specify("Without TLS", func() {
+			startLocalOsprey(false)
+		})
 	})
 
-	It("starts and stops an osprey with TLS", func() {
-		osprey := ospreytest.Start(testDir, true, ospreyPort, localDex)
-		osprey.AssertStillRunning()
+	Context("Health check", func() {
+		AfterEach(func() {
+			localOsprey.Stop()
+			localOsprey.AssertStoppedRunning()
+			localOsprey.AssertSuccess()
+		})
 
-		time.Sleep(100 * time.Millisecond)
+		It("Should return ok when healthy", func() {
+			startLocalOsprey(true)
 
-		osprey.Stop()
-		osprey.AssertStoppedRunning()
+			resp, err := localOsprey.CallHealthcheck()
 
-		osprey.AssertSuccess()
+			Expect(err).To(BeNil(), "called healthcheck")
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+
+		It("Should return unavailable when dex not started", func() {
+			dextest.Stop(localDex)
+
+			startLocalOsprey(true)
+
+			resp, err := localOsprey.CallHealthcheck()
+
+			Expect(err).To(BeNil(), "called healthcheck")
+			Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
+		})
+
+		It("Should return available when dex is up", func() {
+			By("Dex not started")
+			dextest.Stop(localDex)
+			startLocalOsprey(true)
+
+			resp, err := localOsprey.CallHealthcheck()
+			Expect(err).To(BeNil(), "called healthcheck")
+			Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
+
+			By("Dex comes up")
+			localDex, err = dextest.Restart(localDex)
+			time.Sleep(100 * time.Millisecond)
+			Expect(err).ToNot(HaveOccurred(), "dex restarted")
+			localDex.RegisterClient(localOsprey.Environment, localOsprey.Secret, fmt.Sprintf("%s/callback", localOsprey.URL), localDex.Environment)
+
+			resp, err = localOsprey.CallHealthcheck()
+
+			localOsprey.PrintOutput()
+			Expect(err).To(BeNil(), "called healthcheck")
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+
 	})
-
 })

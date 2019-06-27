@@ -1,3 +1,5 @@
+# Release 1.5.0
+- Make readiness depend on the state of the oidc provider state
 
 # Release 1.4.0
 - Update Alpine to 3.9 - fix vulnerability https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-5021.

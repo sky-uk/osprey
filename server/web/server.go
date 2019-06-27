@@ -44,7 +44,7 @@ func (s *Server) Start() error {
 			log.Infof("Starting to listen at: http://%s", s.addr)
 			err = httpServer.ListenAndServe()
 		}
-		if err != nil {
+		if err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start https server: %v", err)
 		}
 	}()
@@ -78,7 +78,7 @@ type Server struct {
 func (s *Server) RegisterService(service osprey.Osprey) {
 	s.mux.Handle("/access-token", handleAccessToken(service))
 	s.mux.Handle("/callback", handleCallback(service))
-	s.mux.Handle("/healthz", handleHealthcheck())
+	s.mux.Handle("/healthz", handleHealthcheck(service))
 }
 
 func setup(server *Server) *http.Server {
@@ -120,10 +120,16 @@ func handleCallback(osprey osprey.Osprey) http.HandlerFunc {
 	}
 }
 
-func handleHealthcheck() http.HandlerFunc {
+func handleHealthcheck(osprey osprey.Osprey) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "Health check passed!")
+		if err := osprey.Ready(context.Background()); err == nil {
+			w.WriteHeader(http.StatusOK)
+			_, _ = fmt.Fprint(w, "Health check passed!")
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			log.Error(err)
+			_, _ = fmt.Fprint(w, err)
+		}
 	}
 }
 

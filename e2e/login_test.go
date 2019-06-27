@@ -42,15 +42,6 @@ var _ = Describe("Login", func() {
 		Expect(ospreyconfig.Kubeconfig).To(BeAnExistingFile())
 	})
 
-	It("healthcheck should return ok", func() {
-		for _, osprey := range ospreys {
-			resp, err := osprey.CallHealthcheck()
-
-			Expect(err).To(BeNil(), "could not call healthcheck")
-			Expect(resp.StatusCode).To(Equal(200))
-		}
-	})
-
 	It("logs in with certificate-authority-data", func() {
 		caDataConfig, err := BuildCADataConfig(testDir, ospreys, true, "")
 		Expect(err).To(BeNil(), "Creates the osprey config")
