@@ -38,12 +38,12 @@ func NewGoogleRetriever(provider *Provider) (Retriever, error) {
 	}
 	oidcEndpoint, err := oidc.GetWellKnownConfig(provider.IssuerURL)
 	if err != nil {
-		return nil, fmt.Errorf("unable to query well-knon oidc config: %v", err)
+		return nil, fmt.Errorf("unable to query well-known oidc config: %v", err)
 	}
 	config.Endpoint = oidcEndpoint
 
 	return &googleRetriever{
-		oidc: oidc.New(config),
+		oidc: oidc.New(config, ""),
 	}, nil
 }
 
@@ -69,7 +69,7 @@ type googleUserInfoResponse struct {
 func (r *googleRetriever) RetrieveUserDetails(target Target, authInfo api.AuthInfo) (*UserInfo, error) {
 	userInfoResponse := &googleUserInfoResponse{}
 	client := http.DefaultClient
-	request, err := http.NewRequest("GET", googleUserInfoEndpoint, nil)
+	request, err := http.NewRequest(http.MethodGet, googleUserInfoEndpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create request: %v", err)
 	}

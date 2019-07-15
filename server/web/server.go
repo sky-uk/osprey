@@ -72,7 +72,7 @@ type Server struct {
 	tlsCertFile         string
 	tlsCertKey          string
 	mux                 *http.ServeMux
-	clusterInfoOnly    bool
+	clusterInfoOnly     bool
 }
 
 // RegisterService binds the http endpoints to the Osprey services
@@ -152,7 +152,7 @@ func handleResponse(w http.ResponseWriter, response proto.Message, err error) {
 		}
 		data, err := proto.Marshal(response)
 		if err == nil {
-			w.Write(data)
+			_, err = w.Write(data)
 			return
 		}
 		errMsg := fmt.Sprintf("Failed to marshal success response: %v", err)

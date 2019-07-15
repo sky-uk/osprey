@@ -36,7 +36,7 @@ func (c *Client) AuthWithDeviceFlow(ctx context.Context) (*oauth2.Token, error) 
 		urlParams.Set("scope", strings.Join(c.oAuthConfig.Scopes, " "))
 	}
 
-	req, err := http.NewRequest("POST", deviceAuthUrl, strings.NewReader(urlParams.Encode()))
+	req, err := http.NewRequest(http.MethodPost, deviceAuthUrl, strings.NewReader(urlParams.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	response, err := ctxhttp.Do(ctx, nil, req)
 	if err != nil {
@@ -72,16 +72,6 @@ const (
 )
 
 func (c *Client) poll(ctx context.Context, df *DeviceFlowAuth) (*oauth2.Token, error) {
-	v := url.Values{
-		"client_id":   {c.oAuthConfig.ClientID},
-		"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},
-		"device_code": {df.DeviceCode},
-		"code":        {df.UserCode},
-	}
-	if len(c.oAuthConfig.Scopes) > 0 {
-		v.Set("scope", strings.Join(c.oAuthConfig.Scopes, " "))
-	}
-
 	// If no interval was provided, the client MUST use a reasonable default polling interval.
 	// See https://tools.ietf.org/html/draft-ietf-oauth-device-flow-07#section-3.5
 	interval := df.Interval
@@ -93,11 +83,11 @@ func (c *Client) poll(ctx context.Context, df *DeviceFlowAuth) (*oauth2.Token, e
 		time.Sleep(time.Duration(interval) * time.Second)
 		tok, err := c.oAuthConfig.Exchange(ctx, df.DeviceCode,
 			oauth2.SetAuthURLParam("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
-			oauth2.SetAuthURLParam("device_code", df.DeviceCode))
+			oauth2.SetAuthURLParam("device_code", df.DeviceCode),
+			oauth2.SetAuthURLParam("resource", fmt.Sprintf("spn:%s", c.serverApplicationID)))
 		if err == nil {
 			return tok, nil
 		}
-
 		errTyp := parseError(err)
 		switch errTyp {
 		case errAccessDenied, errExpiredToken:

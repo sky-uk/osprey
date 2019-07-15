@@ -18,7 +18,9 @@ func NewProviderFactory(config *Config) (*factory, error) {
 		default:
 			return nil, fmt.Errorf("unsupported provider: %s", provider)
 		}
-		retrievers[provider].SetInteractive(config.Interactive)
+		if retrievers[provider] != nil && config.Interactive {
+			retrievers[provider].SetInteractive(config.Interactive)
+		}
 	}
 	if err != nil {
 		return nil, err

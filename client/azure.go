@@ -3,13 +3,13 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/sky-uk/osprey/common/pb"
-	"net/http"
-
 	"github.com/SermoDigital/jose/jws"
 	"github.com/sky-uk/osprey/client/oidc"
+	"github.com/sky-uk/osprey/common/pb"
+	"github.com/sky-uk/osprey/common/web"
 	"golang.org/x/oauth2"
 	"k8s.io/client-go/tools/clientcmd/api"
+	"net/http"
 )
 
 // NewProviderFactory creates new client
@@ -33,7 +33,7 @@ func NewAzureRetriever(provider *Provider) (Retriever, error) {
 	config.Endpoint = oidcEndpoint
 
 	return &azureRetriever{
-		oidc:     oidc.New(config),
+		oidc:     oidc.New(config, provider.ServerApplicationID),
 		tenantId: provider.AzureTenantId,
 	}, nil
 }
@@ -57,20 +57,26 @@ func (r *azureRetriever) RetrieveUserDetails(target Target, authInfo api.AuthInf
 		return nil, fmt.Errorf("failed to parse user token for %s: %v", target.Name(), err)
 	}
 
-	user := jwt.Claims().Get("unique_name")
-	return &UserInfo{
-		Username: fmt.Sprintf("%s", user),
-	}, nil
+	if jwt.Claims().Get("unique_name") != nil {
+		user := jwt.Claims().Get("unique_name")
+		return &UserInfo{
+			Username: fmt.Sprintf("%s", user),
+		}, nil
+	}
+
+	return nil, fmt.Errorf("jwt does not contain the 'unique_name' field")
 }
 
 func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*ClusterInfo, error) {
-	client := http.DefaultClient
 	ctx := context.TODO()
 
 	if !r.oidc.Authenticated() {
 		switch r.interactive {
 		case true:
-			oauthToken, _ := r.oidc.AuthWithOIDCCallback(ctx)
+			oauthToken, err := r.oidc.AuthWithOIDCCallback(ctx)
+			if err != nil {
+				return nil, err
+			}
 			r.accessToken = oauthToken.AccessToken
 		case false:
 			oauthToken, err := r.oidc.AuthWithDeviceFlow(ctx)
@@ -81,13 +87,19 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Cl
 		}
 	}
 
+	var client = &http.Client{}
+	client, err := web.NewTLSClient(target.CertificateAuthorityData())
+	if err != nil {
+		return nil, fmt.Errorf("unable to create TLS client: %v", err)
+	}
+
 	req, err := createClusterInfoRequest(target.Server())
 	if err != nil {
-		return nil, fmt.Errorf("unable to create access-token request: %v", err)
+		return nil, fmt.Errorf("unable to create cluster-info request: %v", err)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve access-token: %v", err)
+		return nil, fmt.Errorf("failed to retrieve cluster-info: %v", err)
 	}
 	clusterInfo, err := pb.ConsumeClusterInfoResponse(resp)
 	if err != nil {

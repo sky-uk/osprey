@@ -87,7 +87,12 @@ func Remove(name string) error {
 		return fmt.Errorf("failed to load existing kubeconfig at %s: %v", pathOptions.GetDefaultFilename(), err)
 	}
 	if config.AuthInfos[name] != nil {
-		config.AuthInfos[name].AuthProvider.Config["id-token"] = ""
+		if config.AuthInfos[name].Token != "" {
+			config.AuthInfos[name].Token = ""
+		}
+		if config.AuthInfos[name].AuthProvider != nil {
+			config.AuthInfos[name].AuthProvider.Config["id-token"] = ""
+		}
 		return kubectl.ModifyConfig(pathOptions, *config, false)
 	}
 	return nil

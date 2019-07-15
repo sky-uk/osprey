@@ -77,6 +77,7 @@ func (r *ospreyRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*C
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve access-token: %v", err)
 	}
+	defer resp.Body.Close()
 	accessToken, err := pb.ConsumeLoginResponse(resp)
 	if err != nil {
 		return nil, err
@@ -109,7 +110,7 @@ func createAccessTokenRequest(host string, credentials *LoginCredentials) (*http
 
 func createClusterInfoRequest(host string) (*http.Request, error) {
 	url := fmt.Sprintf("%s/cluster-info", host)
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create access-token request: %v", err)
 	}

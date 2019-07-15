@@ -45,6 +45,8 @@ type Config struct {
 
 // Provider
 type Provider struct {
+	// ServerApplicationID is the oidc-client-id used on the apiserver configuration
+	ServerApplicationID string `yaml:"server-application-id,omitempty"`
 	// ClientID
 	ClientID string `yaml:"client-id,omitempty"`
 	// ClientSecret
@@ -114,34 +116,35 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid config %s: %v", path, err)
 	}
-
-	if config.Providers["osprey"] != nil {
-		var ospreyCertData string
-		if config.Providers["osprey"].CertificateAuthority != "" && config.Providers["osprey"].CertificateAuthorityData == "" {
-			ospreyCertData, err = web.LoadTLSCert(config.Providers["osprey"].CertificateAuthority)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load global CA certificate: %v", err)
-			}
-			config.Providers["osprey"].CertificateAuthorityData = ospreyCertData
-		} else if config.Providers["osprey"].CertificateAuthorityData != "" {
-			// CA is overridden if CAData is present
-			config.Providers["osprey"].CertificateAuthority = ""
-		}
-
-		for name, target := range config.Providers["osprey"].Targets {
-			if target.CertificateAuthority == "" && target.CertificateAuthorityData == "" {
-				target.CertificateAuthorityData = ospreyCertData
-				// CA is overridden if CAData is present
-				target.CertificateAuthority = ""
-			} else if target.CertificateAuthority != "" && target.CertificateAuthorityData == "" {
-				certData, err := web.LoadTLSCert(target.CertificateAuthority)
+	for provider, _ := range config.Providers {
+		if config.Providers[provider] != nil {
+			var ospreyCertData string
+			if config.Providers[provider].CertificateAuthority != "" && config.Providers[provider].CertificateAuthorityData == "" {
+				ospreyCertData, err = web.LoadTLSCert(config.Providers[provider].CertificateAuthority)
 				if err != nil {
-					return nil, fmt.Errorf("failed to load global CA certificate for target %s: %v", name, err)
+					return nil, fmt.Errorf("failed to load global CA certificate: %v", err)
 				}
-				target.CertificateAuthorityData = certData
-			} else if target.CertificateAuthorityData != "" {
+				config.Providers[provider].CertificateAuthorityData = ospreyCertData
+			} else if config.Providers[provider].CertificateAuthorityData != "" {
 				// CA is overridden if CAData is present
-				target.CertificateAuthority = ""
+				config.Providers[provider].CertificateAuthority = ""
+			}
+
+			for name, target := range config.Providers[provider].Targets {
+				if target.CertificateAuthority == "" && target.CertificateAuthorityData == "" {
+					target.CertificateAuthorityData = ospreyCertData
+					// CA is overridden if CAData is present
+					target.CertificateAuthority = ""
+				} else if target.CertificateAuthority != "" && target.CertificateAuthorityData == "" {
+					certData, err := web.LoadTLSCert(target.CertificateAuthority)
+					if err != nil {
+						return nil, fmt.Errorf("failed to load global CA certificate for target %s: %v", name, err)
+					}
+					target.CertificateAuthorityData = certData
+				} else if target.CertificateAuthorityData != "" {
+					// CA is overridden if CAData is present
+					target.CertificateAuthority = ""
+				}
 			}
 		}
 	}
@@ -168,14 +171,20 @@ func SaveConfig(config *Config, path string) error {
 
 func (c *Config) validate() error {
 	for provider := range c.Providers {
+		if c.Providers[provider] == nil {
+			return fmt.Errorf("the %s provider cannot be specified unless configured", provider)
+		}
 		if len(c.Providers[provider].Targets) == 0 {
-			return fmt.Errorf("at least one target server should be present for %s: %+v", provider, c)
+			return fmt.Errorf("at least one target server should be present for %s", provider)
 		}
 
 		switch provider {
 		case "azure":
 			if c.Providers[provider].AzureTenantId == "" {
 				return fmt.Errorf("tenant-id is required for %s targets", provider)
+			}
+			if c.Providers[provider].ServerApplicationID == "" {
+				return fmt.Errorf("server-application-id is required for %s targets", provider)
 			}
 			if c.Providers[provider].ClientID == "" || c.Providers[provider].ClientSecret == "" {
 				return fmt.Errorf("oauth2 client-id and client-secret must be supplied for %s targets", provider)

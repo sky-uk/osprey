@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"github.com/sky-uk/osprey/e2e/mockoidc"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -34,10 +35,11 @@ var (
 	}
 
 	// Suite variables instantiated once
-	ospreys    []*ospreytest.TestTargetEntry
-	dexes      []*dextest.TestDex
-	ldapServer *ldaptest.TestLDAP
-	testDir    string
+	ospreys        []*ospreytest.TestTargetEntry
+	dexes          []*dextest.TestDex
+	ldapServer     *ldaptest.TestLDAP
+	oidcMockServer mockoidc.MockOidcServer
+	testDir        string
 
 	// Suite variables modifiable per test scenario
 	err               error
@@ -70,6 +72,10 @@ var _ = BeforeSuite(func() {
 
 	ospreys, err = ospreytest.StartOspreys(testDir, dexes, ospreyPortsFrom)
 	Expect(err).To(BeNil(), "Starts the osprey servers")
+
+	oidcMockServer = mockoidc.New("localhost", oidcPort)
+	err = oidcMockServer.Start()
+	Expect(err).To(BeNil(), "Starts the mock oidc server")
 })
 
 var _ = AfterSuite(func() {
@@ -83,8 +89,8 @@ var _ = AfterSuite(func() {
 	os.RemoveAll(testDir)
 })
 
-func setupOspreyClientForEnvironments(envs map[string][]string) {
-	ospreyconfig, err = ospreytest.BuildConfig(testDir, defaultGroup, envs, ospreys)
+func setupClientForEnvironments(providerName string, envs map[string][]string, clientID string) {
+	ospreyconfig, err = ospreytest.BuildConfig(testDir, providerName, defaultGroup, envs, ospreys, clientID)
 	Expect(err).To(BeNil(), "Creates the osprey config with groups")
 	ospreyconfigFlag = "--ospreyconfig=" + ospreyconfig.ConfigFile
 

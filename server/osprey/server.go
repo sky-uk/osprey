@@ -65,7 +65,7 @@ func NewServer(environment, secret, redirectURL, issuerHost, issuerPath, issuerC
 			return nil, err
 		}
 
-		o := &osprey{
+		o = &osprey{
 			client:          client,
 			secret:          secret,
 			environment:     environment,

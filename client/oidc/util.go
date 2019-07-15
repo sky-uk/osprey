@@ -59,7 +59,7 @@ func GetWellKnownConfig(issuerURL string) (oauth2.Endpoint, error) {
 		log.Fatal("unable to parse issuer-url")
 	}
 	client := http.DefaultClient
-	request, err := http.NewRequest("GET", issuerURL, nil)
+	request, err := http.NewRequest(http.MethodGet, issuerURL, nil)
 	if err != nil {
 		return emptyURL, fmt.Errorf("unable to create request: %v", err)
 	}
