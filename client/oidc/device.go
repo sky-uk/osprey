@@ -29,7 +29,7 @@ func (c *Client) AuthWithDeviceFlow(ctx context.Context) (*oauth2.Token, error) 
 	c.oAuthConfig.RedirectURL = ""
 	// devicecode URL is not exposed by the Azure https://login.microsoftonline.com/<tenant-id>/.well-known/openid-configuration endpoint
 	deviceAuthUrl := strings.Replace(c.oAuthConfig.AuthCodeURL(ospreyState), "/authorize", "/v2.0/devicecode", 1)
-	urlParams := url.Values{ "client_id": {c.oAuthConfig.ClientID} }
+	urlParams := url.Values{"client_id": {c.oAuthConfig.ClientID}}
 	if len(c.oAuthConfig.Scopes) > 0 {
 		urlParams.Set("scope", strings.Join(c.oAuthConfig.Scopes, " "))
 	}

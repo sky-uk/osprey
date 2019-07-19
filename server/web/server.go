@@ -143,7 +143,7 @@ func handleHealthcheck(osprey osprey.Osprey) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := osprey.Ready(context.Background()); err == nil {
 			w.WriteHeader(http.StatusOK)
-			_, _ = fmt.Fprint(w, "OK")
+			_, _ = fmt.Fprint(w, "Health check passed!")
 		} else {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			log.Error(err)

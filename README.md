@@ -718,8 +718,8 @@ The fields `unique_name` and `groups` may be possible to have a different value 
 
 ## Dependency management
 
-Dependencies are managed with [dep](https://golang.github.io/dep/).
-Run `dep ensure` to keep your vendor folder up to date after a pull.
+Dependencies are managed with [go modules](https://github.com/golang/go/wiki/Modules).
+Run `go mod download` to download all dependencies.
 
 Make sure any kubernetes dependencies are compatible with the `kubernetes-1.8.5`
 

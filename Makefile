@@ -39,8 +39,7 @@ setup:
 	@echo "== setup"
 	go get -v golang.org/x/lint/golint
 	go get golang.org/x/tools/cmd/goimports
-	go get github.com/golang/dep/cmd/dep
-	dep ensure
+	go mod download
 
 format :
 	@echo "== format"

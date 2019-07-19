@@ -97,7 +97,7 @@ func newServerWithTLS(ctx context.Context, dexCA, dexKey string, port int32, env
 	var err error
 
 	config = newDexConfig(port, func(dexConfig *dex.Config) {
-		_=createLdapConnector(ldap.DexConfig, dexConfig)
+		_ = createLdapConnector(ldap.DexConfig, dexConfig)
 	})
 
 	server, err = dex.NewServer(ctx, *config)

@@ -68,7 +68,7 @@ func NewServer(environment, secret, redirectURL, issuerHost, issuerPath, issuerC
 		if err != nil {
 			return nil, err
 		}
-		o := &osprey{
+		o = &osprey{
 			client:          client,
 			secret:          secret,
 			environment:     environment,
@@ -79,8 +79,7 @@ func NewServer(environment, secret, redirectURL, issuerHost, issuerPath, issuerC
 			issuerPath:      issuerPath,
 			issuerCAData:    issuerCAData,
 		}
-		ctx := oidc.ClientContext(context.Background(), client)
-		provider, err := oidc.NewProvider(ctx, o.issuerURL())
+		provider, err := o.getOrCreateOidcProvider()
 		if err != nil {
 			log.Warnf("unable to create oidc provider %q: %v", o.issuerURL(), err)
 		} else {

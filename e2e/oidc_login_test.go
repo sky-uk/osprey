@@ -108,7 +108,7 @@ var _ = Describe("Login with a cloud provider", func() {
 			})
 		})
 
-		FIt("provides the same JWT token for multiple targets in group", func() {
+		It("provides the same JWT token for multiple targets in group", func() {
 			setupClientForEnvironments("azure", map[string][]string{"dev": {"development"}, "stage": {"development"}}, oidcClientID)
 			targetGroupArgs := append(userLoginArgs, "--group=development", "--interactive=false")
 			login := loginCommand(ospreyBinary, targetGroupArgs...)
