@@ -15,8 +15,14 @@ requiring a client to explicitly approve the requested grants before the
 token is provided. If the target provider does not support this feature,
 additional work is required to handle that approval.
 
-Although the OIDC provider may support multiple providers, the current
-implementation of the Osprey service only supports the flow for one provider.
+Alternatively, support has been added to support cloud identity providers.
+It currently has implementations to support logging in using Azure Active
+Directory. When Azure is configured as the OIDC provider, the `user login`
+command will generate a link to visit, which the user must open in a browser
+in order to authenticate. Upon a successful login, the browser will send a
+request to a local endpoint served by the osprey application. With the
+information contained in this request it is able to request a JWT token
+on your behalf.
 
 ## Quick links
 - [Installation](#installation)
@@ -89,16 +95,18 @@ osprey version dev-8c8751f (Tue 21 Aug 20:19:49 UTC 2018)
 
 With a [configuration](#client-configuration) file like:
 ```
-targets:
-  local.cluster:
-    server: https://osprey.local.cluster
-  foo.cluster:
-    server: https://osprey.foo.cluster
-    alias: [foo]
-    groups: [foo, foobar]
-  bar.cluster:
-    server: https://osprey.bar.cluster
-    groups: [bar, foobar]
+providers:
+  osprey:
+    targets:
+      local.cluster:
+        server: https://osprey.local.cluster
+      foo.cluster:
+        server: https://osprey.foo.cluster
+        alias: [foo]
+        groups: [foo, foobar]
+      bar.cluster:
+        server: https://osprey.bar.cluster
+        groups: [bar, foobar]
 ```
 
 The `groups` are labels that allow the targets to be organised into categories.
@@ -128,6 +136,9 @@ user: someone
 password: ***
 Logged in to local.cluster
 ```
+* Note: When using a cloud identity provider, a link to the respective online
+login form will be shown in the terminal. The user must click on this link and
+follow the login steps.
 
 It will generate the kubeconfig file creating a `cluster` and `user` entry
 per osprey target and one context with the `target` name and as many extra
@@ -244,29 +255,52 @@ The client uses a yaml configuration file. It's recommended location is:
 # When this value is defined, all targets must define at least one group.
 # default-group: my-group
 
-# Named map of target osprey servers to contact for access-tokens
-targets:
-  # Target osprey's environment name.
-  # Used for the name of the cluster, context, and users generated
-  foo.cluster:
-    # hostname:port of the target osprey server
-    server: https://osprey.foo.cluster
-
-    #  list of names to generate aditional contexts against the target.
-    aliases: [foo.alias]
-
-    #  list of names that can be used to logically group different osprey servers.
-    groups: [foo]
-
-    # Mandatory for windows, optional for unix systems.
-    # CA cert to use for HTTPS connections to osprey.
-    # Uses system's CA certs if absent (only in unix systems).
-    # certificate-authority: /tmp/osprey-238319279/cluster_ca.crt
-
-    # Alternatively, base64-encoded PEM format certificate.
-    # This will override certificate-authority if specified.
-    # Same caveat for Windows systems applies.
-    # certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5vdCB2YWxpZAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+# Named map of supported providers (currently `osprey` and `azure`)
+providers:
+  osprey:
+    # Named map of target osprey servers to contact for access-tokens
+    targets:
+      # Target osprey's environment name.
+      # Used for the name of the cluster, context, and users generated
+      foo.cluster:
+        # hostname:port of the target osprey server
+        server: https://osprey.foo.cluster
+    
+        #  list of names to generate aditional contexts against the target.
+        aliases: [foo.alias]
+    
+        #  list of names that can be used to logically group different osprey servers.
+        groups: [foo]
+    
+        # Mandatory for windows, optional for unix systems.
+        # CA cert to use for HTTPS connections to osprey.
+        # Uses system's CA certs if absent (only in unix systems).
+        # certificate-authority: /tmp/osprey-238319279/cluster_ca.crt
+    
+        # Alternatively, base64-encoded PEM format certificate.
+        # This will override certificate-authority if specified.
+        # Same caveat for Windows systems applies.
+        # certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5vdCB2YWxpZAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  
+  # Authenticating against Azure AD
+  azure:
+    # These settings are required when authenticating against Azure
+    tenant-id: your-azure-tenant-id
+    server-application-id: azure-ad-server-application-id
+    client-id: azure-ad-client-id
+    client-secret: azure-ad-client-secret
+    
+    # List of scopes to request as part of the request. This should be an azure link to the API exposed on the server application
+    scopes:
+      - "api://azure-tenant-id/Kubernetes.API.All"
+      
+    # This is required for the browser based authentication flow. The port is configurable, but it must conform to
+    # the format: http://localhost:<port>/auth/callback
+    redirect-uri: http://localhost:65525/auth/callback
+    targets:
+      server: http://osprey.foo.cluster
+      aliases: [foo.alias]
+      groups: [foo]
 
 ```
 
@@ -326,23 +360,38 @@ osprey config.
 
 # Server
 
-The Osprey service will receive the user's credentials and forward them to
-the OIDC provider (Dex) for authentication. On success it will return the
-token generated by the provider along with additional information about the
-cluster so that the client can generate the kubectl config file.
+The Osprey server can be configured to provide cluster info to support the
+population of `kubeconfig` when using a cloud identity provider or to handle
+authentication. When configured with the `--serve-cluster-info-only=true` flag,
+authentication is disabled.
+
+If `--serve-cluster-info-only` is disabled or not specified and used as the OIDC
+provider, the Osprey service will receive the user's credentials and forward
+them to the OIDC provider (Dex) for authentication. On success it will return
+the token generated by the provider along with additional information about
+the cluster so that the client can generate the kubectl config file.
+
 
 ## Server usage
 
 ### Serve
 Starts an instance of the osprey server that will listen for authentication
-requests. The configuration is done through the commands flags.
+requests. The configuration is done through the commands flags. The server
 ```
     osprey serve --help
 ```
 
 ## Server configuration
 
-The following flags require to be the same across the specified components:
+If Osprey is not being used for authentication and only used to serve cluster info,
+the required flags are:
+
+- `apiServerUrl`, the api-server URL to return to the osprey client
+- `serve-cluster-info-only`, set to true to disable authentication and enable the
+  /cluster-info endpoint.
+  
+If Osprey is being used for authentication, the following flags require to be
+the same across the specified components:
 
 - `environment`, id of the cluster to be used as a client id
   - Dex: registered client `id` (managed via the Dex api or `staticClients`)
@@ -493,6 +542,11 @@ The templates can be found in `examples/kubernetes`.
    ```
    examples/kubernetes/deploy-all.sh </full/path/to/runtime/dir>
    ```
+   To create an osprey-server that serves `/cluster-info` only, run the shell script
+   whilst specifying `CLOUD_AUTHENTICATION=true`.
+   ```
+   CLOUD_AUTHENTICATION=true examples/kubernetes/deploy-all.sh </full/path/to/runtime/dir>
+   ```
 3. Use the osprey client
    ```
    osprey --ospreyconfig </full/path/to/runtime/dir/>osprey/ospreyconfig --help
@@ -574,6 +628,8 @@ environment.
 All `Dex` instances from the different environments will talk to the single
 `LDAP` instance.
 
+For cloud end to end tests, a mocked OIDC server is created and used to authenticate with.
+
 ## HTTPS/ProtocolBuffers
 
 Given that aws ELB's do not support HTTP/2 osprey needs to run over HTTP.
@@ -588,6 +644,77 @@ To update, update `common/pb/osprey.proto` then run protoc.
     make proto
 
 Check in the `osprey.pb.go` file afterwards.
+
+## Azure Active Directory setup
+
+The Azure AD Application setup requires two applications to be created. One for the Kubernetes api-servers to use, and 
+one for the Osprey client to use. The Osprey client is then configured to request access on behalf of the Kubernetes
+OIDC provider.
+
+### Create Osprey Kubernetes Application
+1. Visit https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Overview and log in using your
+   organisations credentials.
+2. Select 'App Registrations' from the side-bar and click '+ New registration' on the top menu bar.
+3. Create an application with the following details:
+   - Name: "Osprey - Kubernetes API Server"
+   - Supported account types: "Accounts in this organizational directory only"
+4. Select 'API permissions' from the side-bar and click '+ Add a permission'
+   Add the following permissions:
+     - Microsoft Graph -> Delegated permissions -> Enable access to "email", "openid" and "profile"
+     - Click 'Add permissions' to save.
+5. Select 'Expose an API' from the side-bar and click '+ Add a scope'
+6. Create a scope with an appropriate/descriptive name. e.g. `Kubernetes.API.All`. The details in this form are what are
+   shown to users when they first authorize the application to log in on their behalf.
+7. Select 'Manifest' from the side-bar and find the field 'groupMembershipClaims' in the JSON. Change this so that it's
+   value is `"groupMembershipClaims": "All",` and not `"groupMembershipClaims": null,`
+8. The *server* client-id  is the Object ID of this application. This can be found in the Overview panel.
+
+### Create Osprey Client Application
+1. Visit https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Overview and log in using your
+   organisations credentials.
+2. Select 'App Registrations' from the side-bar and click '+ New registration' on the top menu bar.
+3. Create an application with the following details:
+   - Name: "Osprey - Client"
+   - Supported account types: "Accounts in this organizational directory only"
+   - RedirectURI:
+     - Type: Web
+       RedirectURI: http://localhost:65525/auth/callback
+4. Select 'API permissions' from the side-bar and click '+ Add a permission'
+   Add the following permissions:
+     - Microsoft Graph -> Delegated permissions -> Enable access to "openid"
+     - Click 'Add permissions' to save.
+5. Click '+ Add a permission' and select 'My APIs' from the top of the pop-out menu. 
+     - Select the "Osprey - Kubernetes API Server"
+     - Click 'Add permissions' to save. 
+6. Select 'Certificates & secrets' from the side-bar and click '+ New client secret'
+   - Choose an expiry for this secret. When a token expires, the osprey client config must be updated to include this as
+     the 'client-secret'. Copy this secret as soon as it is created, as it will be hidden when you leave the azure pane.
+7. The *osprey* client-id  is the Object ID of this application. This can be found in the Overview panel.
+ 
+ 
+The client ID and secrets generated in this section are used to fill out the osprey config file.
+```yaml
+providers:
+  azure:
+    tenant-id: your-tenant-id
+    server-application-id: api://SERVER-APPLICATION-ID   # Application ID of the "Osprey - Kubernetes APIserver"
+    client-id: bccf17f1-4625-4a1e-8472-582f573ef578      # Client ID for the "Osprey - Client" application
+    client-secret: 3[AIW3UQDewuN=C*VABA53UZZv.bttpn      # Client Secret for the "Osprey - Client" application
+    scopes:
+    # This must be in the format "api://" due to non-interactive logins appending this to the audience in the JWT. 
+      - "api://SERVER-APPLICATION-ID/Kubernetes.API.All" 
+    redirect-uri: http://localhost:65525/auth/callback   # Redirect URI configured for the "Osprey - Client" application
+```
+
+Kubernetes api-server flags:
+```yaml
+- --oidc-issuer-url=https://sts.windows.net/<tenant-id>>/
+- --oidc-client-id=api://9bd903fd-f8df-4390-9a45-ab2fa28673b4
+- --oidc-username-claim=unique_name
+- --oidc-groups-claim=groups
+```
+
+The fields `unique_name` and `groups` may be possible to have a different value in a particular organisation.
 
 ## Dependency management
 

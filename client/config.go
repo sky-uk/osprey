@@ -95,8 +95,6 @@ func NewConfig() *Config {
 	return &Config{}
 }
 
-//TODO: move into retriever?
-// LoadConfig reads an targetEntry Config from the specified path.
 func LoadConfig(path string) (*Config, error) {
 	in, err := ioutil.ReadFile(path)
 	if err != nil {
