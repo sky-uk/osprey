@@ -63,29 +63,29 @@ func NewServer(environment, secret, redirectURL, issuerHost, issuerPath, issuerC
 			apiServerCAData: apiServerCAData,
 		}
 		return o, nil
+	}
+
+	issuerCAData, err := ReadAndEncodeFile(issuerCA)
+	if err != nil {
+		return nil, err
+	}
+	o = &osprey{
+		client:          client,
+		secret:          secret,
+		environment:     environment,
+		apiServerURL:    apiServerURL,
+		apiServerCAData: apiServerCAData,
+		redirectURL:     redirectURL,
+		issuerHost:      issuerHost,
+		issuerPath:      issuerPath,
+		issuerCAData:    issuerCAData,
+	}
+	provider, err := o.getOrCreateOidcProvider()
+	if err != nil {
+		log.Warnf("unable to create oidc provider %q: %v", o.issuerURL(), err)
 	} else {
-		issuerCAData, err := ReadAndEncodeFile(issuerCA)
-		if err != nil {
-			return nil, err
-		}
-		o = &osprey{
-			client:          client,
-			secret:          secret,
-			environment:     environment,
-			apiServerURL:    apiServerURL,
-			apiServerCAData: apiServerCAData,
-			redirectURL:     redirectURL,
-			issuerHost:      issuerHost,
-			issuerPath:      issuerPath,
-			issuerCAData:    issuerCAData,
-		}
-		provider, err := o.getOrCreateOidcProvider()
-		if err != nil {
-			log.Warnf("unable to create oidc provider %q: %v", o.issuerURL(), err)
-		} else {
-			o.provider = provider
-			o.verifier = provider.Verifier(&oidc.Config{ClientID: environment})
-		}
+		o.provider = provider
+		o.verifier = provider.Verifier(&oidc.Config{ClientID: environment})
 	}
 	return o, nil
 }

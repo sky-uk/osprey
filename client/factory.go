@@ -4,7 +4,8 @@ import (
 	"fmt"
 )
 
-func NewProviderFactory(config *Config) (*factory, error) {
+// NewProviderFactory is a helper method to create a Retriever each Provider being used
+func NewProviderFactory(config *Config) (*Factory, error) {
 	retrievers := make(map[string]Retriever)
 	var err error
 	for provider := range config.Providers {
@@ -24,16 +25,18 @@ func NewProviderFactory(config *Config) (*factory, error) {
 		return nil, err
 	}
 
-	return &factory{
+	return &Factory{
 		retrievers: retrievers,
 	}, nil
 }
 
-type factory struct {
+// Factory holds a map of Provider names to Retrievers
+type Factory struct {
 	retrievers map[string]Retriever
 }
 
-func (c *factory) GetRetriever(providerType string) (Retriever, error) {
+// GetRetriever Returns the Retriever object for a named Provider
+func (c *Factory) GetRetriever(providerType string) (Retriever, error) {
 	retriever := c.retrievers[providerType]
 	if retriever == nil {
 		return nil, fmt.Errorf("unable to find retriever type for %s", providerType)

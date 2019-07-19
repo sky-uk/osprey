@@ -37,7 +37,7 @@ type UserInfo struct {
 	Roles []string
 }
 
-// ProviderType is used to authenticate and generate the configuration
+// Retriever is used to authenticate and generate the configuration
 type Retriever interface {
 	// RetrieveClusterDetailsAndAuthTokens returns an access token that is required to authenticate user access against a kubernetes cluster.
 	RetrieveClusterDetailsAndAuthTokens(Target) (*ClusterInfo, error)

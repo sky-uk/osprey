@@ -39,7 +39,7 @@ var (
 	ospreys        []*ospreytest.TestTargetEntry
 	dexes          []*dextest.TestDex
 	ldapServer     *ldaptest.TestLDAP
-	oidcMockServer mockoidc.MockOidcServer
+	oidcMockServer mockoidc.Server
 	testDir        string
 
 	// Suite variables modifiable per test scenario

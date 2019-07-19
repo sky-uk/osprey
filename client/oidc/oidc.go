@@ -12,16 +12,18 @@ import (
 )
 
 const (
-	nonInteractiveCallbackUrl = "urn:ietf:wg:oauth:2.0:oob"
+	nonInteractiveCallbackURL = "urn:ietf:wg:oauth:2.0:oob"
 	ospreyState               = "as78*sadf$212"
 )
 
+// Client contains the details for a OIDC client
 type Client struct {
 	oAuthConfig         oauth2.Config
 	serverApplicationID string
 	authenticated       bool
 }
 
+// New returns a new OIDC client
 func New(config oauth2.Config, serverApplicationID string) *Client {
 	return &Client{
 		oAuthConfig:         config,
@@ -29,6 +31,7 @@ func New(config oauth2.Config, serverApplicationID string) *Client {
 	}
 }
 
+// AuthWithOIDCCallback attempts to authorise using a local callback
 func (c *Client) AuthWithOIDCCallback(ctx context.Context) (*oauth2.Token, error) {
 	mux := http.NewServeMux()
 
@@ -41,12 +44,12 @@ func (c *Client) AuthWithOIDCCallback(ctx context.Context) (*oauth2.Token, error
 	var oauth2Token = &oauth2.Token{}
 	var fatalError string
 
-	authUrl := c.oAuthConfig.AuthCodeURL(ospreyState)
+	authURL := c.oAuthConfig.AuthCodeURL(ospreyState)
 	stopCh := make(chan struct{})
 	h := &http.Server{Addr: fmt.Sprintf("%s", redirect.Host), Handler: mux}
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, authUrl, http.StatusFound)
+		http.Redirect(w, r, authURL, http.StatusFound)
 	})
 
 	mux.HandleFunc(redirect.Path, func(w http.ResponseWriter, r *http.Request) {
@@ -80,7 +83,7 @@ func (c *Client) AuthWithOIDCCallback(ctx context.Context) (*oauth2.Token, error
 		log.Fatalf("shutting down: login timeout exceeded (%s)", timeoutDuration.String())
 	}()
 
-	fmt.Printf("To sign in, use a web browser to open the page\n%s\n", authUrl)
+	fmt.Printf("To sign in, use a web browser to open the page\n%s\n", authURL)
 
 	<-stopCh
 	h.Shutdown(ctx)
@@ -92,27 +95,7 @@ func (c *Client) AuthWithOIDCCallback(ctx context.Context) (*oauth2.Token, error
 	return oauth2Token, nil
 }
 
-func (c *Client) AuthWithOIDCManualInput(ctx context.Context) (*oauth2.Token, error) {
-	c.oAuthConfig.RedirectURL = nonInteractiveCallbackUrl
-	authUrl := c.oAuthConfig.AuthCodeURL(ospreyState)
-
-	fmt.Printf("To sign in, use a web browser to open the page and paste the code below.\n%s\n", authUrl)
-	token, err := consumeToken()
-	if err != nil {
-		log.Errorf("unable to read token: %v", err)
-	}
-
-	oauth2Token := &oauth2.Token{}
-	oauth2Token, err = c.oAuthConfig.Exchange(ctx, token)
-
-	if err != nil {
-		log.Errorf("Failed to exchange token: %v", err)
-	}
-
-	c.authenticated = true
-	return oauth2Token, nil
-}
-
+// Authenticated returns a true or false value if a given OIDC client has received a successful login
 func (c *Client) Authenticated() bool {
 	return c.authenticated
 }

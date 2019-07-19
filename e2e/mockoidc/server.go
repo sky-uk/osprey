@@ -21,7 +21,8 @@ const (
 	ospreyState             = "as78*sadf$212"
 )
 
-type MockOidcServer interface {
+// Server holds the interface to a mocked OIDC server
+type Server interface {
 	Start() error
 	RequestCount(endpoint string) int
 	Reset()
@@ -57,7 +58,8 @@ func setup(m *mockOidcServer) *http.Server {
 	}
 }
 
-func New(host string, port int) MockOidcServer {
+// New returns a new mocked OIDC server
+func New(host string, port int) Server {
 	return &mockOidcServer{
 		IssuerURL:                fmt.Sprintf("%s:%d", host, port),
 		DeviceFlowRequestPending: false,
@@ -121,7 +123,7 @@ func handleDeviceCodeFlowRequest(m *mockOidcServer) http.HandlerFunc {
 		deviceFlowResponse := &oidc.DeviceFlowAuth{
 			UserCode:        "mock-user-code",
 			DeviceCode:      deviceCode,
-			VerificationUri: fmt.Sprintf("https://%s/v2.0/devicecode-auth", m.IssuerURL),
+			VerificationURI: fmt.Sprintf("https://%s/v2.0/devicecode-auth", m.IssuerURL),
 			Message:         fmt.Sprintf("[Osprey Test Suite] Visit https://%s/v2.0/devicecode-auth and enter the code: testing123", m.IssuerURL),
 			ExpiresIn:       0,
 			Interval:        1,

@@ -16,25 +16,27 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// DeviceFlowAuth contains the response for a device code oAuth flow
 type DeviceFlowAuth struct {
-	UserCode        string `json:"user_code",yaml:"user-code"`
+	UserCode        string `json:"user_code" yaml:"user-code"`
 	DeviceCode      string `json:"device_code"`
-	VerificationUri string `json:"verification_uri,verification_url"`
+	VerificationURI string `json:"verification_uri,verification_url"`
 	Message         string `json:"message"`
 	ExpiresIn       int    `json:"expires_in,omitempty"`
 	Interval        int    `json:"interval,omitempty"`
 }
 
+// AuthWithDeviceFlow attempts to authorise using the device code oAuth flow
 func (c *Client) AuthWithDeviceFlow(ctx context.Context) (*oauth2.Token, error) {
 	c.oAuthConfig.RedirectURL = ""
 	// devicecode URL is not exposed by the Azure https://login.microsoftonline.com/<tenant-id>/.well-known/openid-configuration endpoint
-	deviceAuthUrl := strings.Replace(c.oAuthConfig.AuthCodeURL(ospreyState), "/authorize", "/v2.0/devicecode", 1)
+	deviceAuthURL := strings.Replace(c.oAuthConfig.AuthCodeURL(ospreyState), "/authorize", "/v2.0/devicecode", 1)
 	urlParams := url.Values{"client_id": {c.oAuthConfig.ClientID}}
 	if len(c.oAuthConfig.Scopes) > 0 {
 		urlParams.Set("scope", strings.Join(c.oAuthConfig.Scopes, " "))
 	}
 
-	req, err := http.NewRequest(http.MethodPost, deviceAuthUrl, strings.NewReader(urlParams.Encode()))
+	req, err := http.NewRequest(http.MethodPost, deviceAuthURL, strings.NewReader(urlParams.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	response, err := ctxhttp.Do(ctx, nil, req)
 	if err != nil {

@@ -22,7 +22,7 @@ func NewAzureRetriever(provider *Provider) (Retriever, error) {
 		Scopes:       provider.Scopes,
 	}
 	if provider.IssuerURL == "" {
-		provider.IssuerURL = fmt.Sprintf("https://login.microsoftonline.com/%s/.well-known/openid-configuration", provider.AzureTenantId)
+		provider.IssuerURL = fmt.Sprintf("https://login.microsoftonline.com/%s/.well-known/openid-configuration", provider.AzureTenantID)
 	} else {
 		provider.IssuerURL = fmt.Sprintf("%s/.well-known/openid-configuration", provider.IssuerURL)
 	}
@@ -35,7 +35,7 @@ func NewAzureRetriever(provider *Provider) (Retriever, error) {
 
 	return &azureRetriever{
 		oidc:     oidc.New(config, provider.ServerApplicationID),
-		tenantId: provider.AzureTenantId,
+		tenantID: provider.AzureTenantID,
 	}, nil
 }
 
@@ -43,7 +43,7 @@ type azureRetriever struct {
 	accessToken string
 	interactive bool
 	oidc        *oidc.Client
-	tenantId    string
+	tenantID    string
 	webserver   *http.Server
 	stopCh      chan struct{}
 }

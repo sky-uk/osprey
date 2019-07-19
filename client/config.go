@@ -43,7 +43,7 @@ type Config struct {
 	Interactive bool `yaml:",omitempty"`
 }
 
-// Provider
+// Provider represents a single OIDC auth provider
 type Provider struct {
 	// ServerApplicationID is the oidc-client-id used on the apiserver configuration
 	ServerApplicationID string `yaml:"server-application-id,omitempty"`
@@ -62,12 +62,12 @@ type Provider struct {
 	// This will override any cert file specified in CertificateAuthority.
 	// +optional
 	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
-	// AzureTenantId
-	AzureTenantId string `yaml:"tenant-id,omitempty"`
+	// AzureTenantID is the Azure Tenant ID assigned to your organisation
+	AzureTenantID string `yaml:"tenant-id,omitempty"`
 	// IssuerURL is the URL of the OpenID server. This is mainly used for testing.
 	// +optional
 	IssuerURL string `yaml:"issuer-url,omitempty"`
-	// Targets
+	// Targets contains a map of strings to osprey targets
 	Targets map[string]*TargetEntry `yaml:"targets"`
 }
 
@@ -95,6 +95,7 @@ func NewConfig() *Config {
 	return &Config{}
 }
 
+// LoadConfig is a method that reads and parses the Config file
 func LoadConfig(path string) (*Config, error) {
 	in, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -110,7 +111,7 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid config %s: %v", path, err)
 	}
-	for provider, _ := range config.Providers {
+	for provider := range config.Providers {
 		if config.Providers[provider] != nil {
 			var ospreyCertData string
 			if config.Providers[provider].CertificateAuthority != "" && config.Providers[provider].CertificateAuthorityData == "" {
@@ -174,7 +175,7 @@ func (c *Config) validate() error {
 
 		switch provider {
 		case "azure":
-			if c.Providers[provider].AzureTenantId == "" {
+			if c.Providers[provider].AzureTenantID == "" {
 				return fmt.Errorf("tenant-id is required for %s targets", provider)
 			}
 			if c.Providers[provider].ServerApplicationID == "" {

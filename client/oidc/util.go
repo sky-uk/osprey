@@ -46,13 +46,14 @@ func parseError(err error) string {
 	return ""
 }
 
-type WellKnownConfiguration struct {
+type wellKnownConfiguration struct {
 	AuthEndpoint  string `json:"authorization_endpoint"`
 	TokenEndpoint string `json:"token_endpoint"`
 }
 
+// GetWellKnownConfig constructs a request to return the OIDC well-known config
 func GetWellKnownConfig(issuerURL string) (oauth2.Endpoint, error) {
-	wellknownConfig := &WellKnownConfiguration{}
+	wellknownConfig := &wellKnownConfiguration{}
 	emptyURL := oauth2.Endpoint{}
 	_, err := url.Parse(issuerURL)
 	if err != nil {

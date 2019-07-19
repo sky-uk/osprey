@@ -181,7 +181,7 @@ func BuildFullConfig(testDir, providerName, defaultGroup string, targetGroups ma
 		config.Providers[providerName].ClientSecret = "some-client-secret"
 		config.Providers[providerName].RedirectURI = "http://localhost:65525/auth/callback"
 		config.Providers[providerName].Scopes = []string{"api://some-dummy-scope"}
-		config.Providers[providerName].AzureTenantId = "some-tenant-id"
+		config.Providers[providerName].AzureTenantID = "some-tenant-id"
 		config.Providers[providerName].ServerApplicationID = "some-server-application-id"
 		config.Providers[providerName].IssuerURL = "http://localhost:14980"
 	}
@@ -190,7 +190,7 @@ func BuildFullConfig(testDir, providerName, defaultGroup string, targetGroups ma
 	return testConfig, client.SaveConfig(config, ospreyconfigFile)
 }
 
-// ProviderType returns a TestCommand for the osprey binary with the provided args arguments.
+// Client returns a TestCommand for the osprey binary with the provided args arguments.
 func Client(args ...string) clitest.TestCommand {
 	return clitest.NewCommand(ospreyBinary, args...)
 }
