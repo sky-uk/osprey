@@ -1,11 +1,13 @@
 package client
 
 import (
+	"time"
+
 	clientgo "k8s.io/client-go/tools/clientcmd/api"
 )
 
-// ClusterInfo contains the data required to configure an OIDC authenticator for kubectl
-type ClusterInfo struct {
+// TargetInfo contains the data required to configure an OIDC authenticator for kubectl
+type TargetInfo struct {
 	// Username the identifier of the logged in user
 	Username string
 	// IDToken the JWT token for the user
@@ -26,7 +28,6 @@ type ClusterInfo struct {
 	ClusterCA string
 	// AccessToken is the JWT token for the user when using a cloud IDP
 	AccessToken string
-	interactive bool
 }
 
 // UserInfo contains data about a user
@@ -39,10 +40,18 @@ type UserInfo struct {
 
 // Retriever is used to authenticate and generate the configuration
 type Retriever interface {
+	// GetAuthInfo returns the AuthInfo from the kubeconfig for a given target. Returns an AuthInfo if the user is logged in.
+	GetAuthInfo(*clientgo.Config, Target) *clientgo.AuthInfo
 	// RetrieveClusterDetailsAndAuthTokens returns an access token that is required to authenticate user access against a kubernetes cluster.
-	RetrieveClusterDetailsAndAuthTokens(Target) (*ClusterInfo, error)
+	RetrieveClusterDetailsAndAuthTokens(Target) (*TargetInfo, error)
 	// RetrieveUserDetails returns the user email address and groups, if available.
 	RetrieveUserDetails(Target, clientgo.AuthInfo) (*UserInfo, error)
-	// SetInteractive is a flag that when set to false, creates non-interactive login requests to auth providers (e.g. device flow)
-	SetInteractive(bool)
+	// SetUseDeviceCode is a flag that when set to false, creates non-interactive login requests to auth providers (e.g. device flow)
+	SetUseDeviceCode(bool)
+}
+
+// RetreiverOptions is used to hold command line arguments that change the behaviour of logins
+type RetreiverOptions struct {
+	UseDeviceCode bool
+	LoginTimeout  time.Duration
 }

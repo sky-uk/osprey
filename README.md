@@ -9,15 +9,18 @@ user and will return a JWT token with the user details. The token along
 with some additional cluster information will be used to generate the
 `kubectl` configuration to be used to access Kubernetes clusters.
 
-The implementation relies in one specific configuration detail of the OIDC
+
+
+### Supported OIDC providers
+##### Dex
+This implementation relies in one specific configuration detail of the OIDC
 provider `SkipApprovalScreen : true` which eliminates the intermediate step
 requiring a client to explicitly approve the requested grants before the
 token is provided. If the target provider does not support this feature,
 additional work is required to handle that approval.
 
-Alternatively, support has been added to support cloud identity providers.
-It currently has implementations to support logging in using Azure Active
-Directory. When Azure is configured as the OIDC provider, the `user login`
+##### Azure
+When Azure is configured as the OIDC provider, the `user login`
 command will generate a link to visit, which the user must open in a browser
 in order to authenticate. Upon a successful login, the browser will send a
 request to a local endpoint served by the osprey application. With the
@@ -198,7 +201,7 @@ group via flags.
 
 ```
 $  osprey config targets --by-groups
-Osprey targets:
+Configured targets:
 * <ungrouped>
     local.cluster
   bar
@@ -223,7 +226,7 @@ list of existing groups within the configuration, without any target
 information.
 ```
 $  osprey config targets --list-groups
-Osprey groups:
+Configured groups:
 * <ungrouped>
   bar
   foo
@@ -298,9 +301,10 @@ providers:
     # the format: http://localhost:<port>/auth/callback
     redirect-uri: http://localhost:65525/auth/callback
     targets:
-      server: http://osprey.foo.cluster
-      aliases: [foo.alias]
-      groups: [foo]
+      foo.cluster:
+        server: http://osprey.foo.cluster
+        aliases: [foo.alias]
+        groups: [foo]
 
 ```
 
@@ -374,23 +378,31 @@ the cluster so that the client can generate the kubectl config file.
 
 ## Server usage
 
-### Serve
-Starts an instance of the osprey server that will listen for authentication
-requests. The configuration is done through the commands flags. The server
-```
-    osprey serve --help
-```
+The Osprey server can be started in two different ways:
+- `osprey serve cluster-info`
+- `osprey serve auth`
 
-## Server configuration
+### `osprey serve cluster-info`
+Starts an instance of the osprey serve that will create a webserver that is capable of returning cluster information. In
+this mode, authentication is disabled. This endpoint is used for service discovery for an osprey target.
 
-If Osprey is not being used for authentication and only used to serve cluster info,
-the required flags are:
+This endpoint (`/cluster-info`) will return the api-server URL and the CA for the api-server.
 
+In this mode, the required flags are:
+
+- `apiServerCA`, the path to the api-server CA (defaults to `/var/run/secrets/kubernetes.io/serviceaccount/ca.crt`) which
+is the default location of the CA when running inside a kubernetes cluster. 
 - `apiServerUrl`, the api-server URL to return to the osprey client
-- `serve-cluster-info-only`, set to true to disable authentication and enable the
-  /cluster-info endpoint.
+
+
+### `osprey serve auth`
+Starts an instance of the osprey server that will listen for authentication
+requests. The configuration is done through the commands flags.
+```
+    osprey serve auth --help
+```
   
-If Osprey is being used for authentication, the following flags require to be
+When Osprey is being used for authentication, the following flags require to be
 the same across the specified components:
 
 - `environment`, id of the cluster to be used as a client id
@@ -405,8 +417,7 @@ the same across the specified components:
   - Kubernetes apiserver: `oidc-issuer-url` flag
 - `issuerCA`, Dex's CA certificate path
   - Kubernetes apiserver: `oidc-ca-file` flag
-
-
+  
 The following diagram depicts the authentication flow from the moment the
 osprey client requests a token.
 
@@ -678,7 +689,10 @@ OIDC provider.
    - Supported account types: "Accounts in this organizational directory only"
    - RedirectURI:
      - Type: Web
-       RedirectURI: http://localhost:65525/auth/callback
+       RedirectURI: This is a redirect URI that must be configured to match in both the Azure application config and the
+       Osprey config. It has to be in the `http://localhost:<port>/<path>` format. This will be the port that Osprey
+       client opens up a webserver on, to listen to callbacks from the login page. We use `http://localhost:65525/auth/callback` in the
+       example configuration.
 4. Select 'API permissions' from the side-bar and click '+ Add a permission'
    Add the following permissions:
      - Microsoft Graph -> Delegated permissions -> Enable access to "openid"
@@ -698,8 +712,8 @@ providers:
   azure:
     tenant-id: your-tenant-id
     server-application-id: api://SERVER-APPLICATION-ID   # Application ID of the "Osprey - Kubernetes APIserver"
-    client-id: bccf17f1-4625-4a1e-8472-582f573ef578      # Client ID for the "Osprey - Client" application
-    client-secret: 3[AIW3UQDewuN=C*VABA53UZZv.bttpn      # Client Secret for the "Osprey - Client" application
+    client-id: azure-application-client-id               # Client ID for the "Osprey - Client" application
+    client-secret: azure-application-client-secret       # Client Secret for the "Osprey - Client" application
     scopes:
     # This must be in the format "api://" due to non-interactive logins appending this to the audience in the JWT. 
       - "api://SERVER-APPLICATION-ID/Kubernetes.API.All" 
@@ -713,8 +727,6 @@ Kubernetes api-server flags:
 - --oidc-username-claim=unique_name
 - --oidc-groups-claim=groups
 ```
-
-The fields `unique_name` and `groups` may be possible to have a different value in a particular organisation.
 
 ## Dependency management
 

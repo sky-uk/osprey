@@ -32,7 +32,7 @@ func ConsumeLoginResponse(response *http.Response) (*LoginResponse, error) {
 	return nil, HandleErrorResponse(data, response)
 }
 
-// ConsumeClusterInfoResponse takes the https response and produces a ClusterInfoResponse
+// ConsumeClusterInfoResponse takes the HTTP response and produces a ClusterInfoResponse
 // if the response is successful and can be converted, or an error.
 func ConsumeClusterInfoResponse(response *http.Response) (*ClusterInfoResponse, error) {
 	data, err := ioutil.ReadAll(response.Body)

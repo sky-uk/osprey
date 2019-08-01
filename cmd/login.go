@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"time"
+
 	"github.com/sky-uk/osprey/client"
 	"github.com/sky-uk/osprey/client/kubeconfig"
 	"github.com/spf13/cobra"
@@ -29,11 +31,20 @@ The connection to the osprey servers is via HTTPS.
 	Run: login,
 }
 
-var interactive bool
+var (
+	useDeviceCode bool
+	loginTimeout  time.Duration
+)
 
 func init() {
 	userCmd.AddCommand(loginCmd)
-	loginCmd.Flags().BoolVarP(&interactive, "interactive", "i", true, "set to false if not using a GUI (requires copy and pasting of tokens)")
+	loginCmd.Flags().BoolVarP(&useDeviceCode, "use-device-code", "", false, "set to true to use a device-code flow for authorisation")
+	loginCmd.Flags().DurationVar(&loginTimeout, "login-timeout", 90*time.Second, "set to override the login timeout when using local callback or device-code flow for authorisation")
+}
+
+type authOptions struct {
+	useDeviceCode bool
+	loginTimeout  time.Duration
 }
 
 func login(_ *cobra.Command, _ []string) {
@@ -48,7 +59,7 @@ func login(_ *cobra.Command, _ []string) {
 	}
 
 	groupName := ospreyconfig.GroupOrDefault(targetGroup)
-	snapshot := client.GetSnapshot(ospreyconfig)
+	snapshot := ospreyconfig.GetSnapshot()
 	group, ok := snapshot.GetGroup(groupName)
 	if !ok {
 		log.Errorf("Group not found: %q", groupName)
@@ -56,31 +67,35 @@ func login(_ *cobra.Command, _ []string) {
 	}
 
 	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
-	ospreyconfig.Interactive = interactive
-	retrieverFactory, err := client.NewProviderFactory(ospreyconfig)
-	if err != nil {
-		log.Fatalf("unable to initialise providers: %v", err)
+	retreiverOptions := client.RetreiverOptions{
+		UseDeviceCode: useDeviceCode,
+		LoginTimeout:  loginTimeout,
 	}
 
 	success := true
 
-	for _, target := range group.Targets() {
-		retriever, err := retrieverFactory.GetRetriever(target.ProviderType())
+	retrieverFactory, err := client.NewProviderFactory(ospreyconfig, retreiverOptions)
+	if err != nil {
+		log.Errorf("Unable to initialise providers: %v", err)
+	}
+
+	for provider, targets := range group.Targets() {
+		retriever, err := retrieverFactory.GetRetriever(provider)
 		if err != nil {
-			log.Fatalf(err.Error())
+			log.Fatalf("Unsupported provider %s: %v", provider, err.Error())
 		}
-
-		tokenData, err := retriever.RetrieveClusterDetailsAndAuthTokens(target)
-
-		if err != nil {
-			if state, ok := status.FromError(err); ok && state.Code() == codes.Unauthenticated {
-				log.Fatalf("Failed to log in to %s: %v", target.Name(), state.Message())
+		for _, target := range targets {
+			targetData, err := retriever.RetrieveClusterDetailsAndAuthTokens(target)
+			if err != nil {
+				if state, ok := status.FromError(err); ok && state.Code() == codes.Unauthenticated {
+					log.Fatalf("Failed to log in to %s: %v", target.Name(), state.Message())
+				}
+				success = false
+				log.Errorf("Failed to log in to %s: %v", target.Name(), err)
+				continue
 			}
-			success = false
-			log.Errorf("Failed to log in to %s: %v", target.Name(), err)
-			continue
+			updateKubeconfig(target, targetData)
 		}
-		updateKubeconfig(err, target, tokenData)
 	}
 
 	if !success {
@@ -88,14 +103,15 @@ func login(_ *cobra.Command, _ []string) {
 	}
 }
 
-func updateKubeconfig(err error, target client.Target, tokenData *client.ClusterInfo) {
-	err = kubeconfig.UpdateConfig(target.Name(), target.Aliases(), tokenData)
+func updateKubeconfig(target client.Target, tokenData *client.TargetInfo) {
+	err := kubeconfig.UpdateConfig(target.Name(), target.Aliases(), tokenData)
 	if err != nil {
 		log.Errorf("Failed to update config for %s: %v", target.Name(), err)
+	} else {
+		aliases := ""
+		if target.HasAliases() {
+			aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
+		}
+		log.Infof("Logged in to: %s%s", target.Name(), aliases)
 	}
-	aliases := ""
-	if target.HasAliases() {
-		aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
-	}
-	log.Infof("Logged in to: %s%s", target.Name(), aliases)
 }

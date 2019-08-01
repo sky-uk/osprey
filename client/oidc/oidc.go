@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	nonInteractiveCallbackURL = "urn:ietf:wg:oauth:2.0:oob"
-	ospreyState               = "as78*sadf$212"
+	ospreyState = "as78*sadf$212"
 )
 
 // Client contains the details for a OIDC client
@@ -21,6 +20,7 @@ type Client struct {
 	oAuthConfig         oauth2.Config
 	serverApplicationID string
 	authenticated       bool
+	stopChan            chan tokenResponse
 }
 
 // New returns a new OIDC client
@@ -28,71 +28,98 @@ func New(config oauth2.Config, serverApplicationID string) *Client {
 	return &Client{
 		oAuthConfig:         config,
 		serverApplicationID: serverApplicationID,
+		stopChan:            make(chan tokenResponse),
 	}
 }
 
+type tokenResponse struct {
+	accessToken   *oauth2.Token
+	responseError error
+}
+
 // AuthWithOIDCCallback attempts to authorise using a local callback
-func (c *Client) AuthWithOIDCCallback(ctx context.Context) (*oauth2.Token, error) {
-	mux := http.NewServeMux()
-
-	redirect, err := url.Parse(c.oAuthConfig.RedirectURL)
-
+func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Duration) (*oauth2.Token, error) {
+	redirectURL, err := url.Parse(c.oAuthConfig.RedirectURL)
 	if err != nil {
-		log.Fatalf("unable to parse oidc redirect uri: %e", err)
+		log.Fatalf("Unable to parse oidc redirect uri: %e", err)
 	}
 
-	var oauth2Token = &oauth2.Token{}
-	var fatalError string
-
 	authURL := c.oAuthConfig.AuthCodeURL(ospreyState)
-	stopCh := make(chan struct{})
-	h := &http.Server{Addr: fmt.Sprintf("%s", redirect.Host), Handler: mux}
+	mux := http.NewServeMux()
+	h := &http.Server{Addr: fmt.Sprintf("%s", redirectURL.Host), Handler: mux}
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, authURL, http.StatusFound)
 	})
 
-	mux.HandleFunc(redirect.Path, func(w http.ResponseWriter, r *http.Request) {
-		defer close(stopCh)
+	mux.HandleFunc(redirectURL.Path, c.handleRedirectURI(ctx))
+
+	ch := make(chan error)
+	ctxTimeout, cancel := context.WithTimeout(ctx, loginTimeout)
+	defer cancel()
+
+	fmt.Printf("To sign in, use a web browser to open the page\n%s\n", authURL)
+
+	go func() {
+		ch <- h.ListenAndServe()
+	}()
+
+	select {
+	case <-ctxTimeout.Done():
+		return nil, fmt.Errorf("exceeded login deadline")
+	case err := <-ch:
+		return nil, fmt.Errorf("unable to start local call-back webserver %v", err)
+	case resp := <-c.stopChan:
+		_ = h.Shutdown(ctx)
+		if resp.responseError != nil {
+			return nil, resp.responseError
+		}
+		return resp.accessToken, nil
+	}
+}
+
+func (c *Client) handleRedirectURI(ctx context.Context) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer close(c.stopChan)
+		var fatalError error
 		if r.URL.Query().Get("state") != ospreyState {
-			fatalError = fmt.Sprintf("state did not match")
-			http.Error(w, fatalError, http.StatusBadRequest)
+			fatalError = fmt.Errorf("state did not match")
+			http.Error(w, fatalError.Error(), http.StatusBadRequest)
+			c.stopChan <- tokenResponse{
+				nil,
+				fatalError,
+			}
 			return
 		}
 
-		oauth2Token, err = c.oAuthConfig.Exchange(ctx, r.URL.Query().Get("code"), oauth2.SetAuthURLParam("resource", fmt.Sprintf("spn:%s", c.serverApplicationID)))
+		oauth2Token, err := c.doAuthRequest(ctx, r)
 		if err != nil {
-			fatalError = fmt.Sprintf("Failed to exchange token: %s", err.Error())
-			http.Error(w, fatalError, http.StatusInternalServerError)
+			fatalError = fmt.Errorf("failed to exchange token: %v", err)
+			http.Error(w, fatalError.Error(), http.StatusInternalServerError)
+			c.stopChan <- tokenResponse{
+				nil,
+				fatalError,
+			}
 			return
 		}
 
 		c.authenticated = true
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("<html><head></head><body><h1 style='font-family: 'Source Code Pro''>Successfully logged in</h1></body></html>"))
-	})
 
-	go func() {
-		if err := h.ListenAndServe(); err != nil {
+		c.stopChan <- tokenResponse{
+			oauth2Token,
+			fatalError,
 		}
-	}()
-
-	go func() {
-		timeoutDuration := 60 * time.Second
-		time.Sleep(timeoutDuration)
-		log.Fatalf("shutting down: login timeout exceeded (%s)", timeoutDuration.String())
-	}()
-
-	fmt.Printf("To sign in, use a web browser to open the page\n%s\n", authURL)
-
-	<-stopCh
-	h.Shutdown(ctx)
-
-	if fatalError != "" {
-		return nil, fmt.Errorf(fatalError)
 	}
+}
 
-	return oauth2Token, nil
+func (c *Client) doAuthRequest(ctx context.Context, r *http.Request) (*oauth2.Token, error) {
+	authCode := r.URL.Query().Get("code")
+	authCodeOptions := []oauth2.AuthCodeOption{
+		oauth2.SetAuthURLParam("resource", fmt.Sprintf("spn:%s", c.serverApplicationID)),
+	}
+	return c.oAuthConfig.Exchange(ctx, authCode, authCodeOptions...)
 }
 
 // Authenticated returns a true or false value if a given OIDC client has received a successful login

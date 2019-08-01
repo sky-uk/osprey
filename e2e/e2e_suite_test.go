@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/sky-uk/osprey/e2e/mockoidc"
+	"github.com/sky-uk/osprey/e2e/oidctest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -36,16 +36,16 @@ var (
 	}
 
 	// Suite variables instantiated once
-	ospreys        []*ospreytest.TestTargetEntry
+	ospreys        []*ospreytest.TestOsprey
 	dexes          []*dextest.TestDex
 	ldapServer     *ldaptest.TestLDAP
-	oidcMockServer mockoidc.Server
+	oidcMockServer oidctest.Server
 	testDir        string
 
 	// Suite variables modifiable per test scenario
 	err               error
 	environmentsToUse map[string][]string
-	targetedOspreys   []*ospreytest.TestTargetEntry
+	targetedOspreys   []*ospreytest.TestOsprey
 	ospreyconfig      *ospreytest.TestConfig
 	ospreyconfigFlag  string
 	defaultGroup      string
@@ -74,8 +74,7 @@ var _ = BeforeSuite(func() {
 	ospreys, err = ospreytest.StartOspreys(testDir, dexes, ospreyPortsFrom)
 	Expect(err).To(BeNil(), "Starts the osprey servers")
 
-	oidcMockServer = mockoidc.New("localhost", oidcPort)
-	err = oidcMockServer.Start()
+	oidcMockServer, err = oidctest.Start("localhost", oidcPort)
 	Expect(err).To(BeNil(), "Starts the mock oidc server")
 })
 

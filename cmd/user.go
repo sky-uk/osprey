@@ -42,7 +42,7 @@ func user(_ *cobra.Command, _ []string) {
 	}
 
 	groupName := ospreyconfig.GroupOrDefault(targetGroup)
-	snapshot := client.GetSnapshot(ospreyconfig)
+	snapshot := ospreyconfig.GetSnapshot()
 	group, ok := snapshot.GetGroup(groupName)
 	if !ok {
 		log.Errorf("Group not found: %q", groupName)
@@ -50,44 +50,40 @@ func user(_ *cobra.Command, _ []string) {
 	}
 
 	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
-	retrieverFactory, err := client.NewProviderFactory(ospreyconfig)
+	retrieverFactory, err := client.NewProviderFactory(ospreyconfig, client.RetreiverOptions{})
 	if err != nil {
-		log.Fatalf("unable to initialise providers: %v", err)
+		log.Fatalf("Unable to initialise providers: %v", err)
+	}
+	config, err := kubeconfig.GetConfig()
+	if err != nil {
+		log.Fatalf("failed to load existing kubeconfig at %s: %v", kubeconfig.PathOptions.GetDefaultFilename(), err)
 	}
 
-	success := true
-	for _, target := range group.Targets() {
-
-		authInfo, err := kubeconfig.GetAuthInfo(target)
-		if err != nil {
-			success = false
-			log.Errorf("unable to get auth info for user %s: %v", target.Name(), err)
-		}
-
-		retriever, err := retrieverFactory.GetRetriever(target.ProviderType())
-		if err != nil {
-			log.Fatalf(err.Error())
-		}
-		if authInfo != nil {
-			userInfo, err := retriever.RetrieveUserDetails(target, *authInfo)
+	for _, targets := range group.Targets() {
+		for _, target := range targets {
+			retriever, err := retrieverFactory.GetRetriever(target.ProviderType())
 			if err != nil {
-				log.Errorf("%s: %v", target.Name(), err)
+				log.Fatalf(err.Error())
 			}
-			if userInfo != nil {
-				switch target.ProviderType() {
-				case "osprey":
-					log.Infof("%s: %s %s", target.Name(), userInfo.Username, userInfo.Roles)
-				default:
-					log.Infof("%s: %s", target.Name(), userInfo.Username)
-				}
-			}
-		} else {
-			log.Infof("%s: none", target.Name())
-		}
-	}
 
-	if !success {
-		log.Fatal("Failed to update credentials for some targets.")
+			authInfo := retriever.GetAuthInfo(config, target)
+			if authInfo != nil {
+				userInfo, err := retriever.RetrieveUserDetails(target, *authInfo)
+				if err != nil {
+					log.Errorf("%s: %v", target.Name(), err)
+				}
+				if userInfo != nil {
+					switch target.ProviderType() {
+					case "osprey":
+						log.Infof("%s: %s %s", target.Name(), userInfo.Username, userInfo.Roles)
+					default:
+						log.Infof("%s: %s", target.Name(), userInfo.Username)
+					}
+				}
+			} else {
+				log.Infof("%s: none", target.Name())
+			}
+		}
 	}
 }
 

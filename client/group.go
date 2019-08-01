@@ -17,8 +17,12 @@ func (g *Group) IsDefault() bool {
 }
 
 // Targets returns the list of targets belonging to this group
-func (g *Group) Targets() []Target {
-	return sortTargets(g.targets)
+func (g *Group) Targets() map[string][]Target {
+	groupMap := make(map[string][]Target)
+	for _, target := range g.targets {
+		groupMap[target.ProviderType()] = append(groupMap[target.ProviderType()], target)
+	}
+	return sortTargets(groupMap)
 }
 
 // Name returns the name of the group

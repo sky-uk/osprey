@@ -29,8 +29,9 @@ spec:
             - /usr/local/bin/osprey
           args:
             - serve
+            - cluster-info
             - --apiServerURL=@clusterApiServerURL@
-            - --serve-cluster-info-only=true
+            - --apiServerCA=/ssl/apiserver-ca.pem
 
           ports:
             - containerPort: @ospreyPort@

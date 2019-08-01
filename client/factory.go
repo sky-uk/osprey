@@ -4,21 +4,18 @@ import (
 	"fmt"
 )
 
-// NewProviderFactory is a helper method to create a Retriever each Provider being used
-func NewProviderFactory(config *Config) (*Factory, error) {
+// NewProviderFactory is a helper method to create a Retriever for each Provider being used
+func NewProviderFactory(config *Config, retreiverOptions RetreiverOptions) (*Factory, error) {
 	retrievers := make(map[string]Retriever)
 	var err error
-	for provider := range config.Providers {
+	for provider, providerConfig := range config.Providers {
 		switch provider {
 		case "azure":
-			retrievers[provider], err = NewAzureRetriever(config.Providers[provider])
+			retrievers[provider], err = NewAzureRetriever(config.Providers[provider], retreiverOptions)
 		case "osprey":
-			retrievers[provider], err = NewOspreyRetriever(config.Providers[provider])
+			retrievers[provider] = NewOspreyRetriever(providerConfig)
 		default:
 			return nil, fmt.Errorf("unsupported provider: %s", provider)
-		}
-		if retrievers[provider] != nil && config.Interactive {
-			retrievers[provider].SetInteractive(config.Interactive)
 		}
 	}
 	if err != nil {
@@ -39,7 +36,7 @@ type Factory struct {
 func (c *Factory) GetRetriever(providerType string) (Retriever, error) {
 	retriever := c.retrievers[providerType]
 	if retriever == nil {
-		return nil, fmt.Errorf("unable to find retriever type for %s", providerType)
+		return nil, fmt.Errorf("unable to find retriever for %s. please check if this is a supported provider", providerType)
 	}
 	return retriever, nil
 }

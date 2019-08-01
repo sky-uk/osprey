@@ -1,27 +1,28 @@
 package kubeconfig
 
 import (
-	"bytes"
 	"encoding/base64"
 	"errors"
 	"fmt"
 
 	"github.com/sky-uk/osprey/client"
 
+	log "github.com/sirupsen/logrus"
 	kubectl "k8s.io/client-go/tools/clientcmd"
 	clientgo "k8s.io/client-go/tools/clientcmd/api"
 )
 
-var pathOptions *kubectl.PathOptions
+// PathOptions contains options for the kubectl config file
+var PathOptions *kubectl.PathOptions
 
 // LoadConfig loads a kubeconfig from the specified kubeconfigFile, or uses the recommended
 // file from kubectl defaults ($HOME/.kube/config). If the file exists it will use the existing
 // configuration as a base for the changes, otherwise it starts a new configuration.
 // Returns an error only if the existing file is not a valid configuration or it can't be read.
 func LoadConfig(kubeconfigFile string) error {
-	pathOptions = kubectl.NewDefaultPathOptions()
+	PathOptions = kubectl.NewDefaultPathOptions()
 	if kubeconfigFile != "" {
-		pathOptions.LoadingRules.ExplicitPath = kubeconfigFile
+		PathOptions.LoadingRules.ExplicitPath = kubeconfigFile
 	}
 	_, err := GetConfig()
 	return err
@@ -30,18 +31,16 @@ func LoadConfig(kubeconfigFile string) error {
 // UpdateConfig loads the current kubeconfig file and applies the changes described in the tokenData. Once applied, it
 // writes the changes to disk. It will use the specified name for the names of the cluster, user and context.
 // It will create an additional context for each of the aliases provided
-func UpdateConfig(name string, aliases []string, tokenData *client.ClusterInfo) error {
+func UpdateConfig(name string, aliases []string, tokenData *client.TargetInfo) error {
 	config, err := GetConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load existing kubeconfig at %s: %v", pathOptions.GetDefaultFilename(), err)
+		return fmt.Errorf("failed to load existing kubeconfig at %s: %v", PathOptions.GetDefaultFilename(), err)
 	}
 
 	cluster := clientgo.NewCluster()
-	if bytes.Equal([]byte{}, cluster.CertificateAuthorityData) {
-		cluster.CertificateAuthorityData, err = base64.StdEncoding.DecodeString(tokenData.ClusterCA)
-		if err != nil {
-			return fmt.Errorf("failed to decode certificate authority data: %v", err)
-		}
+	cluster.CertificateAuthorityData, err = base64.StdEncoding.DecodeString(tokenData.ClusterCA)
+	if err != nil {
+		return fmt.Errorf("failed to decode certificate authority data: %v", err)
 	}
 
 	cluster.Server = tokenData.ClusterAPIServerURL
@@ -76,7 +75,7 @@ func UpdateConfig(name string, aliases []string, tokenData *client.ClusterInfo) 
 		config.Contexts[alias] = context
 	}
 
-	return kubectl.ModifyConfig(pathOptions, *config, false)
+	return kubectl.ModifyConfig(PathOptions, *config, false)
 }
 
 // Remove deletes all items related to the specified target: cluster, context, user.
@@ -84,7 +83,7 @@ func UpdateConfig(name string, aliases []string, tokenData *client.ClusterInfo) 
 func Remove(name string) error {
 	config, err := GetConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load existing kubeconfig at %s: %v", pathOptions.GetDefaultFilename(), err)
+		return fmt.Errorf("failed to load existing kubeconfig at %s: %v", PathOptions.GetDefaultFilename(), err)
 	}
 	if config.AuthInfos[name] != nil {
 		if config.AuthInfos[name].Token != "" {
@@ -93,7 +92,7 @@ func Remove(name string) error {
 		if config.AuthInfos[name].AuthProvider != nil {
 			config.AuthInfos[name].AuthProvider.Config["id-token"] = ""
 		}
-		return kubectl.ModifyConfig(pathOptions, *config, false)
+		return kubectl.ModifyConfig(PathOptions, *config, false)
 	}
 	return nil
 }
@@ -101,32 +100,32 @@ func Remove(name string) error {
 // GetConfig returns the currently loaded configuration via LoadConfig().
 // Returns an error if LoadConfig() has not been called.
 func GetConfig() (*clientgo.Config, error) {
-	if pathOptions == nil {
+	if PathOptions == nil {
 		return nil, errors.New("no configuration has been loaded. Use LoadConfig() to load a configuration")
 	}
-	config, err := pathOptions.GetStartingConfig()
+	config, err := PathOptions.GetStartingConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load kubeconfig from %s: %v", pathOptions.GetDefaultFilename(), err)
+		return nil, fmt.Errorf("failed to load kubeconfig from %s: %v", PathOptions.GetDefaultFilename(), err)
 	}
 	return config, nil
 }
 
 // GetAuthInfo returns the auth info configured user for a context
 // Returns an error if the GetAuthInfo is not retrievable.
-func GetAuthInfo(target client.Target) (*clientgo.AuthInfo, error) {
+func GetAuthInfo(target client.Target) *clientgo.AuthInfo {
 	config, err := GetConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load existing kubeconfig at %s: %v", pathOptions.GetDefaultFilename(), err)
+		log.Fatalf("failed to load existing kubeconfig at %s: %v", PathOptions.GetDefaultFilename(), err)
 	}
 
 	authInfo := config.AuthInfos[target.Name()]
 	if authInfo == nil {
-		return nil, nil
+		return nil
 	}
 
 	if authInfo.Token == "" && authInfo.AuthProvider == nil {
-		return nil, fmt.Errorf("missing authprovider or token for user %s", target.Name())
+		return nil
 	}
 
-	return authInfo, nil
+	return authInfo
 }

@@ -1,5 +1,7 @@
 package client
 
+import "sort"
+
 // ConfigSnapshot is a snapshot view of the configuration to organize the targets per group.
 // It does not reflect changes to the configuration after it has been taken.
 type ConfigSnapshot struct {
@@ -42,7 +44,10 @@ func (t *ConfigSnapshot) Targets() []Target {
 			}
 		}
 	}
-	return sortTargets(targets)
+	sort.Slice(targets, func(i, j int) bool {
+		return targets[i].name < targets[j].name
+	})
+	return targets
 }
 
 // DefaultGroup returns the default group in the configuration.
@@ -50,50 +55,4 @@ func (t *ConfigSnapshot) Targets() []Target {
 func (t *ConfigSnapshot) DefaultGroup() Group {
 	defaultGroup, _ := t.GetGroup(t.defaultGroupName)
 	return defaultGroup
-}
-
-// GetSnapshot creates a snapshot view of the provided Config
-func GetSnapshot(config *Config) ConfigSnapshot {
-	defaultGroup := config.DefaultGroup
-	groupsByName := make(map[string]Group)
-
-	for providerType, providerConfig := range config.Providers {
-		for groupName, group := range groupTargets(providerConfig.Targets, defaultGroup, providerType) {
-			if existingGroup, ok := groupsByName[groupName]; ok {
-				existingGroup.targets = append(existingGroup.targets, group.targets...)
-				groupsByName[groupName] = existingGroup
-			} else {
-				groupsByName[groupName] = group
-			}
-		}
-	}
-
-	return ConfigSnapshot{
-		groupsByName:     groupsByName,
-		defaultGroupName: defaultGroup,
-	}
-}
-
-func groupTargets(targetEntries map[string]*TargetEntry, defaultGroup string, providerType string) map[string]Group {
-	groupsByName := make(map[string]Group)
-	var groups []Group
-	for key, targetEntry := range targetEntries {
-		targetEntryGroups := targetEntry.Groups
-		if len(targetEntryGroups) == 0 {
-			targetEntryGroups = []string{""}
-		}
-
-		target := Target{name: key, targetEntry: *targetEntry, providerType: providerType}
-		for _, groupName := range targetEntryGroups {
-			group, ok := groupsByName[groupName]
-			if !ok {
-				isDefault := groupName == defaultGroup
-				group = Group{name: groupName, isDefault: isDefault}
-				groups = append(groups, group)
-			}
-			group.targets = append(group.targets, target)
-			groupsByName[groupName] = group
-		}
-	}
-	return groupsByName
 }

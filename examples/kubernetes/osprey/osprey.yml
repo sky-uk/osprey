@@ -29,6 +29,7 @@ spec:
         - /usr/local/bin/osprey
         args:
         - serve
+        - auth
         - --port=@ospreyPort@
         - --environment=@clusterEnvironment@
         - --secret=@ospreySecret@
@@ -39,6 +40,7 @@ spec:
         - --apiServerCA=/ssl/apiserver-ca.pem
         - --issuerURL=@dexURL@
         - --issuerCA=/ssl/dex-ca.pem
+        - --serve-cluster-info=@ospreyServeClusterInfo@
         - --debug=true
 
         ports:

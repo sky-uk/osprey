@@ -14,22 +14,22 @@ import (
 )
 
 const (
-	// RecommendedHomeDir is the default name for the targetEntry home directory.
-	RecommendedHomeDir = ".targetEntry"
-	// RecommendedFileName is the default name for the targetEntry config file.
+	// RecommendedHomeDir is the default name for the osprey home directory.
+	RecommendedHomeDir = ".osprey"
+	// RecommendedFileName is the default name for the osprey config file.
 	RecommendedFileName = "config"
 )
 
 var (
 	// HomeDir is the user's home directory.
 	HomeDir = homeDir()
-	// RecommendedOspreyHomeDir is the default full path for the targetEntry home.
+	// RecommendedOspreyHomeDir is the default full path for the osprey home.
 	RecommendedOspreyHomeDir = path.Join(HomeDir, RecommendedHomeDir)
-	// RecommendedOspreyConfigFile is the default full path for the targetEntry config file.
+	// RecommendedOspreyConfigFile is the default full path for the osprey config file.
 	RecommendedOspreyConfigFile = path.Join(RecommendedOspreyHomeDir, RecommendedFileName)
 )
 
-// Config holds the information needed to connect to remote targetEntry servers as a given user
+// Config holds the information needed to connect to remote OIDC providers
 type Config struct {
 	// Kubeconfig specifies the path to read/write the kubeconfig file.
 	// +optional
@@ -37,10 +37,11 @@ type Config struct {
 	// DefaultGroup specifies the group to log in to if none provided.
 	// +optional
 	DefaultGroup string `yaml:"default-group,omitempty"`
-	// Targets is a map of referenceable names to targetEntry configs
+	// Providers is a map of OIDC provider config
 	Providers map[string]*Provider `yaml:"providers"`
-	// Interactive
-	Interactive bool `yaml:",omitempty"`
+	// LoginOptions
+	// UseDeviceCode is the option to use a device-code flow when authenticating with an OIDC provider
+	snapshot ConfigSnapshot
 }
 
 // Provider represents a single OIDC auth provider
@@ -71,9 +72,9 @@ type Provider struct {
 	Targets map[string]*TargetEntry `yaml:"targets"`
 }
 
-// TargetEntry contains information about how to communicate with an targetEntry server
+// TargetEntry contains information about how to communicate with an osprey server
 type TargetEntry struct {
-	// Server is the address of the targetEntry server (hostname:port).
+	// Server is the address of the osprey server (hostname:port).
 	Server string `yaml:"server,omitempty"`
 	// CertificateAuthority is the path to a cert file for the certificate authority.
 	// +optional
@@ -82,10 +83,10 @@ type TargetEntry struct {
 	// This will override any cert file specified in CertificateAuthority.
 	// +optional
 	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
-	// Aliases is a list of names that the targetEntry server can be called.
+	// Aliases is a list of names that the osprey server can be called.
 	// +optional
 	Aliases []string `yaml:"aliases,omitempty"`
-	// Groups is a list of names that can be used to group different targetEntry servers.
+	// Groups is a list of names that can be used to group different osprey servers.
 	// +optional
 	Groups []string `yaml:"groups,omitempty"`
 }
@@ -95,7 +96,7 @@ func NewConfig() *Config {
 	return &Config{}
 }
 
-// LoadConfig is a method that reads and parses the Config file
+// LoadConfig reads and parses the Config file
 func LoadConfig(path string) (*Config, error) {
 	in, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -111,6 +112,7 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid config %s: %v", path, err)
 	}
+
 	for provider := range config.Providers {
 		if config.Providers[provider] != nil {
 			var ospreyCertData string
@@ -144,10 +146,15 @@ func LoadConfig(path string) (*Config, error) {
 		}
 	}
 
+	config.createSnapshot()
+	err = config.validateGroups()
+	if err != nil {
+		return nil, fmt.Errorf("invalid groups: %v", err)
+	}
 	return config, err
 }
 
-// SaveConfig serializes the targetEntry config to the specified path.
+// SaveConfig writes the osprey config to the specified path.
 func SaveConfig(config *Config, path string) error {
 	err := os.MkdirAll(filepath.Dir(path), 0755)
 	if err != nil {
@@ -165,42 +172,100 @@ func SaveConfig(config *Config, path string) error {
 }
 
 func (c *Config) validate() error {
-	for provider := range c.Providers {
+	for provider, providerConfig := range c.Providers {
 		if c.Providers[provider] == nil {
-			return fmt.Errorf("the %s provider cannot be specified unless configured", provider)
-		}
-		if len(c.Providers[provider].Targets) == 0 {
-			return fmt.Errorf("at least one target server should be present for %s", provider)
+			continue
 		}
 
 		switch provider {
 		case "azure":
-			if c.Providers[provider].AzureTenantID == "" {
+			if providerConfig.AzureTenantID == "" {
 				return fmt.Errorf("tenant-id is required for %s targets", provider)
 			}
-			if c.Providers[provider].ServerApplicationID == "" {
+			if providerConfig.ServerApplicationID == "" {
 				return fmt.Errorf("server-application-id is required for %s targets", provider)
 			}
-			if c.Providers[provider].ClientID == "" || c.Providers[provider].ClientSecret == "" {
+			if providerConfig.ClientID == "" || providerConfig.ClientSecret == "" {
 				return fmt.Errorf("oauth2 client-id and client-secret must be supplied for %s targets", provider)
 			}
-			if c.Providers[provider].RedirectURI == "" {
+			if providerConfig.RedirectURI == "" {
 				return fmt.Errorf("oauth2 redirect-uri is required for %s targets", provider)
 			}
 		case "osprey":
-			for name, target := range c.Providers[provider].Targets {
+			for name, target := range providerConfig.Targets {
 				if target.Server == "" {
 					return fmt.Errorf("%s's server is required for osprey targets", name)
 				}
 			}
+		default:
+			return fmt.Errorf("the %s provider is unsupported", provider)
+		}
+
+		if len(providerConfig.Targets) == 0 {
+			return fmt.Errorf("at least one target server should be present for %s", provider)
 		}
 	}
 
-	groupedTargets := c.TargetsByGroup()
-	if _, ok := groupedTargets[""]; ok && c.DefaultGroup != "" {
-		return fmt.Errorf("default group %q shadows ungrouped targets", c.DefaultGroup)
+	return nil
+}
+
+func (c *Config) validateGroups() error {
+	groupedTargets := c.snapshot
+	for _, group := range groupedTargets.groupsByName {
+		if group.name == "" && c.DefaultGroup != "" {
+			return fmt.Errorf("default group %q shadows ungrouped targets", c.DefaultGroup)
+		}
 	}
 	return nil
+}
+
+func (c *Config) createSnapshot() {
+	defaultGroup := c.DefaultGroup
+	groupsByName := make(map[string]Group)
+
+	for providerType, providerConfig := range c.Providers {
+		for groupName, group := range groupTargets(providerConfig.Targets, defaultGroup, providerType) {
+			if existingGroup, ok := groupsByName[groupName]; ok {
+				existingGroup.targets = append(existingGroup.targets, group.targets...)
+				groupsByName[groupName] = existingGroup
+			} else {
+				groupsByName[groupName] = group
+			}
+		}
+	}
+	c.snapshot = ConfigSnapshot{
+		groupsByName:     groupsByName,
+		defaultGroupName: defaultGroup,
+	}
+}
+
+// GetSnapshot creates a snapshot view of the provided Config
+func (c *Config) GetSnapshot() ConfigSnapshot {
+	return c.snapshot
+}
+
+func groupTargets(targetEntries map[string]*TargetEntry, defaultGroup string, providerType string) map[string]Group {
+	groupsByName := make(map[string]Group)
+	var groups []Group
+	for key, targetEntry := range targetEntries {
+		targetEntryGroups := targetEntry.Groups
+		if len(targetEntryGroups) == 0 {
+			targetEntryGroups = []string{""}
+		}
+
+		target := Target{name: key, targetEntry: *targetEntry, providerType: providerType}
+		for _, groupName := range targetEntryGroups {
+			group, ok := groupsByName[groupName]
+			if !ok {
+				isDefault := groupName == defaultGroup
+				group = Group{name: groupName, isDefault: isDefault}
+				groups = append(groups, group)
+			}
+			group.targets = append(group.targets, target)
+			groupsByName[groupName] = group
+		}
+	}
+	return groupsByName
 }
 
 // GroupOrDefault returns the group if it is not empty, or the Config.DefaultGroup if it is.
@@ -209,57 +274,6 @@ func (c *Config) GroupOrDefault(group string) string {
 		return group
 	}
 	return c.DefaultGroup
-}
-
-// TargetsInGroup retrieves the TargetEntry targets that match the group.
-// If the group is not provided the DefaultGroup for this configuration will be used.
-func (c *Config) TargetsInGroup(group string) map[string]*TargetEntry {
-	actualGroup := group
-	if actualGroup == "" {
-		actualGroup = c.DefaultGroup
-	}
-	groupedTargets := c.TargetsByGroup()
-	return groupedTargets[actualGroup]
-}
-
-// TargetsByGroup returns the Config targets organized by groups.
-// One target may appear in multiple groups.
-func (c *Config) TargetsByGroup() map[string]map[string]*TargetEntry {
-	targetsByGroup := make(map[string]map[string]*TargetEntry)
-	for provider := range c.Providers {
-		for k, v := range c.groupTargets(c.Providers[provider].Targets) {
-			targetsByGroup[k] = v
-		}
-	}
-	return targetsByGroup
-}
-
-func (c *Config) groupTargets(targets map[string]*TargetEntry) map[string]map[string]*TargetEntry {
-	targetsByGroup := make(map[string]map[string]*TargetEntry)
-	for key, osprey := range targets {
-		ospreyGroups := osprey.Groups
-		if len(ospreyGroups) == 0 {
-			ospreyGroups = []string{""}
-		}
-
-		for _, group := range ospreyGroups {
-			if _, ok := targetsByGroup[group]; !ok {
-				targetsByGroup[group] = make(map[string]*TargetEntry)
-			}
-			targetsByGroup[group][key] = osprey
-		}
-	}
-	return targetsByGroup
-}
-
-// IsInGroup returns true if the TargetEntry target belongs to the given group
-func (o *TargetEntry) IsInGroup(value string) bool {
-	for _, group := range o.Groups {
-		if group == value {
-			return true
-		}
-	}
-	return false
 }
 
 func homeDir() string {

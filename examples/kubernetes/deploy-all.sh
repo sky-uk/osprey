@@ -33,6 +33,14 @@ apply_scoped() {
     execute "--namespace ${namespace} apply -f $1"
 }
 
+deployResources(){
+    resources=$[@]
+    for template in "${resources[@]}"; do
+        sed "${sedScript}" ${examplesK8sDir}/osprey/${template} > ${ospreyRuntime}/${template}
+        apply_scoped ${ospreyRuntime}/${template}
+    done
+}
+
 create_secret() {
     execute "--namespace ${namespace} delete secret $1 --ignore-not-found"
     execute "--namespace ${namespace} create secret generic $1 $@"
@@ -88,14 +96,11 @@ mkdir -p ${runtime}
 sed "${sedScript}" ${examplesK8sDir}/namespace.yml > ${runtime}/namespace.yml
 apply_global ${runtime}/namespace.yml
 
-if [[ "${CLOUD_AUTHENTICATION}" = true ]]; then
-    echo "== Deploy osprey"
+if [[ "${ospreyAthenticationDisabled}" = true ]]; then
+    echo "== Deploy osprey (authentication disabled)"
     mkdir -p ${ospreyRuntime}
     osprey_resources=(osprey-clusterinfo.yml service.yml)
-    for template in "${osprey_resources[@]}"; do
-        sed "${sedScript}" ${examplesK8sDir}/osprey/${template} > ${ospreyRuntime}/${template}
-        apply_scoped ${ospreyRuntime}/${template}
-    done
+    deployResources ${osprey_resources[@]}
 else
     echo "== Generate Certificates"
     mkdir -p ${sslRuntime}
@@ -112,19 +117,13 @@ else
     echo "== Deploy dex"
     mkdir -p ${dexRuntime}
     dex_resources=(config.yml web-templates.yml dex.yml service.yml)
-    for template in "${dex_resources[@]}"; do
-        sed "${sedScript}" ${examplesK8sDir}/dex/${template} > ${dexRuntime}/${template}
-        apply_scoped ${dexRuntime}/${template}
-    done
+    deployResources ${dex_resources[@]}
 
     echo
-    echo "== Deploy osprey"
+    echo "== Deploy osprey (authentication enabled)"
     mkdir -p ${ospreyRuntime}
     osprey_resources=(osprey.yml service.yml)
-    for template in "${osprey_resources[@]}"; do
-        sed "${sedScript}" ${examplesK8sDir}/osprey/${template} > ${ospreyRuntime}/${template}
-        apply_scoped ${ospreyRuntime}/${template}
-    done
+    deployResources ${osprey_resources[@]}
 fi
 
 echo

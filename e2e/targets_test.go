@@ -59,7 +59,7 @@ var _ = Describe("Targets", func() {
 
 		Context("with no default group", func() {
 			BeforeEach(func() {
-				expectedOutputLines = []string{"Osprey targets:",
+				expectedOutputLines = []string{"Configured targets:",
 					fmt.Sprintf("  %s", OspreyTargetOutput("dev")),
 					fmt.Sprintf("* %s", OspreyTargetOutput("local")),
 					fmt.Sprintf("  %s", OspreyTargetOutput("prod")),
@@ -77,7 +77,7 @@ var _ = Describe("Targets", func() {
 					"dev":   {"development", "dev"},
 					"stage": {"development"},
 				}
-				expectedOutputLines = []string{"Osprey targets:",
+				expectedOutputLines = []string{"Configured targets:",
 					fmt.Sprintf("  %s", OspreyTargetOutput("dev")),
 					fmt.Sprintf("  %s", OspreyTargetOutput("stage")),
 				}
@@ -95,7 +95,7 @@ var _ = Describe("Targets", func() {
 					"sandbox": {"sandbox"},
 				}
 				defaultGroup = "development"
-				expectedOutputLines = []string{"Osprey targets:",
+				expectedOutputLines = []string{"Configured targets:",
 					fmt.Sprintf("* %s", OspreyTargetOutput("dev")),
 					fmt.Sprintf("  %s", OspreyTargetOutput("prod")),
 					fmt.Sprintf("  %s", OspreyTargetOutput("sandbox")),
@@ -114,7 +114,7 @@ var _ = Describe("Targets", func() {
 			Context("without target group", func() {
 				Context("without default group", func() {
 					BeforeEach(func() {
-						expectedOutputLines = []string{"Osprey targets:",
+						expectedOutputLines = []string{"Configured targets:",
 							fmt.Sprintf("* <ungrouped>"),
 							fmt.Sprintf("    %s", OspreyTargetOutput("local")),
 							fmt.Sprintf("  development"),
@@ -139,7 +139,7 @@ var _ = Describe("Targets", func() {
 							"sandbox": {"sandbox"},
 						}
 						defaultGroup = "development"
-						expectedOutputLines = []string{"Osprey targets:",
+						expectedOutputLines = []string{"Configured targets:",
 							fmt.Sprintf("* development"),
 							fmt.Sprintf("    %s", OspreyTargetOutput("dev")),
 							fmt.Sprintf("    %s", OspreyTargetOutput("stage")),
@@ -157,7 +157,7 @@ var _ = Describe("Targets", func() {
 			Context("with target group", func() {
 				BeforeEach(func() {
 					targetGroup = "development"
-					expectedOutputLines = []string{"Osprey targets:",
+					expectedOutputLines = []string{"Configured targets:",
 						fmt.Sprintf("  development"),
 						fmt.Sprintf("    %s", OspreyTargetOutput("dev")),
 						fmt.Sprintf("    %s", OspreyTargetOutput("stage")),
@@ -189,7 +189,7 @@ var _ = Describe("Targets", func() {
 			Context("without target group", func() {
 				Context("without default group", func() {
 					BeforeEach(func() {
-						expectedOutputLines = []string{"Osprey groups:",
+						expectedOutputLines = []string{"Configured groups:",
 							fmt.Sprintf("* <ungrouped>"),
 							fmt.Sprintf("  development"),
 							fmt.Sprintf("  production"),
@@ -209,7 +209,7 @@ var _ = Describe("Targets", func() {
 							"sandbox": {"sandbox"},
 						}
 						defaultGroup = "development"
-						expectedOutputLines = []string{"Osprey groups:",
+						expectedOutputLines = []string{"Configured groups:",
 							fmt.Sprintf("* development"),
 							fmt.Sprintf("  production"),
 							fmt.Sprintf("  sandbox"),
@@ -223,7 +223,7 @@ var _ = Describe("Targets", func() {
 			Context("with target group", func() {
 				BeforeEach(func() {
 					targetGroup = "development"
-					expectedOutputLines = []string{"Osprey groups:",
+					expectedOutputLines = []string{"Configured groups:",
 						fmt.Sprintf("  development"),
 					}
 				})

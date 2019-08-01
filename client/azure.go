@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/sky-uk/osprey/client/oidc"
@@ -13,8 +14,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+const wellKnownConfigurationURI = ".well-known/openid-configuration"
+
 // NewAzureRetriever creates new Azure oAuth client
-func NewAzureRetriever(provider *Provider) (Retriever, error) {
+func NewAzureRetriever(provider *Provider, retreiverOptions RetreiverOptions) (Retriever, error) {
 	config := oauth2.Config{
 		ClientID:     provider.ClientID,
 		ClientSecret: provider.ClientSecret,
@@ -22,30 +25,33 @@ func NewAzureRetriever(provider *Provider) (Retriever, error) {
 		Scopes:       provider.Scopes,
 	}
 	if provider.IssuerURL == "" {
-		provider.IssuerURL = fmt.Sprintf("https://login.microsoftonline.com/%s/.well-known/openid-configuration", provider.AzureTenantID)
+		provider.IssuerURL = fmt.Sprintf("https://login.microsoftonline.com/%s/%s", provider.AzureTenantID, wellKnownConfigurationURI)
 	} else {
-		provider.IssuerURL = fmt.Sprintf("%s/.well-known/openid-configuration", provider.IssuerURL)
+		provider.IssuerURL = fmt.Sprintf("%s/%s", provider.IssuerURL, wellKnownConfigurationURI)
 	}
 
 	oidcEndpoint, err := oidc.GetWellKnownConfig(provider.IssuerURL)
 	if err != nil {
-		return nil, fmt.Errorf("unable to query well-knon oidc config: %v", err)
+		return nil, fmt.Errorf("unable to query well-known oidc config: %v", err)
 	}
 	config.Endpoint = oidcEndpoint
 
 	return &azureRetriever{
-		oidc:     oidc.New(config, provider.ServerApplicationID),
-		tenantID: provider.AzureTenantID,
+		oidc:          oidc.New(config, provider.ServerApplicationID),
+		tenantID:      provider.AzureTenantID,
+		useDeviceCode: retreiverOptions.UseDeviceCode,
+		loginTimeout:  retreiverOptions.LoginTimeout,
 	}, nil
 }
 
 type azureRetriever struct {
-	accessToken string
-	interactive bool
-	oidc        *oidc.Client
-	tenantID    string
-	webserver   *http.Server
-	stopCh      chan struct{}
+	accessToken   string
+	useDeviceCode bool
+	loginTimeout  time.Duration
+	oidc          *oidc.Client
+	tenantID      string
+	webserver     *http.Server
+	stopCh        chan struct{}
 }
 
 func (r *azureRetriever) RetrieveUserDetails(target Target, authInfo api.AuthInfo) (*UserInfo, error) {
@@ -64,24 +70,21 @@ func (r *azureRetriever) RetrieveUserDetails(target Target, authInfo api.AuthInf
 	return nil, fmt.Errorf("jwt does not contain the 'unique_name' field")
 }
 
-func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*ClusterInfo, error) {
+func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*TargetInfo, error) {
 	ctx := context.TODO()
 
 	if !r.oidc.Authenticated() {
-		switch r.interactive {
-		case true:
-			oauthToken, err := r.oidc.AuthWithOIDCCallback(ctx)
-			if err != nil {
-				return nil, err
-			}
-			r.accessToken = oauthToken.AccessToken
-		case false:
-			oauthToken, err := r.oidc.AuthWithDeviceFlow(ctx)
-			if err != nil {
-				return nil, err
-			}
-			r.accessToken = oauthToken.AccessToken
+		var oauthToken *oauth2.Token
+		var err error
+		if r.useDeviceCode {
+			oauthToken, err = r.oidc.AuthWithDeviceFlow(ctx, r.loginTimeout)
+		} else {
+			oauthToken, err = r.oidc.AuthWithOIDCCallback(ctx, r.loginTimeout)
 		}
+		if err != nil {
+			return nil, err
+		}
+		r.accessToken = oauthToken.AccessToken
 	}
 
 	var client = &http.Client{}
@@ -103,13 +106,22 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Cl
 		return nil, err
 	}
 
-	return &ClusterInfo{
+	return &TargetInfo{
 		AccessToken:         r.accessToken,
 		ClusterAPIServerURL: clusterInfo.Cluster.ApiServerURL,
 		ClusterCA:           clusterInfo.Cluster.ApiServerCA,
 	}, nil
 }
 
-func (r *azureRetriever) SetInteractive(value bool) {
-	r.interactive = value
+func (r *azureRetriever) GetAuthInfo(config *api.Config, target Target) *api.AuthInfo {
+	authInfo := config.AuthInfos[target.Name()]
+	if authInfo == nil || authInfo.Token == "" {
+		return nil
+	}
+	return authInfo
+
+}
+
+func (r *azureRetriever) SetUseDeviceCode(value bool) {
+	r.useDeviceCode = value
 }

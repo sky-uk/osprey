@@ -22,18 +22,20 @@ import (
 var log = logrus.New().WithFields(logrus.Fields{"logger": "osprey-server"})
 
 type osprey struct {
-	environment     string
-	secret          string
-	issuerHost      string
-	issuerPath      string
-	redirectURL     string
-	apiServerURL    string
-	apiServerCAData string
-	issuerCAData    string
-	provider        *oidc.Provider
-	verifier        *oidc.IDTokenVerifier
-	client          *http.Client
-	mux             sync.Mutex
+	environment           string
+	secret                string
+	issuerHost            string
+	issuerPath            string
+	redirectURL           string
+	apiServerURL          string
+	apiServerCAData       string
+	issuerCAData          string
+	provider              *oidc.Provider
+	serveClusterInfo      bool
+	authenticationEnabled bool
+	verifier              *oidc.IDTokenVerifier
+	client                *http.Client
+	mux                   sync.Mutex
 }
 
 const ospreyState = "as78*sadf$212"
@@ -50,44 +52,48 @@ type Osprey interface {
 	Ready(ctx context.Context) error
 }
 
-// NewServer returns a new osprey server
-func NewServer(environment, secret, redirectURL, issuerHost, issuerPath, issuerCA, apiServerURL, apiServerCA string, clusterInfoOnly bool, client *http.Client) (Osprey, error) {
-	var o *osprey
+// NewAuthenticationServer returns a new osprey server with authentication enabled
+func NewAuthenticationServer(environment, secret, redirectURL, issuerHost, issuerPath, issuerCA, apiServerURL, apiServerCA string, serveClusterInfo bool, client *http.Client) (Osprey, error) {
 	apiServerCAData, err := ReadAndEncodeFile(apiServerCA)
 	if err != nil {
 		return nil, err
 	}
-	if clusterInfoOnly {
-		o = &osprey{
-			apiServerURL:    apiServerURL,
-			apiServerCAData: apiServerCAData,
-		}
-		return o, nil
-	}
-
 	issuerCAData, err := ReadAndEncodeFile(issuerCA)
 	if err != nil {
 		return nil, err
 	}
-	o = &osprey{
-		client:          client,
-		secret:          secret,
-		environment:     environment,
-		apiServerURL:    apiServerURL,
-		apiServerCAData: apiServerCAData,
-		redirectURL:     redirectURL,
-		issuerHost:      issuerHost,
-		issuerPath:      issuerPath,
-		issuerCAData:    issuerCAData,
+	o := &osprey{
+		client:                client,
+		secret:                secret,
+		environment:           environment,
+		apiServerURL:          apiServerURL,
+		apiServerCAData:       apiServerCAData,
+		redirectURL:           redirectURL,
+		issuerHost:            issuerHost,
+		issuerPath:            issuerPath,
+		issuerCAData:          issuerCAData,
+		authenticationEnabled: true,
+		serveClusterInfo:      serveClusterInfo,
 	}
-	provider, err := o.getOrCreateOidcProvider()
+	_, err = o.getOrCreateOidcProvider()
 	if err != nil {
-		log.Warnf("unable to create oidc provider %q: %v", o.issuerURL(), err)
-	} else {
-		o.provider = provider
-		o.verifier = provider.Verifier(&oidc.Config{ClientID: environment})
+		log.Errorf("unable to create oidc provider %q: %v", o.issuerURL(), err)
 	}
 	return o, nil
+}
+
+// NewClusterInfoServer returns a new osprey server for use when serving cluster-info only
+func NewClusterInfoServer(apiServerURL, apiServerCA string) (Osprey, error) {
+	apiServerCAData, err := ReadAndEncodeFile(apiServerCA)
+	if err != nil {
+		return nil, err
+	}
+	return &osprey{
+		apiServerURL:          apiServerURL,
+		apiServerCAData:       apiServerCAData,
+		authenticationEnabled: false,
+		serveClusterInfo:      true,
+	}, nil
 }
 
 func (o *osprey) issuerURL() string {

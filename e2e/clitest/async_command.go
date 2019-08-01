@@ -105,7 +105,6 @@ func (c *asyncCommandWrapper) Stop() {
 	c.stopFlag.Done()
 	// wait for it to finish
 	c.finishedFlag.Wait()
-	c.PrintOutput()
 }
 
 func (c *asyncCommandWrapper) AssertStoppedRunning() {
@@ -118,7 +117,7 @@ func (c *asyncCommandWrapper) AssertStoppedRunning() {
 func (c *asyncCommandWrapper) AssertSuccess() {
 	c.Lock()
 	defer c.Unlock()
-	print(c.GetOutput())
+	//print(c.GetOutput())
 	assertNoExitError(c.GetOutput(), c.error)
 	gomega.Expect(c.finished).To(gomega.BeTrue(), "should have finished running")
 }

@@ -16,8 +16,8 @@ import (
 
 const ospreyBinary = "osprey"
 
-// TestTargetEntry represents an TargetEntry server instance used for testing.
-type TestTargetEntry struct {
+// TestOsprey represents an TargetEntry server instance used for testing.
+type TestOsprey struct {
 	clitest.AsyncTestCommand
 	Port         int32
 	Environment  string
@@ -41,8 +41,8 @@ type TestConfig struct {
 
 // StartOspreys creates one TargetEntry test server per TestDex provided, using ports starting from portsFrom.
 // The TargetEntry directory will be testDir/dex.Environment.
-func StartOspreys(testDir string, dexes []*dextest.TestDex, portsFrom int32) ([]*TestTargetEntry, error) {
-	var servers []*TestTargetEntry
+func StartOspreys(testDir string, dexes []*dextest.TestDex, portsFrom int32) ([]*TestOsprey, error) {
+	var servers []*TestOsprey
 	for i, dex := range dexes {
 		servers = append(servers, Start(testDir, true, portsFrom+int32(i), dex))
 	}
@@ -51,7 +51,7 @@ func StartOspreys(testDir string, dexes []*dextest.TestDex, portsFrom int32) ([]
 
 // Start creates one Osprey test server for the dex Server.
 // Its directory will be testDir/dex.Environment
-func Start(testDir string, useTLS bool, port int32, dex *dextest.TestDex) *TestTargetEntry {
+func Start(testDir string, useTLS bool, port int32, dex *dextest.TestDex) *TestOsprey {
 	ospreyDir := fmt.Sprintf("%s/%s", testDir, dex.Environment)
 	serverDir := filepath.Join(ospreyDir, "osprey")
 	ospreyCert, ospreyKey := ssltest.CreateCertificates("localhost", serverDir)
@@ -61,7 +61,7 @@ func Start(testDir string, useTLS bool, port int32, dex *dextest.TestDex) *TestT
 	apiServerCert, _ := ssltest.CreateCertificates(apiServerCN, serverDir)
 	apiServerURL := fmt.Sprintf("https://%s", apiServerCN)
 	issuerHost := dex.URL()
-	server := &TestTargetEntry{
+	server := &TestOsprey{
 		Port:         port,
 		Environment:  dex.Environment,
 		Secret:       ospreySecret,
@@ -84,7 +84,7 @@ func Start(testDir string, useTLS bool, port int32, dex *dextest.TestDex) *TestT
 	return server
 }
 
-func (o *TestTargetEntry) buildArgs() []string {
+func (o *TestOsprey) buildArgs() []string {
 	portFlag := fmt.Sprintf("--port=%d", o.Port)
 	envFlag := "--environment=" + o.Environment
 	secretFlag := "--secret=" + o.Secret
@@ -95,14 +95,15 @@ func (o *TestTargetEntry) buildArgs() []string {
 	issuerCAFlag := "--issuerCA=" + o.IssuerCA
 	tlsKeyFlag := "--tls-key=" + o.KeyFile
 	tlsCertFlag := "--tls-cert=" + o.CertFile
-	return []string{"serve", "-X",
+	serveClusterInfoFlag := "--serve-cluster-info=true"
+	return []string{"serve", "auth", "-X",
 		portFlag, envFlag, secretFlag, apiServerURLFlag, apiServerCAFlag, redirectURLFlag,
-		issuerURLFlag, issuerCAFlag, tlsKeyFlag, tlsCertFlag}
+		issuerURLFlag, issuerCAFlag, tlsKeyFlag, tlsCertFlag, serveClusterInfoFlag}
 }
 
-// Stop stops the TestTargetEntry server.
+// Stop stops the TestOsprey server.
 // Returns an error if any happened.
-func Stop(server *TestTargetEntry) error {
+func Stop(server *TestOsprey) error {
 	if server == nil {
 		return nil
 	}
@@ -115,14 +116,14 @@ func Stop(server *TestTargetEntry) error {
 
 // BuildConfig creates an ospreyconfig file using the groups provided for the targets.
 // It uses testDir as the home for the .kube and .osprey folders.
-func BuildConfig(testDir, providerName, defaultGroup string, targetGroups map[string][]string, servers []*TestTargetEntry, clientID string) (*TestConfig, error) {
+func BuildConfig(testDir, providerName, defaultGroup string, targetGroups map[string][]string, servers []*TestOsprey, clientID string) (*TestConfig, error) {
 	return BuildFullConfig(testDir, providerName, defaultGroup, targetGroups, servers, false, "", clientID)
 }
 
 // BuildCADataConfig creates an ospreyconfig file with as many targets as servers are provided.
 // It uses testDir as the home for the .kube and .osprey folders.
 // It also base64 encodes the CA data instead of using the file path.
-func BuildCADataConfig(testDir, providerName string, servers []*TestTargetEntry, caData bool, caPath string, clientID string) (*TestConfig, error) {
+func BuildCADataConfig(testDir, providerName string, servers []*TestOsprey, caData bool, caPath string, clientID string) (*TestConfig, error) {
 	return BuildFullConfig(testDir, providerName, "", map[string][]string{}, servers, caData, caPath, clientID)
 }
 
@@ -130,7 +131,7 @@ func BuildCADataConfig(testDir, providerName string, servers []*TestTargetEntry,
 // the groups that have been specified.
 // It uses testDir as the home for the .kube and .osprey folders.
 // If caData is true, it base64 encodes the CA data instead of using the file path.
-func BuildFullConfig(testDir, providerName, defaultGroup string, targetGroups map[string][]string, servers []*TestTargetEntry, caData bool, caPath string, clientID string) (*TestConfig, error) {
+func BuildFullConfig(testDir, providerName, defaultGroup string, targetGroups map[string][]string, servers []*TestOsprey, caData bool, caPath string, clientID string) (*TestConfig, error) {
 	config := client.NewConfig()
 	config.Providers = map[string]*client.Provider{
 		providerName: {

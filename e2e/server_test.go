@@ -19,7 +19,7 @@ var _ = Describe("Server", func() {
 
 	var (
 		localDex    *dextest.TestDex
-		localOsprey *ospreytest.TestTargetEntry
+		localOsprey *ospreytest.TestOsprey
 	)
 
 	BeforeEach(func() {

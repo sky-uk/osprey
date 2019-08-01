@@ -8,7 +8,7 @@ providers:
     client-secret: @azureClientSecret@
     scopes:
       - "@azureScopes@"
-    redirect-uri: @redirectURI@
+    redirect-uri: @azureRedirectURI@
     targets:
       sandfun:
         server: @ospreyURL@

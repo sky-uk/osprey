@@ -7,6 +7,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/sky-uk/osprey/common"
+
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -23,33 +25,19 @@ func GetCredentials() (*LoginCredentials, error) {
 	if terminal.IsTerminal(int(syscall.Stdin)) {
 		return consumeCredentials(hiddenInput)
 	}
-	return consumeCredentials(input)
+	return consumeCredentials(common.Input)
 }
 
 func consumeCredentials(pwdInputFunc func(string, *bufio.Reader) (string, error)) (credentials *LoginCredentials, err error) {
 	var username, password string
 	reader := bufio.NewReader(os.Stdin)
-	if username, err = read("username", "Username: ", reader, input); err != nil {
+	if username, err = common.Read("username", "Username: ", reader, common.Input); err != nil {
 		return nil, err
 	}
-	if password, err = read("password", "Password: ", reader, pwdInputFunc); err != nil {
+	if password, err = common.Read("password", "Password: ", reader, pwdInputFunc); err != nil {
 		return nil, err
 	}
 	return &LoginCredentials{Username: username, Password: password}, nil
-}
-
-func read(name, prompt string, reader *bufio.Reader, inputFunc func(string, *bufio.Reader) (string, error)) (string, error) {
-	fmt.Print(prompt)
-	return inputFunc(name, reader)
-}
-
-func input(inputName string, reader *bufio.Reader) (string, error) {
-	var err error
-	if value, err := reader.ReadString('\n'); err == nil {
-		value = strings.TrimSpace(value)
-		return value, nil
-	}
-	return "", fmt.Errorf("failed to read %s: %v", inputName, err)
 }
 
 func hiddenInput(inputName string, reader *bufio.Reader) (string, error) {

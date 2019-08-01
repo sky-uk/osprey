@@ -12,9 +12,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-// NewOspreyRetriever creates new Azure oAuth client
-func NewOspreyRetriever(provider *Provider) (Retriever, error) {
-	return &ospreyRetriever{serverCertificateAuthorityData: provider.CertificateAuthorityData}, nil
+// NewOspreyRetriever creates new osprey client
+func NewOspreyRetriever(provider *Provider) Retriever {
+	return &ospreyRetriever{serverCertificateAuthorityData: provider.CertificateAuthorityData}
 }
 
 type ospreyRetriever struct {
@@ -33,7 +33,10 @@ func (r *ospreyRetriever) RetrieveUserDetails(target Target, authInfo api.AuthIn
 
 	idToken := authInfo.AuthProvider.Config["id-token"]
 	if idToken == "" {
-		return nil, fmt.Errorf("none")
+		return &UserInfo{
+			Username: "none",
+			Roles:    nil,
+		}, nil
 	}
 
 	jwt, err := jws.ParseJWT([]byte(idToken))
@@ -56,7 +59,7 @@ func (r *ospreyRetriever) RetrieveUserDetails(target Target, authInfo api.AuthIn
 	}, nil
 }
 
-func (r *ospreyRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*ClusterInfo, error) {
+func (r *ospreyRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*TargetInfo, error) {
 	httpClient, err := webClient.NewTLSClient(r.serverCertificateAuthorityData, target.CertificateAuthorityData())
 	if err != nil {
 		return nil, err
@@ -82,7 +85,7 @@ func (r *ospreyRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*C
 	if err != nil {
 		return nil, err
 	}
-	return &ClusterInfo{
+	return &TargetInfo{
 		Username:            accessToken.User.Username,
 		ClientID:            accessToken.Provider.ClientID,
 		ClientSecret:        accessToken.Provider.ClientSecret,
@@ -93,6 +96,14 @@ func (r *ospreyRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*C
 		ClusterAPIServerURL: accessToken.Cluster.ApiServerURL,
 		ClusterCA:           accessToken.Cluster.ApiServerCA,
 	}, nil
+}
+
+func (r *ospreyRetriever) GetAuthInfo(config *api.Config, target Target) *api.AuthInfo {
+	authInfo := config.AuthInfos[target.Name()]
+	if authInfo == nil || authInfo.AuthProvider == nil {
+		return nil
+	}
+	return authInfo
 }
 
 func createAccessTokenRequest(host string, credentials *LoginCredentials) (*http.Request, error) {
@@ -124,7 +135,7 @@ func basicAuth(credentials *LoginCredentials) string {
 	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
-func (r *ospreyRetriever) SetInteractive(value bool) {
+func (r *ospreyRetriever) SetUseDeviceCode(value bool) {
 	// Do nothing as osprey-server does not support a web-based flow
 	return
 }

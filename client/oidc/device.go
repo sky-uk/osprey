@@ -16,7 +16,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// DeviceFlowAuth contains the response for a device code oAuth flow
+// DeviceFlowAuth contains the response for a device code oAuth flow.
 type DeviceFlowAuth struct {
 	UserCode        string `json:"user_code" yaml:"user-code"`
 	DeviceCode      string `json:"device_code"`
@@ -26,8 +26,13 @@ type DeviceFlowAuth struct {
 	Interval        int    `json:"interval,omitempty"`
 }
 
-// AuthWithDeviceFlow attempts to authorise using the device code oAuth flow
-func (c *Client) AuthWithDeviceFlow(ctx context.Context) (*oauth2.Token, error) {
+type pollResponse struct {
+	Token *oauth2.Token
+	error
+}
+
+// AuthWithDeviceFlow attempts to authorise using the device code oAuth flow.
+func (c *Client) AuthWithDeviceFlow(ctx context.Context, loginTimeout time.Duration) (*oauth2.Token, error) {
 	c.oAuthConfig.RedirectURL = ""
 	// devicecode URL is not exposed by the Azure https://login.microsoftonline.com/<tenant-id>/.well-known/openid-configuration endpoint
 	deviceAuthURL := strings.Replace(c.oAuthConfig.AuthCodeURL(ospreyState), "/authorize", "/v2.0/devicecode", 1)
@@ -37,13 +42,19 @@ func (c *Client) AuthWithDeviceFlow(ctx context.Context) (*oauth2.Token, error) 
 	}
 
 	req, err := http.NewRequest(http.MethodPost, deviceAuthURL, strings.NewReader(urlParams.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("unable to create request: %v", err)
+	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	response, err := ctxhttp.Do(ctx, nil, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to post form to %s: %v", deviceAuthURL, err)
 	}
 
 	body, err := ioutil.ReadAll(io.LimitReader(response.Body, 1<<20))
+	if err != nil {
+		return nil, fmt.Errorf("unable to read device-flow response: %v", err)
+	}
 
 	if code := response.StatusCode; code < 200 || code > 299 {
 		return nil, fmt.Errorf("HTTP error %d: %s", code, body)
@@ -51,27 +62,41 @@ func (c *Client) AuthWithDeviceFlow(ctx context.Context) (*oauth2.Token, error) 
 
 	deviceAuth := &DeviceFlowAuth{}
 	if err = json.Unmarshal(body, deviceAuth); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to unmarshal device-flow response: %v", err)
 	}
 
+	// Print the message that is obtained from the previous request. This contains the message and URL from the OIDC provider
 	fmt.Println(deviceAuth.Message)
 
-	oauth2Token, err := c.poll(ctx, deviceAuth)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to fetch device-flow token: %v", err)
+	ch := make(chan *pollResponse)
+	ctxTimeout, cancel := context.WithTimeout(ctx, loginTimeout)
+	defer cancel()
+
+	go func() {
+		ch <- c.poll(ctx, deviceAuth)
+	}()
+
+	select {
+	case <-ctxTimeout.Done():
+		return nil, fmt.Errorf("exceeded device-code login deadline")
+	case deviceCodePoll := <-ch:
+		if deviceCodePoll.error != nil {
+			return nil, fmt.Errorf("failed to fetch device-flow token: %v", err)
+		}
+		c.authenticated = true
+		return deviceCodePoll.Token, nil
 	}
-	c.authenticated = true
-	return oauth2Token, nil
 }
 
 const (
 	errAuthorizationPending = "authorization_pending"
+	errBadVerificationCode  = "bad_verification_code"
 	errAccessDenied         = "authorization_declined"
 	errExpiredToken         = "expired_token"
-	errBadVerificationCode  = "bad_verification_code"
+	errSlowDown             = "slow_down"
 )
 
-func (c *Client) poll(ctx context.Context, df *DeviceFlowAuth) (*oauth2.Token, error) {
+func (c *Client) poll(ctx context.Context, df *DeviceFlowAuth) *pollResponse {
 	// If no interval was provided, the client MUST use a reasonable default polling interval.
 	// See https://tools.ietf.org/html/draft-ietf-oauth-device-flow-07#section-3.5
 	interval := df.Interval
@@ -86,13 +111,27 @@ func (c *Client) poll(ctx context.Context, df *DeviceFlowAuth) (*oauth2.Token, e
 			oauth2.SetAuthURLParam("device_code", df.DeviceCode),
 			oauth2.SetAuthURLParam("resource", fmt.Sprintf("spn:%s", c.serverApplicationID)))
 		if err == nil {
-			return token, nil
+			return &pollResponse{
+				Token: token,
+				error: nil,
+			}
 		}
 		errType := parseError(err)
 		switch errType {
 		case errAccessDenied, errExpiredToken, errBadVerificationCode:
-			return token, errors.New("oauth2: " + errType)
+			return &pollResponse{
+				Token: nil,
+				error: errors.New("oauth2: " + errType),
+			}
+		case errSlowDown:
+			interval = interval + 5
 		case errAuthorizationPending:
+			continue
+		case "":
+			return &pollResponse{
+				nil,
+				errors.New("invalid response from azure device-code endpoint"),
+			}
 		}
 	}
 }

@@ -1,4 +1,4 @@
-package mockoidc
+package oidctest
 
 import (
 	"encoding/json"
@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/osprey/client/oidc"
@@ -23,7 +25,7 @@ const (
 
 // Server holds the interface to a mocked OIDC server
 type Server interface {
-	Start() error
+	//Start(host string, port int) (Server, error)
 	RequestCount(endpoint string) int
 	Reset()
 }
@@ -58,16 +60,6 @@ func setup(m *mockOidcServer) *http.Server {
 	}
 }
 
-// New returns a new mocked OIDC server
-func New(host string, port int) Server {
-	return &mockOidcServer{
-		IssuerURL:                fmt.Sprintf("%s:%d", host, port),
-		DeviceFlowRequestPending: false,
-		mux:                      http.NewServeMux(),
-		requestCount:             initialiseRequestStates(),
-	}
-}
-
 func initialiseRequestStates() map[string]int {
 	endpoints := []string{
 		"/token",
@@ -83,19 +75,29 @@ func initialiseRequestStates() map[string]int {
 	return requestStates
 }
 
-func (m *mockOidcServer) Start() error {
-	httpServer := setup(m)
-	m.mux.Handle("/.well-known/openid-configuration", handleWellKnownConfigRequest(m))
-	m.mux.Handle("/authorize", handleAuthorizeRequest(m))
-	m.mux.Handle("/token", handleTokenRequest(m))
-	m.mux.Handle("/v2.0/devicecode", handleDeviceCodeFlowRequest(m))
+const wellKnownConfigurationURI = "/.well-known/openid-configuration"
+
+// Start returns and starts a new OIDC test server server
+func Start(host string, port int) (Server, error) {
+	server := &mockOidcServer{
+		IssuerURL:                fmt.Sprintf("%s:%d", host, port),
+		DeviceFlowRequestPending: false,
+		mux:                      http.NewServeMux(),
+		requestCount:             initialiseRequestStates(),
+	}
+
+	httpServer := setup(server)
+	server.mux.Handle(wellKnownConfigurationURI, handleWellKnownConfigRequest(server))
+	server.mux.Handle("/authorize", handleAuthorizeRequest(server))
+	server.mux.Handle("/token", handleTokenRequest(server))
+	server.mux.Handle("/v2.0/devicecode", handleDeviceCodeFlowRequest(server))
 
 	go func() {
 		if err := httpServer.ListenAndServe(); err != nil {
 			log.Fatalf("unable to start mock server: %v", err)
 		}
 	}()
-	return nil
+	return server, nil
 }
 
 func handleDeviceCodeFlowRequest(m *mockOidcServer) http.HandlerFunc {
@@ -141,8 +143,21 @@ type errorResponse struct {
 
 func handleTokenRequest(m *mockOidcServer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		fakeJWT := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"aud":         "osprey-tests",
+			"family_name": "Doe",
+			"given_name":  "John",
+			"name":        "Doe, John",
+			"unique_name": "john.doe@osprey.org",
+			"scp":         "offline_access openid profile User.Read",
+			"nbf":         time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
+		})
+
+		// Sign and get the complete encoded token as a string using the secret
+		tokenString, _ := fakeJWT.SignedString([]byte("super-secret"))
+
 		token := &oauth2.Token{
-			AccessToken: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIwMDAwMDAwMi0wMDAwLTAwMDAtYzAwMC0wMDAwMDAwMDAwMDAiLCJpc3MiOiJodHRwczovL2Zha2Vpc3N1ZXIiLCJpYXQiOjE1NjIyMjg0NjksIm5iZiI6MTU2MjIyODQ2OSwiZXhwIjoxNTYyMjMyNzA3LCJmYW1pbHlfbmFtZSI6IkRvZSIsImdpdmVuX25hbWUiOiJKb2huIiwiaXBhZGRyIjoiOTAuMjE2LjEzNC4xOTciLCJuYW1lIjoiRG9lLCBKb2huIiwic2NwIjoib2ZmbGluZV9hY2Nlc3Mgb3BlbmlkIHByb2ZpbGUgVXNlci5SZWFkIiwidW5pcXVlX25hbWUiOiJqb2huLmRvZUBvc3ByZXkub3JnIiwidXBuIjoiam9obi5kb2VAb3NwcmV5Lm9yZyIsInV0aSI6ImpQVnhOZ1AwaEV5T29JMmhRcUFQQUEiLCJ2ZXIiOiIxLjAiLCJqdGkiOiIwNWQ3ZjZkYS00NTUwLTQ1MjYtYTc3YS1kN2MyODcxYTQ0ZjMifQ.L2nzUmW3NtoPnE0rAnCh4GF4r3SI-S1IcZ-TwHB5JOE",
+			AccessToken: tokenString,
 			Expiry:      time.Now().Add(time.Hour),
 		}
 		resp, _ := json.Marshal(token)

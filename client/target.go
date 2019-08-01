@@ -42,9 +42,11 @@ func (m *Target) CertificateAuthorityData() string {
 	return m.targetEntry.CertificateAuthorityData
 }
 
-func sortTargets(targets []Target) []Target {
-	sort.Slice(targets, func(i, j int) bool {
-		return targets[i].name < targets[j].name
-	})
-	return targets
+func sortTargets(targetMap map[string][]Target) map[string][]Target {
+	for _, targets := range targetMap {
+		sort.Slice(targets, func(i, j int) bool {
+			return targets[i].name < targets[j].name
+		})
+	}
+	return targetMap
 }

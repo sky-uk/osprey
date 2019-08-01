@@ -19,14 +19,15 @@ import (
 var signals chan os.Signal
 
 // NewServer creates a new Server definition with an empty ServeMux
-func NewServer(port int32, tlsCertFile, tlsKeyFile string, shutdownGracePeriod time.Duration, clusterInfoOnly bool) *Server {
+func NewServer(port int32, tlsCertFile, tlsKeyFile string, shutdownGracePeriod time.Duration, serveClusterInfo bool, authenticationEnabled bool) *Server {
 	return &Server{
-		addr:                fmt.Sprintf("0.0.0.0:%d", port),
-		shutdownGracePeriod: shutdownGracePeriod,
-		tlsCertFile:         tlsCertFile,
-		tlsCertKey:          tlsKeyFile,
-		mux:                 http.NewServeMux(),
-		clusterInfoOnly:     clusterInfoOnly,
+		addr:                  fmt.Sprintf("0.0.0.0:%d", port),
+		shutdownGracePeriod:   shutdownGracePeriod,
+		tlsCertFile:           tlsCertFile,
+		tlsCertKey:            tlsKeyFile,
+		mux:                   http.NewServeMux(),
+		authenticationEnabled: authenticationEnabled,
+		serveClusterInfo:      serveClusterInfo,
 	}
 }
 
@@ -67,20 +68,23 @@ func gracefulShutdown(s *http.Server, timeout time.Duration) error {
 
 // Server contains the configuration for the HTTP server
 type Server struct {
-	addr                string
-	shutdownGracePeriod time.Duration
-	tlsCertFile         string
-	tlsCertKey          string
-	mux                 *http.ServeMux
-	clusterInfoOnly     bool
+	addr                  string
+	shutdownGracePeriod   time.Duration
+	tlsCertFile           string
+	tlsCertKey            string
+	mux                   *http.ServeMux
+	authenticationEnabled bool
+	serveClusterInfo      bool
 }
 
 // RegisterService binds the http endpoints to the Osprey services
 // "/access-token" -> Osprey.RetrieveClusterDetailsAndAuthTokens()
 func (s *Server) RegisterService(service osprey.Osprey) {
 	s.mux.Handle("/healthz", handleHealthcheck(service))
-	s.mux.Handle("/cluster-info", handleClusterInfo(service))
-	if !s.clusterInfoOnly {
+	if s.serveClusterInfo {
+		s.mux.Handle("/cluster-info", handleClusterInfo(service))
+	}
+	if s.authenticationEnabled {
 		s.mux.Handle("/access-token", handleAccessToken(service))
 		s.mux.Handle("/callback", handleCallback(service))
 	}
