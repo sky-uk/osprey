@@ -104,8 +104,10 @@ func (o *osprey) issuerURL() string {
 }
 
 func (o *osprey) Ready(ctx context.Context) error {
-	if _, err := o.getOrCreateOidcProvider(); err != nil {
-		return fmt.Errorf("unhealthy: %v", err)
+	if o.authenticationEnabled {
+		if _, err := o.getOrCreateOidcProvider(); err != nil {
+			return fmt.Errorf("unhealthy: %v", err)
+		}
 	}
 	return nil
 }

@@ -37,7 +37,7 @@ func targets(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to load ospreyconfig file %s: %v", ospreyconfigFile, err)
 	}
 
-	snapshot := ospreyconfig.GetSnapshot()
+	snapshot := ospreyconfig.GetOrCreateSnapshot()
 
 	var outputLines []string
 	if listGroups {

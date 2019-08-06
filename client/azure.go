@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -14,10 +15,60 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-const wellKnownConfigurationURI = ".well-known/openid-configuration"
+const (
+	// AzureProviderName is the constant string value for the azure provider
+	AzureProviderName         = "azure"
+	wellKnownConfigurationURI = ".well-known/openid-configuration"
+)
+
+// AzureConfig holds the configuration for Azure
+type AzureConfig struct {
+	// ServerApplicationID is the oidc-client-id used on the apiserver configuration
+	ServerApplicationID string `yaml:"server-application-id,omitempty"`
+	// ClientID is the oidc client id used for osprey
+	ClientID string `yaml:"client-id,omitempty"`
+	// ClientSecret is the oidc client secret used for osprey
+	ClientSecret string `yaml:"client-secret,omitempty"`
+	// RedirectURI is the redirect URI that the oidc application is configured to call back to
+	CertificateAuthority string `yaml:"certificate-authority,omitempty"`
+	// CertificateAuthorityData is base64-encoded CA cert data.
+	// This will override any cert file specified in CertificateAuthority.
+	// +optional
+	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
+	RedirectURI              string `yaml:"redirect-uri,omitempty"`
+	// Scopes is the list of scopes to request when performing the oidc login request
+	Scopes []string `yaml:"scopes"`
+	// AzureTenantID is the Azure Tenant ID assigned to your organisation
+	AzureTenantID string `yaml:"tenant-id,omitempty"`
+	// IssuerURL is the URL of the OpenID server. This is mainly used for testing.
+	// +optional
+	IssuerURL string `yaml:"issuer-url,omitempty"`
+	// Targets contains a map of strings to osprey targets
+	Targets map[string]*TargetEntry `yaml:"targets"`
+}
+
+// ValidateConfig checks that the required configuration has been provided for Azure
+func (ac *AzureConfig) ValidateConfig() error {
+	if len(ac.Targets) == 0 {
+		return errors.New("at least one target server should be present for azure")
+	}
+	if ac.AzureTenantID == "" {
+		return errors.New("tenant-id is required for azure targets")
+	}
+	if ac.ServerApplicationID == "" {
+		return errors.New("server-application-id is required for azure targets")
+	}
+	if ac.ClientID == "" || ac.ClientSecret == "" {
+		return errors.New("oauth2 clientid and client-secret must be supplied for azure targets")
+	}
+	if ac.RedirectURI == "" {
+		return errors.New("oauth2 redirect-uri is required for azure targets")
+	}
+	return nil
+}
 
 // NewAzureRetriever creates new Azure oAuth client
-func NewAzureRetriever(provider *Provider, retreiverOptions RetreiverOptions) (Retriever, error) {
+func NewAzureRetriever(provider *AzureConfig, retrieverOptions *RetrieverOptions) (Retriever, error) {
 	config := oauth2.Config{
 		ClientID:     provider.ClientID,
 		ClientSecret: provider.ClientSecret,
@@ -34,14 +85,16 @@ func NewAzureRetriever(provider *Provider, retreiverOptions RetreiverOptions) (R
 	if err != nil {
 		return nil, fmt.Errorf("unable to query well-known oidc config: %v", err)
 	}
-	config.Endpoint = oidcEndpoint
-
-	return &azureRetriever{
-		oidc:          oidc.New(config, provider.ServerApplicationID),
-		tenantID:      provider.AzureTenantID,
-		useDeviceCode: retreiverOptions.UseDeviceCode,
-		loginTimeout:  retreiverOptions.LoginTimeout,
-	}, nil
+	config.Endpoint = *oidcEndpoint
+	retriever := &azureRetriever{
+		oidc:     oidc.New(config, provider.ServerApplicationID),
+		tenantID: provider.AzureTenantID,
+	}
+	if retrieverOptions != nil {
+		retriever.useDeviceCode = retrieverOptions.UseDeviceCode
+		retriever.loginTimeout = retrieverOptions.LoginTimeout
+	}
+	return retriever, nil
 }
 
 type azureRetriever struct {

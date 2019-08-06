@@ -37,9 +37,8 @@ endif
 
 setup:
 	@echo "== setup"
-	go get -v golang.org/x/lint/golint
-	go get golang.org/x/tools/cmd/goimports
-	go mod download
+	go get -u golang.org/x/lint/golint
+	go get -u golang.org/x/tools/cmd/goimports
 
 format :
 	@echo "== format"
@@ -89,7 +88,7 @@ lint :
 
 test :
 	@echo "== run tests"
-	go test -race $(pkgs)
+	go test -v -race $(pkgs)
 
 proto :
 	@echo "== compiling proto files"

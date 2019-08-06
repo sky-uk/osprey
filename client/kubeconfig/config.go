@@ -12,17 +12,21 @@ import (
 	clientgo "k8s.io/client-go/tools/clientcmd/api"
 )
 
-// PathOptions contains options for the kubectl config file
-var PathOptions *kubectl.PathOptions
+var pathOptions *kubectl.PathOptions
+
+// GetPathOptions contains options for the kubectl config file
+func GetPathOptions() *kubectl.PathOptions {
+	return pathOptions
+}
 
 // LoadConfig loads a kubeconfig from the specified kubeconfigFile, or uses the recommended
 // file from kubectl defaults ($HOME/.kube/config). If the file exists it will use the existing
 // configuration as a base for the changes, otherwise it starts a new configuration.
 // Returns an error only if the existing file is not a valid configuration or it can't be read.
 func LoadConfig(kubeconfigFile string) error {
-	PathOptions = kubectl.NewDefaultPathOptions()
+	pathOptions = kubectl.NewDefaultPathOptions()
 	if kubeconfigFile != "" {
-		PathOptions.LoadingRules.ExplicitPath = kubeconfigFile
+		pathOptions.LoadingRules.ExplicitPath = kubeconfigFile
 	}
 	_, err := GetConfig()
 	return err
@@ -34,7 +38,7 @@ func LoadConfig(kubeconfigFile string) error {
 func UpdateConfig(name string, aliases []string, tokenData *client.TargetInfo) error {
 	config, err := GetConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load existing kubeconfig at %s: %v", PathOptions.GetDefaultFilename(), err)
+		return fmt.Errorf("failed to load existing kubeconfig at %s: %v", pathOptions.GetDefaultFilename(), err)
 	}
 
 	cluster := clientgo.NewCluster()
@@ -75,7 +79,7 @@ func UpdateConfig(name string, aliases []string, tokenData *client.TargetInfo) e
 		config.Contexts[alias] = context
 	}
 
-	return kubectl.ModifyConfig(PathOptions, *config, false)
+	return kubectl.ModifyConfig(pathOptions, *config, false)
 }
 
 // Remove deletes all items related to the specified target: cluster, context, user.
@@ -83,7 +87,7 @@ func UpdateConfig(name string, aliases []string, tokenData *client.TargetInfo) e
 func Remove(name string) error {
 	config, err := GetConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load existing kubeconfig at %s: %v", PathOptions.GetDefaultFilename(), err)
+		return fmt.Errorf("failed to load existing kubeconfig at %s: %v", pathOptions.GetDefaultFilename(), err)
 	}
 	if config.AuthInfos[name] != nil {
 		if config.AuthInfos[name].Token != "" {
@@ -92,7 +96,7 @@ func Remove(name string) error {
 		if config.AuthInfos[name].AuthProvider != nil {
 			config.AuthInfos[name].AuthProvider.Config["id-token"] = ""
 		}
-		return kubectl.ModifyConfig(PathOptions, *config, false)
+		return kubectl.ModifyConfig(pathOptions, *config, false)
 	}
 	return nil
 }
@@ -100,12 +104,13 @@ func Remove(name string) error {
 // GetConfig returns the currently loaded configuration via LoadConfig().
 // Returns an error if LoadConfig() has not been called.
 func GetConfig() (*clientgo.Config, error) {
-	if PathOptions == nil {
+	pathOptions := GetPathOptions()
+	if pathOptions == nil {
 		return nil, errors.New("no configuration has been loaded. Use LoadConfig() to load a configuration")
 	}
-	config, err := PathOptions.GetStartingConfig()
+	config, err := pathOptions.GetStartingConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load kubeconfig from %s: %v", PathOptions.GetDefaultFilename(), err)
+		return nil, fmt.Errorf("failed to load kubeconfig from %s: %v", pathOptions.GetDefaultFilename(), err)
 	}
 	return config, nil
 }
@@ -115,7 +120,7 @@ func GetConfig() (*clientgo.Config, error) {
 func GetAuthInfo(target client.Target) *clientgo.AuthInfo {
 	config, err := GetConfig()
 	if err != nil {
-		log.Fatalf("failed to load existing kubeconfig at %s: %v", PathOptions.GetDefaultFilename(), err)
+		log.Fatalf("failed to load existing kubeconfig at %s: %v", GetPathOptions().GetDefaultFilename(), err)
 	}
 
 	authInfo := config.AuthInfos[target.Name()]

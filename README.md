@@ -539,7 +539,7 @@ The templates can be found in `examples/kubernetes`.
    ```
    examples/kubernetes/deploy-all.sh </full/path/to/runtime/dir>
    ```
-   To create an osprey-server that serves `/cluster-info` only, set `ospreyAthenticationDisabled=true` in the properties
+   To create an osprey-server that serves `/cluster-info` only, set `ospreyAuthenticationDisabled=true` in the properties
    file.
 3. Use the osprey client
    ```
@@ -705,7 +705,7 @@ providers:
 
 Kubernetes api-server flags:
 ```yaml
-- --oidc-issuer-url=https://sts.windows.net/<tenant-id>>/
+- --oidc-issuer-url=https://sts.windows.net/<tenant-id>/
 - --oidc-client-id=api://9bd903fd-f8df-4390-9a45-ab2fa28673b4
 - --oidc-username-claim=unique_name
 - --oidc-groups-claim=groups

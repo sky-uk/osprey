@@ -81,24 +81,23 @@ func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Dur
 func (c *Client) handleRedirectURI(ctx context.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer close(c.stopChan)
-		var fatalError error
 		if r.URL.Query().Get("state") != ospreyState {
-			fatalError = fmt.Errorf("state did not match")
-			http.Error(w, fatalError.Error(), http.StatusBadRequest)
+			err := fmt.Errorf("state did not match")
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			c.stopChan <- tokenResponse{
 				nil,
-				fatalError,
+				err,
 			}
 			return
 		}
 
 		oauth2Token, err := c.doAuthRequest(ctx, r)
 		if err != nil {
-			fatalError = fmt.Errorf("failed to exchange token: %v", err)
-			http.Error(w, fatalError.Error(), http.StatusInternalServerError)
+			err := fmt.Errorf("failed to exchange token: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			c.stopChan <- tokenResponse{
 				nil,
-				fatalError,
+				err,
 			}
 			return
 		}
@@ -109,7 +108,7 @@ func (c *Client) handleRedirectURI(ctx context.Context) http.HandlerFunc {
 
 		c.stopChan <- tokenResponse{
 			oauth2Token,
-			fatalError,
+			nil,
 		}
 	}
 }

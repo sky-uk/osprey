@@ -50,8 +50,8 @@ type Retriever interface {
 	SetUseDeviceCode(bool)
 }
 
-// RetreiverOptions is used to hold command line arguments that change the behaviour of logins
-type RetreiverOptions struct {
+// RetrieverOptions is used to hold command line arguments that change the behaviour of logins
+type RetrieverOptions struct {
 	UseDeviceCode bool
 	LoginTimeout  time.Duration
 }

@@ -22,7 +22,14 @@ func (g *Group) Targets() map[string][]Target {
 	for _, target := range g.targets {
 		groupMap[target.ProviderType()] = append(groupMap[target.ProviderType()], target)
 	}
-	return sortTargets(groupMap)
+	return getSortedTargetsByProvider(groupMap)
+}
+
+func getSortedTargetsByProvider(targetMap map[string][]Target) map[string][]Target {
+	for _, targets := range targetMap {
+		sortTargets(targets)
+	}
+	return targetMap
 }
 
 // Name returns the name of the group

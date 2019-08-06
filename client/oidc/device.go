@@ -73,7 +73,7 @@ func (c *Client) AuthWithDeviceFlow(ctx context.Context, loginTimeout time.Durat
 	defer cancel()
 
 	go func() {
-		ch <- c.poll(ctx, deviceAuth)
+		ch <- c.poll(ctxTimeout, deviceAuth)
 	}()
 
 	select {

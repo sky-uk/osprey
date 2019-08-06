@@ -1,7 +1,5 @@
 package client
 
-import "sort"
-
 // ConfigSnapshot is a snapshot view of the configuration to organize the targets per group.
 // It does not reflect changes to the configuration after it has been taken.
 type ConfigSnapshot struct {
@@ -44,10 +42,7 @@ func (t *ConfigSnapshot) Targets() []Target {
 			}
 		}
 	}
-	sort.Slice(targets, func(i, j int) bool {
-		return targets[i].name < targets[j].name
-	})
-	return targets
+	return sortTargets(targets)
 }
 
 // DefaultGroup returns the default group in the configuration.

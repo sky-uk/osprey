@@ -38,38 +38,16 @@ type Config struct {
 	// +optional
 	DefaultGroup string `yaml:"default-group,omitempty"`
 	// Providers is a map of OIDC provider config
-	Providers map[string]*Provider `yaml:"providers"`
+	Providers *Providers `yaml:"providers,omitempty"`
 	// LoginOptions
 	// UseDeviceCode is the option to use a device-code flow when authenticating with an OIDC provider
-	snapshot ConfigSnapshot
+	snapshot *ConfigSnapshot
 }
 
-// Provider represents a single OIDC auth provider
-type Provider struct {
-	// ServerApplicationID is the oidc-client-id used on the apiserver configuration
-	ServerApplicationID string `yaml:"server-application-id,omitempty"`
-	// ClientID is the oidc client id used for osprey
-	ClientID string `yaml:"client-id,omitempty"`
-	// ClientSecret is the oidc client secret used for osprey
-	ClientSecret string `yaml:"client-secret,omitempty"`
-	// RedirectURI is the redirect URI that the oidc application is configured to call back to
-	RedirectURI string `yaml:"redirect-uri,omitempty"`
-	// Scopes is the list of scopes to request when performing the oidc login request
-	Scopes []string `yaml:"scopes"`
-	// CertificateAuthority is the path to a cert file for the certificate authority.
-	// +optional
-	CertificateAuthority string `yaml:"certificate-authority,omitempty"`
-	// CertificateAuthorityData is base64-encoded CA cert data.
-	// This will override any cert file specified in CertificateAuthority.
-	// +optional
-	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
-	// AzureTenantID is the Azure Tenant ID assigned to your organisation
-	AzureTenantID string `yaml:"tenant-id,omitempty"`
-	// IssuerURL is the URL of the OpenID server. This is mainly used for testing.
-	// +optional
-	IssuerURL string `yaml:"issuer-url,omitempty"`
-	// Targets contains a map of strings to osprey targets
-	Targets map[string]*TargetEntry `yaml:"targets"`
+// Providers holds the configuration structs for the supported providers
+type Providers struct {
+	Azure  *AzureConfig  `yaml:"azure,omitempty"`
+	Osprey *OspreyConfig `yaml:"osprey,omitempty"`
 }
 
 // TargetEntry contains information about how to communicate with an osprey server
@@ -108,45 +86,25 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to unmarshal config file %s: %v", path, err)
 	}
 
-	err = config.validate()
-	if err != nil {
-		return nil, fmt.Errorf("invalid config %s: %v", path, err)
-	}
-
-	for provider := range config.Providers {
-		if config.Providers[provider] != nil {
-			var ospreyCertData string
-			if config.Providers[provider].CertificateAuthority != "" && config.Providers[provider].CertificateAuthorityData == "" {
-				ospreyCertData, err = web.LoadTLSCert(config.Providers[provider].CertificateAuthority)
-				if err != nil {
-					return nil, fmt.Errorf("failed to load global CA certificate: %v", err)
-				}
-				config.Providers[provider].CertificateAuthorityData = ospreyCertData
-			} else if config.Providers[provider].CertificateAuthorityData != "" {
-				// CA is overridden if CAData is present
-				config.Providers[provider].CertificateAuthority = ""
-			}
-
-			for name, target := range config.Providers[provider].Targets {
-				if target.CertificateAuthority == "" && target.CertificateAuthorityData == "" {
-					target.CertificateAuthorityData = ospreyCertData
-					// CA is overridden if CAData is present
-					target.CertificateAuthority = ""
-				} else if target.CertificateAuthority != "" && target.CertificateAuthorityData == "" {
-					certData, err := web.LoadTLSCert(target.CertificateAuthority)
-					if err != nil {
-						return nil, fmt.Errorf("failed to load global CA certificate for target %s: %v", name, err)
-					}
-					target.CertificateAuthorityData = certData
-				} else if target.CertificateAuthorityData != "" {
-					// CA is overridden if CAData is present
-					target.CertificateAuthority = ""
-				}
-			}
+	if config.Providers.Azure != nil {
+		azureConfig := config.Providers.Azure
+		err = azureConfig.ValidateConfig()
+		if err == nil {
+			err = setTargetCA(azureConfig.CertificateAuthority, azureConfig.CertificateAuthorityData, azureConfig.Targets)
 		}
 	}
 
-	config.createSnapshot()
+	if config.Providers.Osprey != nil {
+		ospreyConfig := config.Providers.Osprey
+		err = ospreyConfig.ValidateConfig()
+		if err == nil {
+			err = setTargetCA(ospreyConfig.CertificateAuthority, ospreyConfig.CertificateAuthorityData, ospreyConfig.Targets)
+		}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid config %s: %v", path, err)
+	}
 	err = config.validateGroups()
 	if err != nil {
 		return nil, fmt.Errorf("invalid groups: %v", err)
@@ -171,47 +129,8 @@ func SaveConfig(config *Config, path string) error {
 	return nil
 }
 
-func (c *Config) validate() error {
-	for provider, providerConfig := range c.Providers {
-		if c.Providers[provider] == nil {
-			continue
-		}
-
-		switch provider {
-		case "azure":
-			if providerConfig.AzureTenantID == "" {
-				return fmt.Errorf("tenant-id is required for %s targets", provider)
-			}
-			if providerConfig.ServerApplicationID == "" {
-				return fmt.Errorf("server-application-id is required for %s targets", provider)
-			}
-			if providerConfig.ClientID == "" || providerConfig.ClientSecret == "" {
-				return fmt.Errorf("oauth2 client-id and client-secret must be supplied for %s targets", provider)
-			}
-			if providerConfig.RedirectURI == "" {
-				return fmt.Errorf("oauth2 redirect-uri is required for %s targets", provider)
-			}
-		case "osprey":
-			for name, target := range providerConfig.Targets {
-				if target.Server == "" {
-					return fmt.Errorf("%s's server is required for osprey targets", name)
-				}
-			}
-		default:
-			return fmt.Errorf("the %s provider is unsupported", provider)
-		}
-
-		if len(providerConfig.Targets) == 0 {
-			return fmt.Errorf("at least one target server should be present for %s", provider)
-		}
-	}
-
-	return nil
-}
-
 func (c *Config) validateGroups() error {
-	groupedTargets := c.snapshot
-	for _, group := range groupedTargets.groupsByName {
+	for _, group := range c.GetOrCreateSnapshot().groupsByName {
 		if group.name == "" && c.DefaultGroup != "" {
 			return fmt.Errorf("default group %q shadows ungrouped targets", c.DefaultGroup)
 		}
@@ -219,12 +138,91 @@ func (c *Config) validateGroups() error {
 	return nil
 }
 
-func (c *Config) createSnapshot() {
-	defaultGroup := c.DefaultGroup
-	groupsByName := make(map[string]Group)
+// GetRetrievers returns a map of providers to retrievers
+func (c *Config) GetRetrievers(options *RetrieverOptions) (map[string]Retriever, error) {
+	retrievers := make(map[string]Retriever)
+	var err error
+	if c.Providers.Azure != nil {
+		retrievers[AzureProviderName], err = NewAzureRetriever(c.Providers.Azure, options)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if c.Providers.Osprey != nil {
+		retrievers[OspreyProviderName] = NewOspreyRetriever(c.Providers.Osprey)
+	}
+	return retrievers, nil
+}
 
-	for providerType, providerConfig := range c.Providers {
-		for groupName, group := range groupTargets(providerConfig.Targets, defaultGroup, providerType) {
+// GetOrCreateSnapshot creates or returns a ConfigSnapshot
+func (c *Config) GetOrCreateSnapshot() ConfigSnapshot {
+	if c.snapshot != nil {
+		return *c.snapshot
+	}
+
+	groupedTargets := make(map[string]map[string]*TargetEntry)
+	if c.Providers.Azure != nil {
+		groupedTargets[AzureProviderName] = c.Providers.Azure.Targets
+	}
+	if c.Providers.Osprey != nil {
+		groupedTargets[OspreyProviderName] = c.Providers.Osprey.Targets
+	}
+
+	groupsByName := groupTargetsByName(groupedTargets, c.DefaultGroup)
+	c.snapshot = &ConfigSnapshot{
+		groupsByName:     groupsByName,
+		defaultGroupName: c.DefaultGroup,
+	}
+
+	return *c.snapshot
+}
+
+// GetSnapshot creates a snapshot view of the provided Config
+func (c *Config) GetSnapshot() ConfigSnapshot {
+	return *c.snapshot
+}
+
+// GroupOrDefault returns the group if it is not empty, or the Config.DefaultGroup if it is.
+func (c *Config) GroupOrDefault(group string) string {
+	if group != "" {
+		return group
+	}
+	return c.DefaultGroup
+}
+
+func setTargetCA(certificateAuthority, certificateAuthorityData string, targets map[string]*TargetEntry) error {
+	ospreyCertData := certificateAuthorityData
+	var err error
+	if ospreyCertData == "" && certificateAuthority != "" {
+		ospreyCertData, err = web.LoadTLSCert(certificateAuthority)
+		if err != nil {
+			return fmt.Errorf("failed to load global CA certificate: %v", err)
+		}
+	}
+
+	for name, target := range targets {
+		if target.CertificateAuthority == "" && target.CertificateAuthorityData == "" {
+			target.CertificateAuthorityData = ospreyCertData
+			// CA is overridden if CAData is present
+			target.CertificateAuthority = ""
+		} else if target.CertificateAuthority != "" && target.CertificateAuthorityData == "" {
+			certData, err := web.LoadTLSCert(target.CertificateAuthority)
+			if err != nil {
+				return fmt.Errorf("failed to load global CA certificate for target %s: %v", name, err)
+			}
+			target.CertificateAuthorityData = certData
+		} else if target.CertificateAuthorityData != "" {
+			// CA is overridden if CAData is present
+			target.CertificateAuthority = ""
+		}
+	}
+	return nil
+}
+
+func groupTargetsByName(groupedTargets map[string]map[string]*TargetEntry, defaultGroup string) map[string]Group {
+	groupsByName := make(map[string]Group)
+	for providerName, targetEntries := range groupedTargets {
+		for groupName, group := range groupTargetsByProvider(targetEntries, defaultGroup, providerName) {
 			if existingGroup, ok := groupsByName[groupName]; ok {
 				existingGroup.targets = append(existingGroup.targets, group.targets...)
 				groupsByName[groupName] = existingGroup
@@ -233,18 +231,11 @@ func (c *Config) createSnapshot() {
 			}
 		}
 	}
-	c.snapshot = ConfigSnapshot{
-		groupsByName:     groupsByName,
-		defaultGroupName: defaultGroup,
-	}
+
+	return groupsByName
 }
 
-// GetSnapshot creates a snapshot view of the provided Config
-func (c *Config) GetSnapshot() ConfigSnapshot {
-	return c.snapshot
-}
-
-func groupTargets(targetEntries map[string]*TargetEntry, defaultGroup string, providerType string) map[string]Group {
+func groupTargetsByProvider(targetEntries map[string]*TargetEntry, defaultGroup string, providerType string) map[string]Group {
 	groupsByName := make(map[string]Group)
 	var groups []Group
 	for key, targetEntry := range targetEntries {
@@ -266,14 +257,6 @@ func groupTargets(targetEntries map[string]*TargetEntry, defaultGroup string, pr
 		}
 	}
 	return groupsByName
-}
-
-// GroupOrDefault returns the group if it is not empty, or the Config.DefaultGroup if it is.
-func (c *Config) GroupOrDefault(group string) string {
-	if group != "" {
-		return group
-	}
-	return c.DefaultGroup
 }
 
 func homeDir() string {

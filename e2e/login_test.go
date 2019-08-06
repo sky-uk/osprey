@@ -19,7 +19,7 @@ var _ = Describe("Login", func() {
 	})
 
 	JustBeforeEach(func() {
-		setupClientForEnvironments("osprey", environmentsToUse, "")
+		setupClientForEnvironments(ospreyProviderName, environmentsToUse, "")
 		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag)
 	})
 
@@ -42,7 +42,7 @@ var _ = Describe("Login", func() {
 	})
 
 	It("logs in with certificate-authority-data", func() {
-		caDataConfig, err := BuildCADataConfig(testDir, "osprey", ospreys, true, "", "")
+		caDataConfig, err := BuildCADataConfig(testDir, ospreyProviderName, ospreys, true, "", "")
 		Expect(err).To(BeNil(), "Creates the osprey config")
 		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
 		caDataLogin := Login("user", "login", caDataConfigFlag)
@@ -51,7 +51,7 @@ var _ = Describe("Login", func() {
 	})
 
 	It("logs in overriding certificate-authority with certificate-authority-data", func() {
-		caDataConfig, err := BuildCADataConfig(testDir, "osprey", ospreys, true, dexes[0].DexCA, "")
+		caDataConfig, err := BuildCADataConfig(testDir, ospreyProviderName, ospreys, true, dexes[0].DexCA, "")
 		Expect(err).To(BeNil(), "Creates the osprey config")
 		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
 		caDataLogin := Login("user", "login", caDataConfigFlag)

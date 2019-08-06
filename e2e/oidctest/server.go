@@ -25,7 +25,6 @@ const (
 
 // Server holds the interface to a mocked OIDC server
 type Server interface {
-	//Start(host string, port int) (Server, error)
 	RequestCount(endpoint string) int
 	Reset()
 }

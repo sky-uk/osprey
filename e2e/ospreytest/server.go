@@ -16,7 +16,7 @@ import (
 
 const ospreyBinary = "osprey"
 
-// TestOsprey represents an TargetEntry server instance used for testing.
+// TestOsprey represents an Osprey server instance used for testing.
 type TestOsprey struct {
 	clitest.AsyncTestCommand
 	Port         int32
@@ -33,14 +33,14 @@ type TestOsprey struct {
 	TestDir      string
 }
 
-// TestConfig represents an TargetEntry client configuration file used for testing.
+// TestConfig represents an Osprey client configuration file used for testing.
 type TestConfig struct {
 	*client.Config
 	ConfigFile string
 }
 
-// StartOspreys creates one TargetEntry test server per TestDex provided, using ports starting from portsFrom.
-// The TargetEntry directory will be testDir/dex.Environment.
+// StartOspreys creates one Osprey test server per TestDex provided, using ports starting from portsFrom.
+// The Osprey directory will be testDir/dex.Environment.
 func StartOspreys(testDir string, dexes []*dextest.TestDex, portsFrom int32) ([]*TestOsprey, error) {
 	var servers []*TestOsprey
 	for i, dex := range dexes {
@@ -133,19 +133,15 @@ func BuildCADataConfig(testDir, providerName string, servers []*TestOsprey, caDa
 // If caData is true, it base64 encodes the CA data instead of using the file path.
 func BuildFullConfig(testDir, providerName, defaultGroup string, targetGroups map[string][]string, servers []*TestOsprey, caData bool, caPath string, clientID string) (*TestConfig, error) {
 	config := client.NewConfig()
-	config.Providers = map[string]*client.Provider{
-		providerName: {
-			CertificateAuthority: caPath,
-			Targets:              make(map[string]*client.TargetEntry),
-		},
-	}
 	config.Kubeconfig = fmt.Sprintf("%s/.kube/config", testDir)
 	ospreyconfigFile := fmt.Sprintf("%s/.osprey/config", testDir)
 
 	if defaultGroup != "" {
 		config.DefaultGroup = defaultGroup
 	}
-
+	targets := make(map[string]*client.TargetEntry)
+	var certData string
+	var err error
 	for _, osprey := range servers {
 		if _, ok := targetGroups[osprey.Environment]; len(targetGroups) > 0 && !ok {
 			continue
@@ -159,7 +155,7 @@ func BuildFullConfig(testDir, providerName, defaultGroup string, targetGroups ma
 
 		if caData {
 			ospreyconfigFile = fmt.Sprintf("%s/.osprey/config-data", testDir)
-			certData, err := web.LoadTLSCert(osprey.CertFile)
+			certData, err = web.LoadTLSCert(osprey.CertFile)
 			if err != nil {
 				return nil, err
 			}
@@ -173,18 +169,31 @@ func BuildFullConfig(testDir, providerName, defaultGroup string, targetGroups ma
 		if groups, ok := targetGroups[osprey.Environment]; ok {
 			target.Groups = groups
 		}
-		config.Providers[providerName].Targets[targetName] = target
+		targets[targetName] = target
 	}
 
-	// If provider is Azure, create some fake oAuth client configuration
-	if providerName == "azure" {
-		config.Providers[providerName].ClientID = clientID
-		config.Providers[providerName].ClientSecret = "some-client-secret"
-		config.Providers[providerName].RedirectURI = "http://localhost:65525/auth/callback"
-		config.Providers[providerName].Scopes = []string{"api://some-dummy-scope"}
-		config.Providers[providerName].AzureTenantID = "some-tenant-id"
-		config.Providers[providerName].ServerApplicationID = "some-server-application-id"
-		config.Providers[providerName].IssuerURL = "http://localhost:14980"
+	switch providerName {
+	case client.AzureProviderName:
+		config.Providers = &client.Providers{
+			Azure: &client.AzureConfig{
+				ClientID:            clientID,
+				ClientSecret:        "some-client-secret",
+				RedirectURI:         "http://localhost:65525/auth/callback",
+				Scopes:              []string{"api://some-dummy-scope"},
+				AzureTenantID:       "some-tenant-id",
+				ServerApplicationID: "some-server-application-id",
+				IssuerURL:           "http://localhost:14980",
+				Targets:             targets,
+			},
+		}
+	case client.OspreyProviderName:
+		config.Providers = &client.Providers{
+			Osprey: &client.OspreyConfig{
+				//CertificateAuthority: caPath,
+				Targets: targets,
+			},
+		}
+
 	}
 
 	testConfig := &TestConfig{Config: config, ConfigFile: ospreyconfigFile}

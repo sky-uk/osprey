@@ -96,7 +96,7 @@ mkdir -p ${runtime}
 sed "${sedScript}" ${examplesK8sDir}/namespace.yml > ${runtime}/namespace.yml
 apply_global ${runtime}/namespace.yml
 
-if [[ "${ospreyAthenticationDisabled}" = true ]]; then
+if [[ "${ospreyAuthenticationDisabled}" = true ]]; then
     echo "== Deploy osprey (authentication disabled)"
     mkdir -p ${ospreyRuntime}
     osprey_resources=(osprey-clusterinfo.yml service.yml)

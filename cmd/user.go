@@ -42,7 +42,7 @@ func user(_ *cobra.Command, _ []string) {
 	}
 
 	groupName := ospreyconfig.GroupOrDefault(targetGroup)
-	snapshot := ospreyconfig.GetSnapshot()
+	snapshot := ospreyconfig.GetOrCreateSnapshot()
 	group, ok := snapshot.GetGroup(groupName)
 	if !ok {
 		log.Errorf("Group not found: %q", groupName)
@@ -50,22 +50,20 @@ func user(_ *cobra.Command, _ []string) {
 	}
 
 	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
-	retrieverFactory, err := client.NewProviderFactory(ospreyconfig, client.RetreiverOptions{})
-	if err != nil {
-		log.Fatalf("Unable to initialise providers: %v", err)
-	}
+
 	config, err := kubeconfig.GetConfig()
 	if err != nil {
-		log.Fatalf("failed to load existing kubeconfig at %s: %v", kubeconfig.PathOptions.GetDefaultFilename(), err)
+		log.Fatalf("failed to load existing kubeconfig at %s: %v", kubeconfig.GetPathOptions().GetDefaultFilename(), err)
+	}
+
+	retrievers, err := ospreyconfig.GetRetrievers(nil)
+	if err != nil {
+		log.Errorf("Unable to initialise providers: %v", err)
 	}
 
 	for _, targets := range group.Targets() {
 		for _, target := range targets {
-			retriever, err := retrieverFactory.GetRetriever(target.ProviderType())
-			if err != nil {
-				log.Fatalf(err.Error())
-			}
-
+			retriever := retrievers[target.ProviderType()]
 			authInfo := retriever.GetAuthInfo(config, target)
 			if authInfo != nil {
 				userInfo, err := retriever.RetrieveUserDetails(target, *authInfo)
@@ -74,7 +72,7 @@ func user(_ *cobra.Command, _ []string) {
 				}
 				if userInfo != nil {
 					switch target.ProviderType() {
-					case "osprey":
+					case client.OspreyProviderName:
 						log.Infof("%s: %s %s", target.Name(), userInfo.Username, userInfo.Roles)
 					default:
 						log.Infof("%s: %s", target.Name(), userInfo.Username)

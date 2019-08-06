@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -12,8 +13,37 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+// OspreyProviderName is the constant string value for the osprey provider
+const OspreyProviderName = "osprey"
+
+// OspreyConfig holds the configuration for Osprey
+type OspreyConfig struct {
+	// CertificateAuthority is the path to a cert file for the certificate authority.
+	// +optional
+	CertificateAuthority string `yaml:"certificate-authority,omitempty"`
+	// CertificateAuthorityData is base64-encoded CA cert data.
+	// This will override any cert file specified in CertificateAuthority.
+	// +optional
+	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
+	// AzureTenantID is the Azure Tenant ID assigned to your organisation
+	Targets map[string]*TargetEntry `yaml:"targets"`
+}
+
+// ValidateConfig checks that the required configuration has been provided for Osprey
+func (oc *OspreyConfig) ValidateConfig() error {
+	if len(oc.Targets) == 0 {
+		return errors.New("at least one target server should be present for osprey")
+	}
+	for name, target := range oc.Targets {
+		if target.Server == "" {
+			return fmt.Errorf("%s's server is required for osprey targets", name)
+		}
+	}
+	return nil
+}
+
 // NewOspreyRetriever creates new osprey client
-func NewOspreyRetriever(provider *Provider) Retriever {
+func NewOspreyRetriever(provider *OspreyConfig) Retriever {
 	return &ospreyRetriever{serverCertificateAuthorityData: provider.CertificateAuthorityData}
 }
 
@@ -137,5 +167,4 @@ func basicAuth(credentials *LoginCredentials) string {
 
 func (r *ospreyRetriever) SetUseDeviceCode(value bool) {
 	// Do nothing as osprey-server does not support a web-based flow
-	return
 }

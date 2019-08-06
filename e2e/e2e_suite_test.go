@@ -21,8 +21,10 @@ func TestOspreySuite(t *testing.T) {
 }
 
 const (
-	dexPortsFrom    = int32(11980)
-	ospreyPortsFrom = int32(12980)
+	dexPortsFrom       = int32(11980)
+	ospreyPortsFrom    = int32(12980)
+	azureProviderName  = "azure"
+	ospreyProviderName = "osprey"
 )
 
 var (
@@ -39,7 +41,7 @@ var (
 	ospreys        []*ospreytest.TestOsprey
 	dexes          []*dextest.TestDex
 	ldapServer     *ldaptest.TestLDAP
-	oidcMockServer oidctest.Server
+	oidcTestServer oidctest.Server
 	testDir        string
 
 	// Suite variables modifiable per test scenario
@@ -74,7 +76,7 @@ var _ = BeforeSuite(func() {
 	ospreys, err = ospreytest.StartOspreys(testDir, dexes, ospreyPortsFrom)
 	Expect(err).To(BeNil(), "Starts the osprey servers")
 
-	oidcMockServer, err = oidctest.Start("localhost", oidcPort)
+	oidcTestServer, err = oidctest.Start("localhost", oidcPort)
 	Expect(err).To(BeNil(), "Starts the mock oidc server")
 })
 

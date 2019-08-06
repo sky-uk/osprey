@@ -42,11 +42,6 @@ func init() {
 	loginCmd.Flags().DurationVar(&loginTimeout, "login-timeout", 90*time.Second, "set to override the login timeout when using local callback or device-code flow for authorisation")
 }
 
-type authOptions struct {
-	useDeviceCode bool
-	loginTimeout  time.Duration
-}
-
 func login(_ *cobra.Command, _ []string) {
 	ospreyconfig, err := client.LoadConfig(ospreyconfigFile)
 	if err != nil {
@@ -59,7 +54,7 @@ func login(_ *cobra.Command, _ []string) {
 	}
 
 	groupName := ospreyconfig.GroupOrDefault(targetGroup)
-	snapshot := ospreyconfig.GetSnapshot()
+	snapshot := ospreyconfig.GetOrCreateSnapshot()
 	group, ok := snapshot.GetGroup(groupName)
 	if !ok {
 		log.Errorf("Group not found: %q", groupName)
@@ -67,22 +62,22 @@ func login(_ *cobra.Command, _ []string) {
 	}
 
 	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
-	retreiverOptions := client.RetreiverOptions{
+	retrieverOptions := &client.RetrieverOptions{
 		UseDeviceCode: useDeviceCode,
 		LoginTimeout:  loginTimeout,
 	}
 
 	success := true
 
-	retrieverFactory, err := client.NewProviderFactory(ospreyconfig, retreiverOptions)
+	retrievers, err := ospreyconfig.GetRetrievers(retrieverOptions)
 	if err != nil {
 		log.Errorf("Unable to initialise providers: %v", err)
 	}
 
 	for provider, targets := range group.Targets() {
-		retriever, err := retrieverFactory.GetRetriever(provider)
-		if err != nil {
-			log.Fatalf("Unsupported provider %s: %v", provider, err.Error())
+		retriever, ok := retrievers[provider]
+		if !ok {
+			log.Fatalf("Unsupported provider: %s", provider)
 		}
 		for _, target := range targets {
 			targetData, err := retriever.RetrieveClusterDetailsAndAuthTokens(target)
@@ -107,11 +102,11 @@ func updateKubeconfig(target client.Target, tokenData *client.TargetInfo) {
 	err := kubeconfig.UpdateConfig(target.Name(), target.Aliases(), tokenData)
 	if err != nil {
 		log.Errorf("Failed to update config for %s: %v", target.Name(), err)
-	} else {
-		aliases := ""
-		if target.HasAliases() {
-			aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
-		}
-		log.Infof("Logged in to: %s%s", target.Name(), aliases)
+		return
 	}
+	aliases := ""
+	if target.HasAliases() {
+		aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
+	}
+	log.Infof("Logged in to: %s %s", target.Name(), aliases)
 }

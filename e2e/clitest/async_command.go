@@ -33,6 +33,10 @@ type AsyncTestCommand interface {
 	AssertSuccess()
 	// AssertFailure checks for the command to have finished and asserts failure.
 	AssertFailure()
+	// EventuallyAssertFailure checks for the command to have finished and asserts failure after a given duration
+	EventuallyAssertFailure(timeoutDuration, pollingInterval time.Duration)
+	// EventuallyAssertSuccess checks for the command to have finished and asserts success after a given duration
+	EventuallyAssertSuccess(timeoutDuration, pollingInterval time.Duration)
 	// Successful returns true if the command dos not have an error.
 	Successful() bool
 	// Failed returns true if the command dos not have an error.
@@ -117,9 +121,27 @@ func (c *asyncCommandWrapper) AssertStoppedRunning() {
 func (c *asyncCommandWrapper) AssertSuccess() {
 	c.Lock()
 	defer c.Unlock()
-	//print(c.GetOutput())
 	assertNoExitError(c.GetOutput(), c.error)
 	gomega.Expect(c.finished).To(gomega.BeTrue(), "should have finished running")
+}
+
+func (c *asyncCommandWrapper) EventuallyAssertSuccess(timeoutDuration, pollingInterval time.Duration) {
+	assertNoExitError(c.GetOutput(), c.error)
+	gomega.Eventually(func() bool {
+		c.Lock()
+		defer c.Unlock()
+		return c.finished
+	}, timeoutDuration, pollingInterval).Should(gomega.BeTrue(), "should have finished running")
+}
+
+func (c *asyncCommandWrapper) EventuallyAssertFailure(timeoutDuration, pollingInterval time.Duration) {
+	assertNoExitError(c.GetOutput(), c.error)
+	gomega.Eventually(func() bool {
+		c.Lock()
+		defer c.Unlock()
+		_, isExitError := c.error.(*exec.ExitError)
+		return c.error != nil && isExitError
+	}, timeoutDuration, pollingInterval).Should(gomega.BeTrue(), "should have failed")
 }
 
 func (c *asyncCommandWrapper) AssertFailure() {

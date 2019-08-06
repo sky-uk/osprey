@@ -17,12 +17,11 @@ import (
 )
 
 const (
-	oidcPort           = int(14980)
-	oidcClientID       = "some-client-id"
-	oidcRedirectURI    = "http://localhost:65525/auth/callback"
-	ospreyState        = "as78*sadf$212"
-	ospreyBinary       = "osprey"
-	azureApplicationID = "123456-123456-123456-123456"
+	oidcPort        = int(14980)
+	oidcClientID    = "some-client-id"
+	oidcRedirectURI = "http://localhost:65525/auth/callback"
+	ospreyState     = "as78*sadf$212"
+	ospreyBinary    = "osprey"
 )
 
 var _ = Describe("Login with a cloud provider", func() {
@@ -36,7 +35,7 @@ var _ = Describe("Login with a cloud provider", func() {
 	})
 
 	JustBeforeEach(func() {
-		setupClientForEnvironments("azure", environmentsToUse, oidcClientID)
+		setupClientForEnvironments(azureProviderName, environmentsToUse, oidcClientID)
 		userLoginArgs = []string{"user", "login", ospreyconfigFlag}
 	})
 
@@ -50,7 +49,7 @@ var _ = Describe("Login with a cloud provider", func() {
 
 	Context("using OIDC callback (--use-device-code=false)", func() {
 		AfterEach(func() {
-			oidcMockServer.Reset()
+			oidcTestServer.Reset()
 		})
 		It("receives a token and decodes the JWT for user details", func() {
 			By("logging in", func() {
@@ -69,8 +68,8 @@ var _ = Describe("Login with a cloud provider", func() {
 			})
 		})
 
-		It("provides the same JWT token for multiple targets in group", func() {
-			setupClientForEnvironments("azure", map[string][]string{"dev": {"development"}, "stage": {"development"}}, oidcClientID)
+		It("provides the same JWT token for multiple targets in group for the same provider", func() {
+			setupClientForEnvironments(azureProviderName, map[string][]string{"dev": {"development"}, "stage": {"development"}}, oidcClientID)
 			targetGroupArgs := append(userLoginArgs, "--group=development")
 			login := loginCommand(ospreyBinary, targetGroupArgs...)
 
@@ -79,7 +78,7 @@ var _ = Describe("Login with a cloud provider", func() {
 
 			login.AssertSuccess()
 
-			Expect(oidcMockServer.RequestCount("/authorize")).To(Equal(1))
+			Expect(oidcTestServer.RequestCount("/authorize")).To(Equal(1))
 
 			kubeconfig := getKubeConfig()
 			Expect(kubeconfig.AuthInfos["kubectl.dev"].Token).To(Equal(kubeconfig.AuthInfos["kubectl.stage"].Token))
@@ -88,7 +87,7 @@ var _ = Describe("Login with a cloud provider", func() {
 
 	Context("using OIDC device-flow authentication (--use-device-code=true)", func() {
 		AfterEach(func() {
-			oidcMockServer.Reset()
+			oidcTestServer.Reset()
 		})
 		It("receives a token and decodes the JWT for user details", func() {
 			By("logging in", func() {
@@ -108,8 +107,8 @@ var _ = Describe("Login with a cloud provider", func() {
 			})
 		})
 
-		It("provides the same JWT token for multiple targets in group", func() {
-			setupClientForEnvironments("azure", map[string][]string{"dev": {"development"}, "stage": {"development"}}, oidcClientID)
+		It("provides the same JWT token for multiple targets in group for the same provider", func() {
+			setupClientForEnvironments(azureProviderName, map[string][]string{"dev": {"development"}, "stage": {"development"}}, oidcClientID)
 			targetGroupArgs := append(userLoginArgs, "--group=development", "--use-device-code")
 			login := loginCommand(ospreyBinary, targetGroupArgs...)
 
@@ -118,27 +117,27 @@ var _ = Describe("Login with a cloud provider", func() {
 
 			login.AssertSuccess()
 
-			Expect(oidcMockServer.RequestCount("/token")).To(Equal(1))
+			Expect(oidcTestServer.RequestCount("/token")).To(Equal(1))
 
 			kubeconfig := getKubeConfig()
 			Expect(kubeconfig.AuthInfos["kubectl.dev"].Token).To(Equal(kubeconfig.AuthInfos["kubectl.stage"].Token))
 		})
 
 		It("Polls the token endpoint at server specified intervals when token status is pending", func() {
-			setupClientForEnvironments("azure", environmentsToUse, "pending_client_id")
+			setupClientForEnvironments(azureProviderName, environmentsToUse, "pending_client_id")
 			useDeviceCodeArgs := append(userLoginArgs, "--use-device-code")
 			login := loginCommand(ospreyBinary, useDeviceCodeArgs...)
 
 			err = doRequestToMockDeviceFlowEndpoint(oidcClientID)
-			time.Sleep(2 * time.Second)
 			Expect(err).NotTo(HaveOccurred())
 
-			login.AssertSuccess()
-			Expect(oidcMockServer.RequestCount("/token")).To(Equal(3))
+			login.EventuallyAssertSuccess(10*time.Second, 1*time.Second)
+
+			Expect(oidcTestServer.RequestCount("/token")).To(Equal(3))
 		})
 
 		It("Handles client id is not authorised error code", func() {
-			setupClientForEnvironments("azure", environmentsToUse, "bad_verification_client_id")
+			setupClientForEnvironments(azureProviderName, environmentsToUse, "bad_verification_client_id")
 			useDeviceCodeArgs := append(userLoginArgs, "--use-device-code")
 			login := loginCommand(ospreyBinary, useDeviceCodeArgs...)
 
@@ -149,7 +148,7 @@ var _ = Describe("Login with a cloud provider", func() {
 		})
 
 		It("Handles device code expired error code", func() {
-			setupClientForEnvironments("azure", environmentsToUse, "expired_client_id")
+			setupClientForEnvironments(azureProviderName, environmentsToUse, "expired_client_id")
 			useDeviceCodeArgs := append(userLoginArgs, "--use-device-code")
 			login := loginCommand(ospreyBinary, useDeviceCodeArgs...)
 
@@ -162,7 +161,7 @@ var _ = Describe("Login with a cloud provider", func() {
 
 	Context("Specifiying the --login-timeout flag", func() {
 		It("logs in successfully if the flow is complete before the timeout", func() {
-			setupClientForEnvironments("azure", environmentsToUse, "login_timeout_exceeded_client_id")
+			setupClientForEnvironments(azureProviderName, environmentsToUse, "login_timeout_exceeded_client_id")
 			timeoutArgs := append(userLoginArgs, "--login-timeout=20s")
 			login := loginCommand(ospreyBinary, timeoutArgs...)
 
@@ -173,20 +172,21 @@ var _ = Describe("Login with a cloud provider", func() {
 		})
 
 		It("callback flow times out if not logged in within the stipulated time", func() {
-			setupClientForEnvironments("azure", environmentsToUse, "login_timeout_exceeded_client_id")
+			setupClientForEnvironments(azureProviderName, environmentsToUse, "login_timeout_exceeded_client_id")
 			timeoutArgs := append(userLoginArgs, "--login-timeout=1s")
 			login := loginCommand(ospreyBinary, timeoutArgs...)
 
-			time.Sleep(2 * time.Second)
-			login.AssertFailure()
+			login.EventuallyAssertFailure(5*time.Second, 1*time.Second)
+			Expect(login.GetOutput()).To(ContainSubstring("exceeded login deadline"))
 		})
+
 		It("device-code flow times out if not logged in within the stipulated time", func() {
-			setupClientForEnvironments("azure", environmentsToUse, "login_timeout_exceeded_client_id")
+			setupClientForEnvironments(azureProviderName, environmentsToUse, "login_timeout_exceeded_client_id")
 			deviceCodeTimeoutArgs := append(userLoginArgs, "--use-device-code=true", "--login-timeout=1s")
 			login := loginCommand(ospreyBinary, deviceCodeTimeoutArgs...)
 
-			time.Sleep(2 * time.Second)
-			login.AssertFailure()
+			login.EventuallyAssertFailure(5*time.Second, 1*time.Second)
+			Expect(login.GetOutput()).To(ContainSubstring("exceeded device-code login deadline"))
 		})
 	})
 })
