@@ -1,3 +1,8 @@
+# Release 2.0.0
+- Adds support for authentication using Azure Active Directory as the OIDC.
+- This release introduces a breaking change to osprey config files. This is due to functionality to support multiple
+  identity providers in the same configuration file.
+
 # Release 1.5.0
 - Make readiness depend on the state of the oidc provider state
 

@@ -107,11 +107,9 @@ func Start(host string, port int) (Server, error) {
 }
 
 func (m *mockOidcServer) Stop() {
-	go func() {
-		if err := m.httpServer.Shutdown(context.Background()); err != nil {
-			fmt.Printf("unable to shutdown test OIDC server: %v\n", err)
-		}
-	}()
+	if err := m.httpServer.Shutdown(context.Background()); err != nil {
+		fmt.Printf("unable to shutdown test OIDC server: %v\n", err)
+	}
 }
 
 func handleDeviceCodeFlowRequest(m *mockOidcServer) http.HandlerFunc {
