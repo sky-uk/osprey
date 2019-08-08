@@ -37,7 +37,7 @@ func targets(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to load ospreyconfig file %s: %v", ospreyconfigFile, err)
 	}
 
-	snapshot := ospreyconfig.GetOrCreateSnapshot()
+	snapshot := ospreyconfig.Snapshot()
 
 	var outputLines []string
 	if listGroups {
@@ -55,7 +55,7 @@ func targets(_ *cobra.Command, _ []string) {
 
 }
 
-func displayGroups(snapshot client.ConfigSnapshot, listTargets bool) []string {
+func displayGroups(snapshot *client.ConfigSnapshot, listTargets bool) []string {
 	var outputLines []string
 	var groups []client.Group
 	if targetGroup == "" {
@@ -104,7 +104,7 @@ func displayGroup(group client.Group, listTargets bool) []string {
 	return outputLines
 }
 
-func displayTargets(snapshot client.ConfigSnapshot) []string {
+func displayTargets(snapshot *client.ConfigSnapshot) []string {
 	allTargets := snapshot.Targets()
 	defaultGroup := snapshot.DefaultGroup()
 	var outputLines []string

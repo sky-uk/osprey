@@ -1,6 +1,7 @@
 package oidctest
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -27,6 +28,7 @@ const (
 type Server interface {
 	RequestCount(endpoint string) int
 	Reset()
+	Stop()
 }
 
 func (m *mockOidcServer) Reset() {
@@ -40,8 +42,9 @@ func (m *mockOidcServer) RequestCount(endpoint string) int {
 type mockOidcServer struct {
 	IssuerURL                string
 	DeviceFlowRequestPending bool
-	mux                      *http.ServeMux
+	httpServer               *http.Server
 	requestCount             map[string]int
+	mux                      *http.ServeMux
 }
 
 type wellKnownConfig struct {
@@ -81,22 +84,34 @@ func Start(host string, port int) (Server, error) {
 	server := &mockOidcServer{
 		IssuerURL:                fmt.Sprintf("%s:%d", host, port),
 		DeviceFlowRequestPending: false,
-		mux:                      http.NewServeMux(),
 		requestCount:             initialiseRequestStates(),
+		mux:                      http.NewServeMux(),
+	}
+	server.httpServer = &http.Server{
+		Addr:      server.IssuerURL,
+		Handler:   server.mux,
+		TLSConfig: nil,
 	}
 
-	httpServer := setup(server)
 	server.mux.Handle(wellKnownConfigurationURI, handleWellKnownConfigRequest(server))
 	server.mux.Handle("/authorize", handleAuthorizeRequest(server))
 	server.mux.Handle("/token", handleTokenRequest(server))
 	server.mux.Handle("/v2.0/devicecode", handleDeviceCodeFlowRequest(server))
 
 	go func() {
-		if err := httpServer.ListenAndServe(); err != nil {
+		if err := server.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("unable to start mock server: %v", err)
 		}
 	}()
 	return server, nil
+}
+
+func (m *mockOidcServer) Stop() {
+	go func() {
+		if err := m.httpServer.Shutdown(context.Background()); err != nil {
+			fmt.Printf("unable to shutdown test OIDC server: %v\n", err)
+		}
+	}()
 }
 
 func handleDeviceCodeFlowRequest(m *mockOidcServer) http.HandlerFunc {

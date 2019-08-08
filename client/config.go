@@ -39,9 +39,6 @@ type Config struct {
 	DefaultGroup string `yaml:"default-group,omitempty"`
 	// Providers is a map of OIDC provider config
 	Providers *Providers `yaml:"providers,omitempty"`
-	// LoginOptions
-	// UseDeviceCode is the option to use a device-code flow when authenticating with an OIDC provider
-	snapshot *ConfigSnapshot
 }
 
 // Providers holds the configuration structs for the supported providers
@@ -130,7 +127,7 @@ func SaveConfig(config *Config, path string) error {
 }
 
 func (c *Config) validateGroups() error {
-	for _, group := range c.GetOrCreateSnapshot().groupsByName {
+	for _, group := range c.Snapshot().groupsByName {
 		if group.name == "" && c.DefaultGroup != "" {
 			return fmt.Errorf("default group %q shadows ungrouped targets", c.DefaultGroup)
 		}
@@ -154,12 +151,8 @@ func (c *Config) GetRetrievers(options *RetrieverOptions) (map[string]Retriever,
 	return retrievers, nil
 }
 
-// GetOrCreateSnapshot creates or returns a ConfigSnapshot
-func (c *Config) GetOrCreateSnapshot() ConfigSnapshot {
-	if c.snapshot != nil {
-		return *c.snapshot
-	}
-
+// Snapshot creates or returns a ConfigSnapshot
+func (c *Config) Snapshot() *ConfigSnapshot {
 	groupedTargets := make(map[string]map[string]*TargetEntry)
 	if c.Providers.Azure != nil {
 		groupedTargets[AzureProviderName] = c.Providers.Azure.Targets
@@ -169,17 +162,10 @@ func (c *Config) GetOrCreateSnapshot() ConfigSnapshot {
 	}
 
 	groupsByName := groupTargetsByName(groupedTargets, c.DefaultGroup)
-	c.snapshot = &ConfigSnapshot{
+	return &ConfigSnapshot{
 		groupsByName:     groupsByName,
 		defaultGroupName: c.DefaultGroup,
 	}
-
-	return *c.snapshot
-}
-
-// GetSnapshot creates a snapshot view of the provided Config
-func (c *Config) GetSnapshot() ConfigSnapshot {
-	return *c.snapshot
 }
 
 // GroupOrDefault returns the group if it is not empty, or the Config.DefaultGroup if it is.

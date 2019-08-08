@@ -42,7 +42,7 @@ func user(_ *cobra.Command, _ []string) {
 	}
 
 	groupName := ospreyconfig.GroupOrDefault(targetGroup)
-	snapshot := ospreyconfig.GetOrCreateSnapshot()
+	snapshot := ospreyconfig.Snapshot()
 	group, ok := snapshot.GetGroup(groupName)
 	if !ok {
 		log.Errorf("Group not found: %q", groupName)

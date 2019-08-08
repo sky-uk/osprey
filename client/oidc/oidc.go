@@ -20,6 +20,7 @@ type Client struct {
 	oAuthConfig         oauth2.Config
 	serverApplicationID string
 	authenticated       bool
+	failedLogin         bool
 	stopChan            chan tokenResponse
 }
 
@@ -66,6 +67,7 @@ func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Dur
 
 	select {
 	case <-ctxTimeout.Done():
+		_ = h.Shutdown(ctx)
 		return nil, fmt.Errorf("exceeded login deadline")
 	case err := <-ch:
 		return nil, fmt.Errorf("unable to start local call-back webserver %v", err)

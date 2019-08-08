@@ -7,7 +7,6 @@ import (
 
 	"github.com/sky-uk/osprey/client"
 
-	log "github.com/sirupsen/logrus"
 	kubectl "k8s.io/client-go/tools/clientcmd"
 	clientgo "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -104,7 +103,6 @@ func Remove(name string) error {
 // GetConfig returns the currently loaded configuration via LoadConfig().
 // Returns an error if LoadConfig() has not been called.
 func GetConfig() (*clientgo.Config, error) {
-	pathOptions := GetPathOptions()
 	if pathOptions == nil {
 		return nil, errors.New("no configuration has been loaded. Use LoadConfig() to load a configuration")
 	}
@@ -113,24 +111,4 @@ func GetConfig() (*clientgo.Config, error) {
 		return nil, fmt.Errorf("failed to load kubeconfig from %s: %v", pathOptions.GetDefaultFilename(), err)
 	}
 	return config, nil
-}
-
-// GetAuthInfo returns the auth info configured user for a context
-// Returns an error if the GetAuthInfo is not retrievable.
-func GetAuthInfo(target client.Target) *clientgo.AuthInfo {
-	config, err := GetConfig()
-	if err != nil {
-		log.Fatalf("failed to load existing kubeconfig at %s: %v", GetPathOptions().GetDefaultFilename(), err)
-	}
-
-	authInfo := config.AuthInfos[target.Name()]
-	if authInfo == nil {
-		return nil
-	}
-
-	if authInfo.Token == "" && authInfo.AuthProvider == nil {
-		return nil
-	}
-
-	return authInfo
 }
