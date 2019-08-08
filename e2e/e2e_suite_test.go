@@ -1,16 +1,17 @@
 package e2e
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/sky-uk/osprey/e2e/ospreytest"
-
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/sky-uk/osprey/e2e/oidctest"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/sky-uk/osprey/e2e/dextest"
 	"github.com/sky-uk/osprey/e2e/ldaptest"
+	"github.com/sky-uk/osprey/e2e/ospreytest"
 	"github.com/sky-uk/osprey/e2e/util"
 )
 
@@ -20,8 +21,10 @@ func TestOspreySuite(t *testing.T) {
 }
 
 const (
-	dexPortsFrom    = int32(11980)
-	ospreyPortsFrom = int32(12980)
+	dexPortsFrom       = int32(11980)
+	ospreyPortsFrom    = int32(12980)
+	azureProviderName  = "azure"
+	ospreyProviderName = "osprey"
 )
 
 var (
@@ -35,10 +38,11 @@ var (
 	}
 
 	// Suite variables instantiated once
-	ospreys    []*ospreytest.TestOsprey
-	dexes      []*dextest.TestDex
-	ldapServer *ldaptest.TestLDAP
-	testDir    string
+	ospreys        []*ospreytest.TestOsprey
+	dexes          []*dextest.TestDex
+	ldapServer     *ldaptest.TestLDAP
+	oidcTestServer oidctest.Server
+	testDir        string
 
 	// Suite variables modifiable per test scenario
 	err               error
@@ -61,7 +65,6 @@ var _ = BeforeSuite(func() {
 
 	ldapServer, err = ldaptest.Start(testDir) //uses the ldaptest/testdata/schema.ldap
 	Expect(err).To(BeNil(), "Starts the ldap server")
-
 	var envs []string
 	for env := range environments {
 		envs = append(envs, env)
@@ -72,6 +75,9 @@ var _ = BeforeSuite(func() {
 
 	ospreys, err = ospreytest.StartOspreys(testDir, dexes, ospreyPortsFrom)
 	Expect(err).To(BeNil(), "Starts the osprey servers")
+
+	oidcTestServer, err = oidctest.Start("localhost", oidcPort)
+	Expect(err).To(BeNil(), "Starts the mock oidc server")
 })
 
 var _ = AfterSuite(func() {
@@ -81,12 +87,13 @@ var _ = AfterSuite(func() {
 	for _, aDex := range dexes {
 		dextest.Stop(aDex)
 	}
+	oidcTestServer.Stop()
 	ldaptest.Stop(ldapServer)
 	os.RemoveAll(testDir)
 })
 
-func setupOspreyClientForEnvironments(envs map[string][]string) {
-	ospreyconfig, err = ospreytest.BuildConfig(testDir, defaultGroup, envs, ospreys)
+func setupClientForEnvironments(providerName string, envs map[string][]string, clientID string) {
+	ospreyconfig, err = ospreytest.BuildConfig(testDir, providerName, defaultGroup, envs, ospreys, clientID)
 	Expect(err).To(BeNil(), "Creates the osprey config with groups")
 	ospreyconfigFlag = "--ospreyconfig=" + ospreyconfig.ConfigFile
 

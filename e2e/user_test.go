@@ -19,7 +19,7 @@ var _ = Describe("User", func() {
 	})
 
 	JustBeforeEach(func() {
-		setupOspreyClientForEnvironments(environmentsToUse)
+		setupClientForEnvironments(ospreyProviderName, environmentsToUse, "")
 
 		user = Client("user", ospreyconfigFlag, targetGroupFlag)
 		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag)
@@ -58,7 +58,7 @@ var _ = Describe("User", func() {
 				output := user.GetOutput()
 				for _, osprey := range expectedEnvironments {
 					target := OspreyconfigTargetName(osprey)
-					Expect(output).To(ContainSubstring("%s: janedoe@example.com [admins, developers]", target), "No users exists")
+					Expect(output).To(ContainSubstring("%s: janedoe@example.com [admins developers]", target), "No users exists")
 				}
 			})
 

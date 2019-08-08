@@ -32,6 +32,25 @@ func ConsumeLoginResponse(response *http.Response) (*LoginResponse, error) {
 	return nil, HandleErrorResponse(data, response)
 }
 
+// ConsumeClusterInfoResponse takes the HTTP response and produces a ClusterInfoResponse
+// if the response is successful and can be converted, or an error.
+func ConsumeClusterInfoResponse(response *http.Response) (*ClusterInfoResponse, error) {
+	data, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode == http.StatusOK {
+		clusterInfo := &ClusterInfoResponse{}
+		err = proto.Unmarshal(data, clusterInfo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse response: %v", err)
+		}
+		return clusterInfo, nil
+	}
+	return nil, HandleErrorResponse(data, response)
+}
+
 // HandleErrorResponse returns a response that is known to be an error and converts
 // it to an error.
 func HandleErrorResponse(body []byte, response *http.Response) (err error) {

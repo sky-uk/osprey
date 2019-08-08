@@ -19,13 +19,15 @@ import (
 var signals chan os.Signal
 
 // NewServer creates a new Server definition with an empty ServeMux
-func NewServer(port int32, tlsCertFile, tlsKeyFile string, shutdownGracePeriod time.Duration) *Server {
+func NewServer(port int32, tlsCertFile, tlsKeyFile string, shutdownGracePeriod time.Duration, serveClusterInfo bool, authenticationEnabled bool) *Server {
 	return &Server{
-		addr:                fmt.Sprintf("0.0.0.0:%d", port),
-		shutdownGracePeriod: shutdownGracePeriod,
-		tlsCertFile:         tlsCertFile,
-		tlsCertKey:          tlsKeyFile,
-		mux:                 http.NewServeMux(),
+		addr:                  fmt.Sprintf("0.0.0.0:%d", port),
+		shutdownGracePeriod:   shutdownGracePeriod,
+		tlsCertFile:           tlsCertFile,
+		tlsCertKey:            tlsKeyFile,
+		mux:                   http.NewServeMux(),
+		authenticationEnabled: authenticationEnabled,
+		serveClusterInfo:      serveClusterInfo,
 	}
 }
 
@@ -66,19 +68,26 @@ func gracefulShutdown(s *http.Server, timeout time.Duration) error {
 
 // Server contains the configuration for the HTTP server
 type Server struct {
-	addr                string
-	shutdownGracePeriod time.Duration
-	tlsCertFile         string
-	tlsCertKey          string
-	mux                 *http.ServeMux
+	addr                  string
+	shutdownGracePeriod   time.Duration
+	tlsCertFile           string
+	tlsCertKey            string
+	mux                   *http.ServeMux
+	authenticationEnabled bool
+	serveClusterInfo      bool
 }
 
 // RegisterService binds the http endpoints to the Osprey services
-// "/access-token" -> Osprey.GetAccessToken()
+// "/access-token" -> Osprey.RetrieveClusterDetailsAndAuthTokens()
 func (s *Server) RegisterService(service osprey.Osprey) {
-	s.mux.Handle("/access-token", handleAccessToken(service))
-	s.mux.Handle("/callback", handleCallback(service))
 	s.mux.Handle("/healthz", handleHealthcheck(service))
+	if s.serveClusterInfo {
+		s.mux.Handle("/cluster-info", handleClusterInfo(service))
+	}
+	if s.authenticationEnabled {
+		s.mux.Handle("/access-token", handleAccessToken(service))
+		s.mux.Handle("/callback", handleCallback(service))
+	}
 }
 
 func setup(server *Server) *http.Server {
@@ -120,6 +129,20 @@ func handleCallback(osprey osprey.Osprey) http.HandlerFunc {
 	}
 }
 
+func handleClusterInfo(osprey osprey.Osprey) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var response proto.Message
+		var err error
+		switch r.Method {
+		case http.MethodGet:
+			response, err = osprey.GetClusterInfo(r.Context())
+		default:
+			err = status.Error(codes.InvalidArgument, "Method not implemented")
+		}
+		handleResponse(w, response, err)
+	}
+}
+
 func handleHealthcheck(osprey osprey.Osprey) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := osprey.Ready(context.Background()); err == nil {
@@ -140,7 +163,7 @@ func handleResponse(w http.ResponseWriter, response proto.Message, err error) {
 		}
 		data, err := proto.Marshal(response)
 		if err == nil {
-			w.Write(data)
+			_, err = w.Write(data)
 			return
 		}
 		errMsg := fmt.Sprintf("Failed to marshal success response: %v", err)

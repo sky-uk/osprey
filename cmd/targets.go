@@ -37,14 +37,14 @@ func targets(_ *cobra.Command, _ []string) {
 		log.Fatalf("Failed to load ospreyconfig file %s: %v", ospreyconfigFile, err)
 	}
 
-	snapshot := client.GetSnapshot(ospreyconfig)
+	snapshot := ospreyconfig.Snapshot()
 
 	var outputLines []string
 	if listGroups {
-		outputLines = append(outputLines, "Osprey groups:")
+		outputLines = append(outputLines, "Configured groups:")
 		outputLines = append(outputLines, displayGroups(snapshot, false)...)
 	} else {
-		outputLines = append(outputLines, "Osprey targets:")
+		outputLines = append(outputLines, "Configured targets:")
 		if byGroups {
 			outputLines = append(outputLines, displayGroups(snapshot, true)...)
 		} else {
@@ -55,7 +55,7 @@ func targets(_ *cobra.Command, _ []string) {
 
 }
 
-func displayGroups(snapshot client.ConfigSnapshot, listTargets bool) []string {
+func displayGroups(snapshot *client.ConfigSnapshot, listTargets bool) []string {
 	var outputLines []string
 	var groups []client.Group
 	if targetGroup == "" {
@@ -91,18 +91,20 @@ func displayGroup(group client.Group, listTargets bool) []string {
 	}
 	outputLines = append(outputLines, fmt.Sprintf("%s %s", highlight, name))
 	if listTargets {
-		for _, target := range group.Targets() {
-			aliases := ""
-			if target.HasAliases() {
-				aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
+		for _, targets := range group.Targets() {
+			for _, target := range targets {
+				aliases := ""
+				if target.HasAliases() {
+					aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
+				}
+				outputLines = append(outputLines, fmt.Sprintf("    %s%s", target.Name(), aliases))
 			}
-			outputLines = append(outputLines, fmt.Sprintf("    %s%s", target.Name(), aliases))
 		}
 	}
 	return outputLines
 }
 
-func displayTargets(snapshot client.ConfigSnapshot) []string {
+func displayTargets(snapshot *client.ConfigSnapshot) []string {
 	allTargets := snapshot.Targets()
 	defaultGroup := snapshot.DefaultGroup()
 	var outputLines []string

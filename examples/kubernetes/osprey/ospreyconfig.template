@@ -1,6 +1,20 @@
 kubeconfig: @clusterKubeconfig@
 certificate-authority: @ospreyCA@
-targets:
-  @clusterEnvironment@:
-    server: @ospreyURL@
-    aliases: [alias.@clusterEnvironment@]
+providers:
+  azure:
+    tenant-id: @azureTenantID@
+    server-application-id: @serverApplicationID@
+    client-id: @azureclientID@
+    client-secret: @azureClientSecret@
+    scopes:
+      - "@azureScopes@"
+    redirect-uri: @azureRedirectURI@
+    targets:
+      sandfun:
+        server: @ospreyURL@
+        aliases: [alias.@clusterEnvironment@]
+  osprey:
+    targets:
+      @clusterEnvironment@:
+        server: @ospreyURL@
+        aliases: [alias.@clusterEnvironment@]

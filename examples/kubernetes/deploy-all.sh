@@ -33,6 +33,14 @@ apply_scoped() {
     execute "--namespace ${namespace} apply -f $1"
 }
 
+deployResources(){
+    resources=$[@]
+    for template in "${resources[@]}"; do
+        sed "${sedScript}" ${examplesK8sDir}/osprey/${template} > ${ospreyRuntime}/${template}
+        apply_scoped ${ospreyRuntime}/${template}
+    done
+}
+
 create_secret() {
     execute "--namespace ${namespace} delete secret $1 --ignore-not-found"
     execute "--namespace ${namespace} create secret generic $1 $@"
@@ -88,35 +96,35 @@ mkdir -p ${runtime}
 sed "${sedScript}" ${examplesK8sDir}/namespace.yml > ${runtime}/namespace.yml
 apply_global ${runtime}/namespace.yml
 
-echo
-echo "== Generate Certificates"
-mkdir -p ${sslRuntime}
-apps=(dex osprey apiserver)
-for app in "${apps[@]}"; do
-    ${examplesK8sDir}/../generate-certs.sh ${app} ${runtime} ${properties} ssl
-done
+if [[ "${ospreyAuthenticationDisabled}" = true ]]; then
+    echo "== Deploy osprey (authentication disabled)"
+    mkdir -p ${ospreyRuntime}
+    osprey_resources=(osprey-clusterinfo.yml service.yml)
+    deployResources ${osprey_resources[@]}
+else
+    echo "== Generate Certificates"
+    mkdir -p ${sslRuntime}
+    apps=(dex osprey apiserver)
+    for app in "${apps[@]}"; do
+        ${examplesK8sDir}/../generate-certs.sh ${app} ${runtime} ${properties} ssl
+    done
 
-echo
-echo "== Create ssl secret"
-create_secret ${ospreySslSecret} --from-file=${sslRuntime}
+    echo
+    echo "== Create ssl secret"
+    create_secret ${ospreySslSecret} --from-file=${sslRuntime}
 
-echo
-echo "== Deploy dex"
-mkdir -p ${dexRuntime}
-dex_resources=(config.yml web-templates.yml dex.yml service.yml)
-for template in "${dex_resources[@]}"; do
-    sed "${sedScript}" ${examplesK8sDir}/dex/${template} > ${dexRuntime}/${template}
-    apply_scoped ${dexRuntime}/${template}
-done
+    echo
+    echo "== Deploy dex"
+    mkdir -p ${dexRuntime}
+    dex_resources=(config.yml web-templates.yml dex.yml service.yml)
+    deployResources ${dex_resources[@]}
 
-echo
-echo "== Deploy osprey"
-mkdir -p ${ospreyRuntime}
-osprey_resources=(osprey.yml service.yml)
-for template in "${osprey_resources[@]}"; do
-    sed "${sedScript}" ${examplesK8sDir}/osprey/${template} > ${ospreyRuntime}/${template}
-    apply_scoped ${ospreyRuntime}/${template}
-done
+    echo
+    echo "== Deploy osprey (authentication enabled)"
+    mkdir -p ${ospreyRuntime}
+    osprey_resources=(osprey.yml service.yml)
+    deployResources ${osprey_resources[@]}
+fi
 
 echo
 echo "== Generate ospreyconfig"

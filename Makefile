@@ -37,10 +37,8 @@ endif
 
 setup:
 	@echo "== setup"
-	go get -v golang.org/x/lint/golint
-	go get golang.org/x/tools/cmd/goimports
-	go get github.com/golang/dep/cmd/dep
-	dep ensure
+	go get -u golang.org/x/lint/golint
+	go get -u golang.org/x/tools/cmd/goimports
 
 format :
 	@echo "== format"
@@ -90,11 +88,11 @@ lint :
 
 test :
 	@echo "== run tests"
-	go test -race $(pkgs)
+	go test -v -race $(pkgs)
 
 proto :
 	@echo "== compiling proto files"
-	@docker run -v `pwd`/pb:/pb -w / grpc/go:1.0 protoc -I /pb /pb/osgsprey.proto --go_out=plugins=grpc:pb
+	@docker run -v `pwd`/common/pb:/pb -w / grpc/go:1.0 protoc -I /pb /pb/osprey.proto --go_out=plugins=grpc:pb
 
 prepare-release-bintray :
 ifeq ($(strip $(SKIP_PREPARE_RELEASE_BINTRAY)), )

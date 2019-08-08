@@ -1,7 +1,6 @@
 package client
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -30,29 +29,28 @@ var (
 	RecommendedOspreyConfigFile = path.Join(RecommendedOspreyHomeDir, RecommendedFileName)
 )
 
-// Config holds the information needed to connect to remote osprey servers as a given user
+// Config holds the information needed to connect to remote OIDC providers
 type Config struct {
-	// CertificateAuthority is the path to a cert file for the certificate authority.
-	// +optional
-	CertificateAuthority string `yaml:"certificate-authority,omitempty"`
-	// CertificateAuthorityData is base64-encoded CA cert data.
-	// This will override any cert file specified in CertificateAuthority.
-	// +optional
-	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
 	// Kubeconfig specifies the path to read/write the kubeconfig file.
 	// +optional
 	Kubeconfig string `yaml:"kubeconfig,omitempty"`
 	// DefaultGroup specifies the group to log in to if none provided.
 	// +optional
 	DefaultGroup string `yaml:"default-group,omitempty"`
-	// Targets is a map of referenceable names to osprey configs
-	Targets map[string]*Osprey `yaml:"targets"`
+	// Providers is a map of OIDC provider config
+	Providers *Providers `yaml:"providers,omitempty"`
 }
 
-// Osprey contains information about how to communicate with an osprey server
-type Osprey struct {
+// Providers holds the configuration structs for the supported providers
+type Providers struct {
+	Azure  *AzureConfig  `yaml:"azure,omitempty"`
+	Osprey *OspreyConfig `yaml:"osprey,omitempty"`
+}
+
+// TargetEntry contains information about how to communicate with an osprey server
+type TargetEntry struct {
 	// Server is the address of the osprey server (hostname:port).
-	Server string `yaml:"server"`
+	Server string `yaml:"server,omitempty"`
 	// CertificateAuthority is the path to a cert file for the certificate authority.
 	// +optional
 	CertificateAuthority string `yaml:"certificate-authority,omitempty"`
@@ -70,10 +68,10 @@ type Osprey struct {
 
 // NewConfig is a convenience function that returns a new Config object with non-nil maps
 func NewConfig() *Config {
-	return &Config{Targets: make(map[string]*Osprey)}
+	return &Config{}
 }
 
-// LoadConfig reads an osprey Config from the specified path.
+// LoadConfig reads and parses the Config file
 func LoadConfig(path string) (*Config, error) {
 	in, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -85,42 +83,33 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to unmarshal config file %s: %v", path, err)
 	}
 
-	err = config.validate()
+	if config.Providers.Azure != nil {
+		azureConfig := config.Providers.Azure
+		err = azureConfig.ValidateConfig()
+		if err == nil {
+			err = setTargetCA(azureConfig.CertificateAuthority, azureConfig.CertificateAuthorityData, azureConfig.Targets)
+		}
+	}
+
+	if config.Providers.Osprey != nil {
+		ospreyConfig := config.Providers.Osprey
+		err = ospreyConfig.ValidateConfig()
+		if err == nil {
+			err = setTargetCA(ospreyConfig.CertificateAuthority, ospreyConfig.CertificateAuthorityData, ospreyConfig.Targets)
+		}
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("invalid config %s: %v", path, err)
 	}
-
-	if config.CertificateAuthorityData == "" {
-		if config.CertificateAuthority != "" {
-			certData, err := web.LoadTLSCert(config.CertificateAuthority)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load global CA certificate: %v", err)
-			}
-			config.CertificateAuthorityData = certData
-		}
-	} else {
-		// CA is overridden if CAData is present
-		config.CertificateAuthority = ""
-	}
-
-	for name, target := range config.Targets {
-		if target.CertificateAuthorityData == "" {
-			if target.CertificateAuthority != "" {
-				certData, err := web.LoadTLSCert(target.CertificateAuthority)
-				if err != nil {
-					return nil, fmt.Errorf("failed to load CA certificate for target %s: %v", name, err)
-				}
-				target.CertificateAuthorityData = certData
-			}
-		} else {
-			// CA is overridden if CAData is present
-			target.CertificateAuthority = ""
-		}
+	err = config.validateGroups()
+	if err != nil {
+		return nil, fmt.Errorf("invalid groups: %v", err)
 	}
 	return config, err
 }
 
-// SaveConfig serializes the osprey config to the specified path.
+// SaveConfig writes the osprey config to the specified path.
 func SaveConfig(config *Config, path string) error {
 	err := os.MkdirAll(filepath.Dir(path), 0755)
 	if err != nil {
@@ -137,21 +126,46 @@ func SaveConfig(config *Config, path string) error {
 	return nil
 }
 
-func (c *Config) validate() error {
-	if len(c.Targets) == 0 {
-		return errors.New("at least one target server should be present")
-	}
-	for name, target := range c.Targets {
-		if target.Server == "" {
-			return fmt.Errorf("%s's target server is required", name)
+func (c *Config) validateGroups() error {
+	for _, group := range c.Snapshot().groupsByName {
+		if group.name == "" && c.DefaultGroup != "" {
+			return fmt.Errorf("default group %q shadows ungrouped targets", c.DefaultGroup)
 		}
 	}
-
-	groupedTargets := c.TargetsByGroup()
-	if _, ok := groupedTargets[""]; ok && c.DefaultGroup != "" {
-		return fmt.Errorf("default group %q shadows ungrouped targets", c.DefaultGroup)
-	}
 	return nil
+}
+
+// GetRetrievers returns a map of providers to retrievers
+func (c *Config) GetRetrievers(options *RetrieverOptions) (map[string]Retriever, error) {
+	retrievers := make(map[string]Retriever)
+	var err error
+	if c.Providers.Azure != nil {
+		retrievers[AzureProviderName], err = NewAzureRetriever(c.Providers.Azure, options)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if c.Providers.Osprey != nil {
+		retrievers[OspreyProviderName] = NewOspreyRetriever(c.Providers.Osprey)
+	}
+	return retrievers, nil
+}
+
+// Snapshot creates or returns a ConfigSnapshot
+func (c *Config) Snapshot() *ConfigSnapshot {
+	groupedTargets := make(map[string]map[string]*TargetEntry)
+	if c.Providers.Azure != nil {
+		groupedTargets[AzureProviderName] = c.Providers.Azure.Targets
+	}
+	if c.Providers.Osprey != nil {
+		groupedTargets[OspreyProviderName] = c.Providers.Osprey.Targets
+	}
+
+	groupsByName := groupTargetsByName(groupedTargets, c.DefaultGroup)
+	return &ConfigSnapshot{
+		groupsByName:     groupsByName,
+		defaultGroupName: c.DefaultGroup,
+	}
 }
 
 // GroupOrDefault returns the group if it is not empty, or the Config.DefaultGroup if it is.
@@ -162,45 +176,73 @@ func (c *Config) GroupOrDefault(group string) string {
 	return c.DefaultGroup
 }
 
-// TargetsInGroup retrieves the Osprey targets that match the group.
-// If the group is not provided the DefaultGroup for this configuration will be used.
-func (c *Config) TargetsInGroup(group string) map[string]*Osprey {
-	actualGroup := group
-	if actualGroup == "" {
-		actualGroup = c.DefaultGroup
-	}
-	groupedTargets := c.TargetsByGroup()
-	return groupedTargets[actualGroup]
-}
-
-// TargetsByGroup returns the Config targets organized by groups.
-// One target may appear in multiple groups.
-func (c *Config) TargetsByGroup() map[string]map[string]*Osprey {
-	targetsByGroup := make(map[string]map[string]*Osprey)
-	for key, osprey := range c.Targets {
-		ospreyGroups := osprey.Groups
-		if len(ospreyGroups) == 0 {
-			ospreyGroups = []string{""}
+func setTargetCA(certificateAuthority, certificateAuthorityData string, targets map[string]*TargetEntry) error {
+	ospreyCertData := certificateAuthorityData
+	var err error
+	if ospreyCertData == "" && certificateAuthority != "" {
+		ospreyCertData, err = web.LoadTLSCert(certificateAuthority)
+		if err != nil {
+			return fmt.Errorf("failed to load global CA certificate: %v", err)
 		}
+	}
 
-		for _, group := range ospreyGroups {
-			if _, ok := targetsByGroup[group]; !ok {
-				targetsByGroup[group] = make(map[string]*Osprey)
+	for name, target := range targets {
+		if target.CertificateAuthority == "" && target.CertificateAuthorityData == "" {
+			target.CertificateAuthorityData = ospreyCertData
+			// CA is overridden if CAData is present
+			target.CertificateAuthority = ""
+		} else if target.CertificateAuthority != "" && target.CertificateAuthorityData == "" {
+			certData, err := web.LoadTLSCert(target.CertificateAuthority)
+			if err != nil {
+				return fmt.Errorf("failed to load global CA certificate for target %s: %v", name, err)
 			}
-			targetsByGroup[group][key] = osprey
+			target.CertificateAuthorityData = certData
+		} else if target.CertificateAuthorityData != "" {
+			// CA is overridden if CAData is present
+			target.CertificateAuthority = ""
 		}
 	}
-	return targetsByGroup
+	return nil
 }
 
-// IsInGroup returns true if the Osprey target belongs to the given group
-func (o *Osprey) IsInGroup(value string) bool {
-	for _, group := range o.Groups {
-		if group == value {
-			return true
+func groupTargetsByName(groupedTargets map[string]map[string]*TargetEntry, defaultGroup string) map[string]Group {
+	groupsByName := make(map[string]Group)
+	for providerName, targetEntries := range groupedTargets {
+		for groupName, group := range groupTargetsByProvider(targetEntries, defaultGroup, providerName) {
+			if existingGroup, ok := groupsByName[groupName]; ok {
+				existingGroup.targets = append(existingGroup.targets, group.targets...)
+				groupsByName[groupName] = existingGroup
+			} else {
+				groupsByName[groupName] = group
+			}
 		}
 	}
-	return false
+
+	return groupsByName
+}
+
+func groupTargetsByProvider(targetEntries map[string]*TargetEntry, defaultGroup string, providerType string) map[string]Group {
+	groupsByName := make(map[string]Group)
+	var groups []Group
+	for key, targetEntry := range targetEntries {
+		targetEntryGroups := targetEntry.Groups
+		if len(targetEntryGroups) == 0 {
+			targetEntryGroups = []string{""}
+		}
+
+		target := Target{name: key, targetEntry: *targetEntry, providerType: providerType}
+		for _, groupName := range targetEntryGroups {
+			group, ok := groupsByName[groupName]
+			if !ok {
+				isDefault := groupName == defaultGroup
+				group = Group{name: groupName, isDefault: isDefault}
+				groups = append(groups, group)
+			}
+			group.targets = append(group.targets, target)
+			groupsByName[groupName] = group
+		}
+	}
+	return groupsByName
 }
 
 func homeDir() string {

@@ -55,11 +55,12 @@ func (o *TestOsprey) ToKubeconfigUserWithoutToken(locationOfOrigin string) *clie
 	caData, _ := osprey.ReadAndEncodeFile(o.IssuerCA)
 	authInfo := clientgo.NewAuthInfo()
 	authProviderConfig := make(map[string]string)
-	authProviderConfig["client-id"] = o.Environment
 	authProviderConfig["client-secret"] = o.Secret
 	authProviderConfig["id-token"] = ""
 	authProviderConfig["idp-certificate-authority-data"] = caData
 	authProviderConfig["idp-issuer-url"] = o.IssuerURL
+	authProviderConfig["access-token"] = ""
+	authProviderConfig["client-id"] = o.Environment
 	authInfo.ImpersonateUserExtra = nil
 	authInfo.LocationOfOrigin = locationOfOrigin
 	authInfo.AuthProvider = &clientgo.AuthProviderConfig{
