@@ -720,7 +720,8 @@ Make sure any kubernetes dependencies are compatible with the `kubernetes-1.8.5`
 
 # Releasing
 
-Tag the commit in master and push it to release it. Only maintainers can do this.
+Tag the commit in master using an annotated tag and push it to release it. 
+Only maintainers can do this.
 
 Osprey gets released to:
 - [Bintray](https://bintray.com/sky-uk/oss-generic/osprey) as binaries for the supported platforms.
