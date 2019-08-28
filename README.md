@@ -245,7 +245,7 @@ The client uses a yaml configuration file. It's recommended location is:
 # Mandatory for windows, optional for unix systems.
 # CA cert to use for HTTPS connections to osprey.
 # Uses system's CA certs if absent (only in unix systems).
-# certificate-authority: /tmp/osprey-238319279/cluster_ca.crt
+# certificate-authority: ~/cluster_ca.crt
 
 # Alternatively, base64-encoded PEM format certificate.
 # This will override certificate-authority if specified.

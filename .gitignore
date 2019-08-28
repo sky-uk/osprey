@@ -2,5 +2,6 @@ build
 dist
 .idea
 *.iml
+osprey
 /examples/local/bin/
 /vendor/

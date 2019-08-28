@@ -1,3 +1,7 @@
+# Release 2.1.0
+- Allow the use of tilde (~) as a shortcut for the user's home directory in
+  client config (`certificate-authority`)
+
 # Release 2.0.0
 - Adds support for authentication using Azure Active Directory as the OIDC.
 - This release introduces a breaking change to osprey config files. This is due to functionality to support multiple

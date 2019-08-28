@@ -10,6 +10,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/mitchellh/go-homedir"
 )
 
 // LoadTLSCert loads a PEM-encoded certificate from file and returns it as a
@@ -18,7 +20,11 @@ func LoadTLSCert(path string) (string, error) {
 	if path == "" {
 		return "", nil
 	}
-	fileData, err := ioutil.ReadFile(path)
+	expandedPath, err := homedir.Expand(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to expand home directory in %q: %v", path, err)
+	}
+	fileData, err := ioutil.ReadFile(expandedPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read certificate file %q: %v", path, err)
 	}
