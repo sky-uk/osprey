@@ -3,7 +3,7 @@ pkgs := $(shell go list ./... | grep -v /vendor/ )
 
 git_rev := $(shell git rev-parse --short HEAD)
 git_tag := $(shell git tag --points-at=$(git_rev))
-release_date := $(shell date +%d-%m-%Y)
+release_date := $(shell date +%d-%m-%y)
 latest_git_tag := $(shell git for-each-ref --format="%(tag)" --sort=-taggerdate refs/tags | head -1)
 latest_git_rev := $(shell git rev-list --abbrev-commit -n 1 $(latest_git_tag))
 version := $(if $(git_tag),$(git_tag),dev-$(git_rev))

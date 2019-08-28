@@ -19,10 +19,6 @@
       "excludePattern": "dist/latest/(.*)",
       "uploadPattern": "osprey/$1/osprey-$1_$2.$3"
     },
-    { "includePattern": "dist/latest/(.*)/osprey\\.(.*)",
-      "uploadPattern": "osprey/latest/osprey-latest_$1.$2",
-      "matrixParams": { "override": 1 }
-    }
   ],
   "publish": @publish
 }
