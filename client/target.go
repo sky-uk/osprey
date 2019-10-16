@@ -48,3 +48,12 @@ func sortTargets(targets []Target) []Target {
 	})
 	return targets
 }
+
+// CreateTarget returns an initiliased Target object
+func CreateTarget(name string, targetEntry TargetEntry, providerType string) Target {
+	return Target{
+		name: name,
+		targetEntry: targetEntry,
+		providerType: providerType,
+	}
+}
