@@ -58,7 +58,7 @@ func (r *ospreyRetriever) RetrieveUserDetails(target Target, authInfo api.AuthIn
 	}
 
 	if authInfo.AuthProvider.Name != "oidc" {
-		return nil, fmt.Errorf("invalid authprovider %s for target %s", authInfo.AuthProvider.Name, target.Name())
+		return nil, fmt.Errorf("invalid authprovider %s for target %s", authInfo.AuthProvider.Name, target.TargetName())
 	}
 
 	idToken := authInfo.AuthProvider.Config["id-token"]
@@ -71,7 +71,7 @@ func (r *ospreyRetriever) RetrieveUserDetails(target Target, authInfo api.AuthIn
 
 	jwt, err := jws.ParseJWT([]byte(idToken))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse user token for %s: %v", target.Name(), err)
+		return nil, fmt.Errorf("failed to parse user token for %s: %v", target.TargetName(), err)
 	}
 
 	user := jwt.Claims().Get("email")
@@ -129,7 +129,7 @@ func (r *ospreyRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*T
 }
 
 func (r *ospreyRetriever) GetAuthInfo(config *api.Config, target Target) *api.AuthInfo {
-	authInfo := config.AuthInfos[target.Name()]
+	authInfo := config.AuthInfos[target.TargetName()]
 	if authInfo == nil || authInfo.AuthProvider == nil {
 		return nil
 	}

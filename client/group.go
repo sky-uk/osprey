@@ -20,7 +20,7 @@ func (g *Group) IsDefault() bool {
 func (g *Group) Targets() map[string][]Target {
 	groupMap := make(map[string][]Target)
 	for _, target := range g.targets {
-		groupMap[target.ProviderType()] = append(groupMap[target.ProviderType()], target)
+		groupMap[target.TargetProviderType()] = append(groupMap[target.TargetProviderType()], target)
 	}
 	return getSortedTargetsByProvider(groupMap)
 }
@@ -40,7 +40,7 @@ func (g *Group) Name() string {
 //Contains returns true if it contains the target
 func (g *Group) Contains(target Target) bool {
 	for _, current := range g.targets {
-		if target.name == current.name {
+		if target.Name == current.Name {
 			return true
 		}
 	}

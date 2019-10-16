@@ -83,10 +83,10 @@ func login(_ *cobra.Command, _ []string) {
 			targetData, err := retriever.RetrieveClusterDetailsAndAuthTokens(target)
 			if err != nil {
 				if state, ok := status.FromError(err); ok && state.Code() == codes.Unauthenticated {
-					log.Fatalf("Failed to log in to %s: %v", target.Name(), state.Message())
+					log.Fatalf("Failed to log in to %s: %v", target.TargetName(), state.Message())
 				}
 				success = false
-				log.Errorf("Failed to log in to %s: %v", target.Name(), err)
+				log.Errorf("Failed to log in to %s: %v", target.TargetName(), err)
 				continue
 			}
 			updateKubeconfig(target, targetData)
@@ -99,14 +99,14 @@ func login(_ *cobra.Command, _ []string) {
 }
 
 func updateKubeconfig(target client.Target, tokenData *client.TargetInfo) {
-	err := kubeconfig.UpdateConfig(target.Name(), target.Aliases(), tokenData)
+	err := kubeconfig.UpdateConfig(target.TargetName(), target.Aliases(), tokenData)
 	if err != nil {
-		log.Errorf("Failed to update config for %s: %v", target.Name(), err)
+		log.Errorf("Failed to update config for %s: %v", target.TargetName(), err)
 		return
 	}
 	aliases := ""
 	if target.HasAliases() {
 		aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
 	}
-	log.Infof("Logged in to: %s %s", target.Name(), aliases)
+	log.Infof("Logged in to: %s %s", target.TargetName(), aliases)
 }

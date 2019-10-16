@@ -230,7 +230,7 @@ func groupTargetsByProvider(targetEntries map[string]*TargetEntry, defaultGroup 
 			targetEntryGroups = []string{""}
 		}
 
-		target := Target{name: key, targetEntry: *targetEntry, providerType: providerType}
+		target := Target{Name: key, TargetEntry: *targetEntry, ProviderType: providerType}
 		for _, groupName := range targetEntryGroups {
 			group, ok := groupsByName[groupName]
 			if !ok {

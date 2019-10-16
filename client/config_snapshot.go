@@ -36,8 +36,8 @@ func (t *ConfigSnapshot) Targets() []Target {
 	set := make(map[string]*interface{})
 	for _, group := range t.groupsByName {
 		for _, target := range group.targets {
-			if _, ok := set[target.name]; !ok {
-				set[target.name] = nil
+			if _, ok := set[target.Name]; !ok {
+				set[target.Name] = nil
 				targets = append(targets, target)
 			}
 		}

@@ -97,7 +97,7 @@ func displayGroup(group client.Group, listTargets bool) []string {
 				if target.HasAliases() {
 					aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
 				}
-				outputLines = append(outputLines, fmt.Sprintf("    %s%s", target.Name(), aliases))
+				outputLines = append(outputLines, fmt.Sprintf("    %s%s", target.TargetName(), aliases))
 			}
 		}
 	}
@@ -117,7 +117,7 @@ func displayTargets(snapshot *client.ConfigSnapshot) []string {
 		if target.HasAliases() {
 			aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
 		}
-		outputLines = append(outputLines, fmt.Sprintf("%s %s%s", highlight, target.Name(), aliases))
+		outputLines = append(outputLines, fmt.Sprintf("%s %s%s", highlight, target.TargetName(), aliases))
 	}
 	return outputLines
 }

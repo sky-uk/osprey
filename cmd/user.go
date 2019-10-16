@@ -63,23 +63,23 @@ func user(_ *cobra.Command, _ []string) {
 
 	for _, targets := range group.Targets() {
 		for _, target := range targets {
-			retriever := retrievers[target.ProviderType()]
+			retriever := retrievers[target.TargetProviderType()]
 			authInfo := retriever.GetAuthInfo(config, target)
 			if authInfo != nil {
 				userInfo, err := retriever.RetrieveUserDetails(target, *authInfo)
 				if err != nil {
-					log.Errorf("%s: %v", target.Name(), err)
+					log.Errorf("%s: %v", target.TargetName(), err)
 				}
 				if userInfo != nil {
-					switch target.ProviderType() {
+					switch target.TargetProviderType() {
 					case client.OspreyProviderName:
-						log.Infof("%s: %s %s", target.Name(), userInfo.Username, userInfo.Roles)
+						log.Infof("%s: %s %s", target.TargetName(), userInfo.Username, userInfo.Roles)
 					default:
-						log.Infof("%s: %s", target.Name(), userInfo.Username)
+						log.Infof("%s: %s", target.TargetName(), userInfo.Username)
 					}
 				}
 			} else {
-				log.Infof("%s: none", target.Name())
+				log.Infof("%s: none", target.TargetName())
 			}
 		}
 	}

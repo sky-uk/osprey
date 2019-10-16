@@ -45,12 +45,12 @@ func logout(_ *cobra.Command, _ []string) {
 	success := true
 	for _, targets := range group.Targets() {
 		for _, target := range targets {
-			err = kubeconfig.Remove(target.Name())
+			err = kubeconfig.Remove(target.TargetName())
 			if err != nil {
-				log.Errorf("Failed to remove %s from kubeconfig: %v", target.Name(), err)
+				log.Errorf("Failed to remove %s from kubeconfig: %v", target.TargetName(), err)
 				success = false
 			} else {
-				log.Infof("Logged out from %s", target.Name())
+				log.Infof("Logged out from %s", target.TargetName())
 			}
 		}
 	}

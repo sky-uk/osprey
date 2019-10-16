@@ -110,7 +110,7 @@ type azureRetriever struct {
 func (r *azureRetriever) RetrieveUserDetails(target Target, authInfo api.AuthInfo) (*UserInfo, error) {
 	jwt, err := jws.ParseJWT([]byte(authInfo.Token))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse user token for %s: %v", target.Name(), err)
+		return nil, fmt.Errorf("failed to parse user token for %s: %v", target.TargetName(), err)
 	}
 
 	if jwt.Claims().Get("unique_name") != nil {
@@ -167,7 +167,7 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 }
 
 func (r *azureRetriever) GetAuthInfo(config *api.Config, target Target) *api.AuthInfo {
-	authInfo := config.AuthInfos[target.Name()]
+	authInfo := config.AuthInfos[target.TargetName()]
 	if authInfo == nil || authInfo.Token == "" {
 		return nil
 	}

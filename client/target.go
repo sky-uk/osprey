@@ -6,45 +6,45 @@ import (
 
 // Target has the information of an TargetEntry target server
 type Target struct {
-	name         string
-	targetEntry  TargetEntry
-	providerType string
+	Name         string
+	TargetEntry  TargetEntry
+	ProviderType string
 }
 
 // Aliases returns the list of aliases of the Target alphabetically sorted
 func (m *Target) Aliases() []string {
-	sort.Strings(m.targetEntry.Aliases)
-	return m.targetEntry.Aliases
+	sort.Strings(m.TargetEntry.Aliases)
+	return m.TargetEntry.Aliases
 }
 
 // HasAliases returns true if the Target has at least one alias
 func (m *Target) HasAliases() bool {
-	return len(m.targetEntry.Aliases) > 0
+	return len(m.TargetEntry.Aliases) > 0
 }
 
 // Name returns the main name of the Target
-func (m *Target) Name() string {
-	return m.name
+func (m *Target) TargetName() string {
+	return m.Name
 }
 
 // Server returns the server of the Target
 func (m *Target) Server() string {
-	return m.targetEntry.Server
+	return m.TargetEntry.Server
 }
 
 // ProviderType returns the authentication provider of the Target
-func (m *Target) ProviderType() string {
-	return m.providerType
+func (m *Target) TargetProviderType() string {
+	return m.ProviderType
 }
 
 // CertificateAuthorityData returns the CertificateAuthorityData of the Target
 func (m *Target) CertificateAuthorityData() string {
-	return m.targetEntry.CertificateAuthorityData
+	return m.TargetEntry.CertificateAuthorityData
 }
 
 func sortTargets(targets []Target) []Target {
 	sort.Slice(targets, func(i, j int) bool {
-		return targets[i].name < targets[j].name
+		return targets[i].Name < targets[j].Name
 	})
 	return targets
 }
