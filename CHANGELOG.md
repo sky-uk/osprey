@@ -1,5 +1,6 @@
 # Release 2.1.0
 - Adds a public constructor to initialise a Target struct.
+- Fix release bintray deployment
 
 # Release 2.0.0
 - Adds support for authentication using Azure Active Directory as the OIDC.

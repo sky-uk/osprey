@@ -18,7 +18,7 @@
     { "includePattern": "dist/(.*)/(.*)/osprey\\.(.*)",
       "excludePattern": "dist/latest/(.*)",
       "uploadPattern": "osprey/$1/osprey-$1_$2.$3"
-    },
+    }
   ],
   "publish": @publish
 }
