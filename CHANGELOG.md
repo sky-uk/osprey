@@ -1,4 +1,3 @@
-# Release <???>
 - Fix error message for cluster-info req
 
 # Release 2.1.0
