@@ -1,3 +1,5 @@
+- Fix error message for cluster-info req
+
 # Release 2.1.0
 - Adds a public constructor to initialise a Target struct.
 - Fix release bintray deployment

@@ -153,7 +153,7 @@ func createClusterInfoRequest(host string) (*http.Request, error) {
 	url := fmt.Sprintf("%s/cluster-info", host)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create access-token request: %v", err)
+		return nil, fmt.Errorf("unable to create cluster-info request: %v", err)
 	}
 	req.Header.Add("Accept", "application/octet-stream")
 
