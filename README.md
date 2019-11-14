@@ -43,15 +43,19 @@ binaries main use are the client commands.
 
 Osprey's executable binaries can be downloaded from our [Bintray repository](https://dl.bintray.com/sky-uk/oss-generic/osprey).
 
-To install a specific version replace `<version>` with the release version.
+To install a specific version replace `<version>` with the release version
+(e.g `v9.9.0`; mind the `v` prefix).
 
 **Linux and Mac OS**
 ```
-  curl -L https://dl.bintray.com/sky-uk/oss-generic/osprey/<version>/osprey-<version>_linux_amd64.tar.gz -o osprey.tar.gz
+  curl -fsSL https://dl.bintray.com/sky-uk/oss-generic/osprey/<version>/osprey-<version>_linux_amd64.tar.gz -o osprey.tar.gz
 
   tar -xvf osprey.tar.gz -C $HOME/.local/bin
   chmod +x $HOME/.local/bin/osprey
 ```
+`$HOME/.local/bin` should be in your `$PATH`, or replace it with one that
+better suits your setup.
+
 To install for Mac OS replace `linux` for `darwin`
 
 **Windows**
@@ -69,7 +73,8 @@ To install for Mac OS replace `linux` for `darwin`
 
 The docker image is based on alpine. It can be pulled from our [Docker Hub repository](https://hub.docker.com/r/skycirrus/osprey/)
 
-To pull a specific version replace `<version>` with the release version.
+To pull a specific version replace `<version>` with the release version 
+(e.g `v9.9.0`; mind the `v` prefix).
 
 ```
    docker pull skycirrus/osprey:<version>
