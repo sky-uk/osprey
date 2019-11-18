@@ -1,4 +1,5 @@
-- Fix error message for cluster-info req
+- Fix error message for cluster-info req.
+- Remove `latest` artifact from bintray.
 
 # Release 2.1.0
 - Adds a public constructor to initialise a Target struct.
