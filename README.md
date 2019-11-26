@@ -381,7 +381,7 @@ In this mode, the required flags are:
 
 - `apiServerCA`, the path to the api-server CA (defaults to `/var/run/secrets/kubernetes.io/serviceaccount/ca.crt`) which
 is the default location of the CA when running inside a kubernetes cluster. 
-- `apiServerUrl`, the api-server URL to return to the osprey client
+- `apiServerURL`, the api-server URL to return to the osprey client
 
 
 ### `osprey serve auth`
