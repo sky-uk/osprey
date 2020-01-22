@@ -2,9 +2,12 @@ package oidc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os/exec"
+	"runtime"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -26,6 +29,7 @@ type Client struct {
 
 // New returns a new OIDC client
 func New(config oauth2.Config, serverApplicationID string) *Client {
+
 	return &Client{
 		oAuthConfig:         config,
 		serverApplicationID: serverApplicationID,
@@ -39,7 +43,7 @@ type tokenResponse struct {
 }
 
 // AuthWithOIDCCallback attempts to authorise using a local callback
-func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Duration) (*oauth2.Token, error) {
+func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Duration, disableBrowserPopup bool) (*oauth2.Token, error) {
 	redirectURL, err := url.Parse(c.oAuthConfig.RedirectURL)
 	if err != nil {
 		log.Fatalf("Unable to parse oidc redirect uri: %e", err)
@@ -59,7 +63,28 @@ func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Dur
 	ctxTimeout, cancel := context.WithTimeout(ctx, loginTimeout)
 	defer cancel()
 
-	fmt.Printf("To sign in, use a web browser to open the page\n%s\n", authURL)
+	if disableBrowserPopup {
+		err = errors.New("browser popup disabled")
+	} else {
+		switch runtime.GOOS {
+		case "linux":
+			err = exec.Command("xdg-open", authURL).Start()
+		case "windows":
+			err = exec.Command("rundll32", "url.dll,FileProtocolHandler", authURL).Start()
+		case "darwin":
+			err = exec.Command("open", authURL).Start()
+		default:
+			err = fmt.Errorf("unknown OS %q", runtime.GOOS)
+		}
+	}
+
+	if err != nil {
+		fmt.Printf("Unable to open browser: %v\n", err)
+		fmt.Println("Please use this URL to authenticate:")
+	} else {
+		fmt.Println("Opening browser window to authenticate:")
+	}
+	fmt.Printf("%s\n", authURL)
 
 	go func() {
 		ch <- h.ListenAndServe()

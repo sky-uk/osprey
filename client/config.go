@@ -136,7 +136,7 @@ func (c *Config) validateGroups() error {
 }
 
 // GetRetrievers returns a map of providers to retrievers
-func (c *Config) GetRetrievers(options *RetrieverOptions) (map[string]Retriever, error) {
+func (c *Config) GetRetrievers(options RetrieverOptions) (map[string]Retriever, error) {
 	retrievers := make(map[string]Retriever)
 	var err error
 	if c.Providers.Azure != nil {

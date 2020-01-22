@@ -68,7 +68,7 @@ func (ac *AzureConfig) ValidateConfig() error {
 }
 
 // NewAzureRetriever creates new Azure oAuth client
-func NewAzureRetriever(provider *AzureConfig, retrieverOptions *RetrieverOptions) (Retriever, error) {
+func NewAzureRetriever(provider *AzureConfig, options RetrieverOptions) (Retriever, error) {
 	config := oauth2.Config{
 		ClientID:     provider.ClientID,
 		ClientSecret: provider.ClientSecret,
@@ -90,21 +90,21 @@ func NewAzureRetriever(provider *AzureConfig, retrieverOptions *RetrieverOptions
 		oidc:     oidc.New(config, provider.ServerApplicationID),
 		tenantID: provider.AzureTenantID,
 	}
-	if retrieverOptions != nil {
-		retriever.useDeviceCode = retrieverOptions.UseDeviceCode
-		retriever.loginTimeout = retrieverOptions.LoginTimeout
-	}
+	retriever.useDeviceCode = options.UseDeviceCode
+	retriever.loginTimeout = options.LoginTimeout
+	retriever.disableBrowserPopup = options.DisableBrowserPopup
 	return retriever, nil
 }
 
 type azureRetriever struct {
-	accessToken   string
-	useDeviceCode bool
-	loginTimeout  time.Duration
-	oidc          *oidc.Client
-	tenantID      string
-	webserver     *http.Server
-	stopCh        chan struct{}
+	accessToken         string
+	useDeviceCode       bool
+	loginTimeout        time.Duration
+	disableBrowserPopup bool
+	oidc                *oidc.Client
+	tenantID            string
+	webserver           *http.Server
+	stopCh              chan struct{}
 }
 
 func (r *azureRetriever) RetrieveUserDetails(target Target, authInfo api.AuthInfo) (*UserInfo, error) {
@@ -132,7 +132,7 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 		if r.useDeviceCode {
 			oauthToken, err = r.oidc.AuthWithDeviceFlow(ctx, r.loginTimeout)
 		} else {
-			oauthToken, err = r.oidc.AuthWithOIDCCallback(ctx, r.loginTimeout)
+			oauthToken, err = r.oidc.AuthWithOIDCCallback(ctx, r.loginTimeout, r.disableBrowserPopup)
 		}
 		if err != nil {
 			return nil, err

@@ -52,6 +52,7 @@ type Retriever interface {
 
 // RetrieverOptions is used to hold command line arguments that change the behaviour of logins
 type RetrieverOptions struct {
-	UseDeviceCode bool
-	LoginTimeout  time.Duration
+	UseDeviceCode       bool
+	LoginTimeout        time.Duration
+	DisableBrowserPopup bool
 }

@@ -36,7 +36,7 @@ var _ = Describe("Login with a cloud provider", func() {
 
 	JustBeforeEach(func() {
 		setupClientForEnvironments(azureProviderName, environmentsToUse, oidcClientID)
-		userLoginArgs = []string{"user", "login", ospreyconfigFlag}
+		userLoginArgs = []string{"user", "login", ospreyconfigFlag, "--disable-browser-popup"}
 	})
 
 	getKubeConfig := func() *api.Config {
