@@ -32,14 +32,19 @@ The connection to the osprey servers is via HTTPS.
 }
 
 var (
-	useDeviceCode bool
-	loginTimeout  time.Duration
+	useDeviceCode       bool
+	loginTimeout        time.Duration
+	disableBrowserPopup bool
 )
 
 func init() {
 	userCmd.AddCommand(loginCmd)
-	loginCmd.Flags().BoolVarP(&useDeviceCode, "use-device-code", "", false, "set to true to use a device-code flow for authorisation")
-	loginCmd.Flags().DurationVar(&loginTimeout, "login-timeout", 90*time.Second, "set to override the login timeout when using local callback or device-code flow for authorisation")
+	loginCmd.Flags().BoolVarP(&useDeviceCode, "use-device-code", "", false,
+		"set to true to use a device-code flow for authorisation")
+	loginCmd.Flags().DurationVar(&loginTimeout, "login-timeout", 90*time.Second,
+		"set to override the login timeout when using local callback or device-code flow for authorisation")
+	loginCmd.Flags().BoolVarP(&disableBrowserPopup, "disable-browser-popup", "", false,
+		"enable to disable the browser popup used for authentication")
 }
 
 func login(_ *cobra.Command, _ []string) {
@@ -62,9 +67,10 @@ func login(_ *cobra.Command, _ []string) {
 	}
 
 	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
-	retrieverOptions := &client.RetrieverOptions{
-		UseDeviceCode: useDeviceCode,
-		LoginTimeout:  loginTimeout,
+	retrieverOptions := client.RetrieverOptions{
+		UseDeviceCode:       useDeviceCode,
+		LoginTimeout:        loginTimeout,
+		DisableBrowserPopup: disableBrowserPopup,
 	}
 
 	success := true

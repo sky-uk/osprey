@@ -20,7 +20,7 @@ var _ = Describe("Login", func() {
 
 	JustBeforeEach(func() {
 		setupClientForEnvironments(ospreyProviderName, environmentsToUse, "")
-		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag)
+		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag, "--disable-browser-popup")
 	})
 
 	AfterEach(func() {

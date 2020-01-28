@@ -56,7 +56,7 @@ func user(_ *cobra.Command, _ []string) {
 		log.Fatalf("failed to load existing kubeconfig at %s: %v", kubeconfig.GetPathOptions().GetDefaultFilename(), err)
 	}
 
-	retrievers, err := ospreyconfig.GetRetrievers(nil)
+	retrievers, err := ospreyconfig.GetRetrievers(client.RetrieverOptions{})
 	if err != nil {
 		log.Errorf("Unable to initialise providers: %v", err)
 	}
