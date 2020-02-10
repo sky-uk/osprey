@@ -131,7 +131,20 @@ func (c *Client) handleRedirectURI(ctx context.Context) http.HandlerFunc {
 
 		c.authenticated = true
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("<html><head></head><body><h1 style='font-family: 'Source Code Pro''>Successfully logged in</h1></body></html>"))
+		w.Write([]byte(`<html>
+<head>
+<title>Osprey Logged In</title>
+<script type="text/javascript">
+function closeWindow() {
+  open(location, '_self').close();
+}
+window.onload = setTimeout(closeWindow, 800);
+</script>
+</head>
+<body>
+<h1>Successfully logged in...</h1>
+</body>
+</html>`))
 
 		c.stopChan <- tokenResponse{
 			oauth2Token,
