@@ -138,7 +138,7 @@ func (c *Client) handleRedirectURI(ctx context.Context) http.HandlerFunc {
 function closeWindow() {
   open(location, '_self').close();
 }
-window.onload = setTimeout(closeWindow, 800);
+window.onload = setTimeout(closeWindow, 1000);
 </script>
 </head>
 <body>
