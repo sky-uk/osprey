@@ -136,7 +136,7 @@ func (c *Client) handleRedirectURI(ctx context.Context) http.HandlerFunc {
 <title>Osprey Logged In</title>
 <script type="text/javascript">
 function closeWindow() {
-  open(location, '_self').close();
+  window.close();
 }
 window.onload = setTimeout(closeWindow, 1000);
 </script>
