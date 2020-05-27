@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"path/filepath"
+
 	"github.com/sky-uk/osprey/client"
 	"github.com/sky-uk/osprey/client/kubeconfig"
 	"github.com/spf13/cobra"
@@ -8,6 +10,10 @@ import (
 	"os"
 
 	log "github.com/sirupsen/logrus"
+)
+
+var (
+	defaultConfigLocations = []string{".config/osprey/config", ".osprey/config"}
 )
 
 var userCmd = &cobra.Command{
@@ -87,7 +93,21 @@ func user(_ *cobra.Command, _ []string) {
 
 func checkClientParams(_ *cobra.Command, _ []string) {
 	if ospreyconfigFile == "" {
-		ospreyconfigFile = client.RecommendedOspreyConfigFile
+		home, err := os.UserHomeDir()
+		if err != nil {
+			panic(err)
+		}
+		for _, defaultConfig := range defaultConfigLocations {
+			defaultConfig = filepath.Join(home, defaultConfig)
+			if _, err := os.Stat(defaultConfig); err == nil {
+				ospreyconfigFile = defaultConfig
+				break
+			}
+		}
+		if ospreyconfigFile == "" {
+			log.Fatalf("No osprey configuration found in %v", defaultConfigLocations)
+		}
 	}
+
 	checkFile(ospreyconfigFile, "ospreyconfig")
 }

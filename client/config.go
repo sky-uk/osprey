@@ -4,29 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/osprey/common/web"
 	"gopkg.in/yaml.v2"
-)
-
-const (
-	// RecommendedHomeDir is the default name for the osprey home directory.
-	RecommendedHomeDir = ".osprey"
-	// RecommendedFileName is the default name for the osprey config file.
-	RecommendedFileName = "config"
-)
-
-var (
-	// HomeDir is the user's home directory.
-	HomeDir = homeDir()
-	// RecommendedOspreyHomeDir is the default full path for the osprey home.
-	RecommendedOspreyHomeDir = path.Join(HomeDir, RecommendedHomeDir)
-	// RecommendedOspreyConfigFile is the default full path for the osprey config file.
-	RecommendedOspreyConfigFile = path.Join(RecommendedOspreyHomeDir, RecommendedFileName)
 )
 
 // Config holds the information needed to connect to remote OIDC providers
