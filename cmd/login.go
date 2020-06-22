@@ -35,6 +35,8 @@ var (
 	useDeviceCode       bool
 	loginTimeout        time.Duration
 	disableBrowserPopup bool
+	username            string
+	password            string
 )
 
 func init() {
@@ -45,6 +47,10 @@ func init() {
 		"set to override the login timeout when using local callback or device-code flow for authorisation")
 	loginCmd.Flags().BoolVarP(&disableBrowserPopup, "disable-browser-popup", "", false,
 		"enable to disable the browser popup used for authentication")
+	loginCmd.Flags().StringVarP(&username, "username", "", "",
+		"username to use for authentication")
+	loginCmd.Flags().StringVarP(&password, "password", "", "",
+		"password to use for authentication")
 }
 
 func login(_ *cobra.Command, _ []string) {
@@ -71,6 +77,8 @@ func login(_ *cobra.Command, _ []string) {
 		UseDeviceCode:       useDeviceCode,
 		LoginTimeout:        loginTimeout,
 		DisableBrowserPopup: disableBrowserPopup,
+		Username:            username,
+		Password:            password,
 	}
 
 	success := true

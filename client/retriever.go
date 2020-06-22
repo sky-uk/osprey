@@ -55,4 +55,6 @@ type RetrieverOptions struct {
 	UseDeviceCode       bool
 	LoginTimeout        time.Duration
 	DisableBrowserPopup bool
+	Username            string
+	Password            string
 }
