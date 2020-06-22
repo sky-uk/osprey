@@ -129,7 +129,7 @@ func (c *Config) GetRetrievers(options RetrieverOptions) (map[string]Retriever, 
 		}
 	}
 	if c.Providers.Osprey != nil {
-		retrievers[OspreyProviderName] = NewOspreyRetriever(c.Providers.Osprey)
+		retrievers[OspreyProviderName] = NewOspreyRetriever(c.Providers.Osprey, options)
 	}
 	return retrievers, nil
 }

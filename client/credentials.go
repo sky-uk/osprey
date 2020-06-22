@@ -21,22 +21,33 @@ type LoginCredentials struct {
 }
 
 // GetCredentials loads the credentials from the terminal or stdin.
-func GetCredentials() (*LoginCredentials, error) {
+func GetCredentials(partialLoginCredentials *LoginCredentials) (*LoginCredentials, error) {
 	if terminal.IsTerminal(int(syscall.Stdin)) {
-		return consumeCredentials(hiddenInput)
+		return consumeCredentials(hiddenInput, partialLoginCredentials)
 	}
-	return consumeCredentials(common.Input)
+	return consumeCredentials(common.Input, partialLoginCredentials)
 }
 
-func consumeCredentials(pwdInputFunc func(string, *bufio.Reader) (string, error)) (credentials *LoginCredentials, err error) {
+func consumeCredentials(pwdInputFunc func(string, *bufio.Reader) (string, error), partialLoginCredentials *LoginCredentials) (credentials *LoginCredentials, err error) {
 	var username, password string
+	if partialLoginCredentials != nil {
+		username = partialLoginCredentials.Username
+		password = partialLoginCredentials.Password
+	}
+
 	reader := bufio.NewReader(os.Stdin)
-	if username, err = common.Read("username", "Username: ", reader, common.Input); err != nil {
-		return nil, err
+	if username == "" {
+		if username, err = common.Read("username", "Username: ", reader, common.Input); err != nil {
+			return nil, err
+		}
 	}
-	if password, err = common.Read("password", "Password: ", reader, pwdInputFunc); err != nil {
-		return nil, err
+
+	if password == "" {
+		if password, err = common.Read("password", "Password: ", reader, pwdInputFunc); err != nil {
+			return nil, err
+		}
 	}
+
 	return &LoginCredentials{Username: username, Password: password}, nil
 }
 

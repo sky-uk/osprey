@@ -43,8 +43,14 @@ func (oc *OspreyConfig) ValidateConfig() error {
 }
 
 // NewOspreyRetriever creates new osprey client
-func NewOspreyRetriever(provider *OspreyConfig) Retriever {
-	return &ospreyRetriever{serverCertificateAuthorityData: provider.CertificateAuthorityData}
+func NewOspreyRetriever(provider *OspreyConfig, options RetrieverOptions) Retriever {
+	return &ospreyRetriever{
+		serverCertificateAuthorityData: provider.CertificateAuthorityData,
+		credentials: &LoginCredentials{
+			Username: options.Username,
+			Password: options.Password,
+		},
+	}
 }
 
 type ospreyRetriever struct {
@@ -95,8 +101,8 @@ func (r *ospreyRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*T
 		return nil, err
 	}
 
-	if r.credentials == nil {
-		r.credentials, err = GetCredentials()
+	if r.credentials == nil || r.credentials.Username == "" || r.credentials.Password == "" {
+		r.credentials, err = GetCredentials(r.credentials)
 		if err != nil {
 			log.Fatalf("Failed to get credentials: %v", err)
 		}
