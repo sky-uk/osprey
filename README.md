@@ -247,16 +247,6 @@ The client uses a yaml configuration file. It's recommended location is:
 # Uses kubectl defaults if absent ($HOME/.kube/config).
 # kubeconfig: /home/jdoe/.kube/config
 
-# Mandatory for windows, optional for unix systems.
-# CA cert to use for HTTPS connections to osprey.
-# Uses system's CA certs if absent (only in unix systems).
-# certificate-authority: /tmp/osprey-238319279/cluster_ca.crt
-
-# Alternatively, base64-encoded PEM format certificate.
-# This will override certificate-authority if specified.
-# Same caveat for Windows systems applies.
-# certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5vdCB2YWxpZAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
-
 # Optional group name to be the default for all commands that accept it.
 # When this value is defined, all targets must define at least one group.
 # default-group: my-group
@@ -264,6 +254,16 @@ The client uses a yaml configuration file. It's recommended location is:
 # Named map of supported providers (currently `osprey` and `azure`)
 providers:
   osprey:
+    # Mandatory for windows, optional for unix systems.
+    # CA cert to use for HTTPS connections to osprey.
+    # Uses system's CA certs if absent (only in unix systems).
+    # certificate-authority: /tmp/osprey-238319279/cluster_ca.crt
+
+    # Alternatively, base64-encoded PEM format certificate.
+    # This will override certificate-authority if specified.
+    # Same caveat for Windows systems applies.
+    # certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5vdCB2YWxpZAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+
     # Named map of target osprey servers to contact for access-tokens
     targets:
       # Target osprey's environment name.
