@@ -1,3 +1,11 @@
+# Release 2.4.0
+- Add username/password command line options for Osprey login
+
+# Release 2.3.0
+- Automatically close browser window if possible for Azure login
+
+# Release 2.2.0
+- Add automatic browser popup for Azure login
 - Fix error message for cluster-info req.
 - Remove `latest` artifact from bintray.
 
