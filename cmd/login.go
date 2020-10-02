@@ -47,10 +47,10 @@ func init() {
 		"set to override the login timeout when using local callback or device-code flow for authorisation")
 	loginCmd.Flags().BoolVarP(&disableBrowserPopup, "disable-browser-popup", "", false,
 		"enable to disable the browser popup used for authentication")
-	loginCmd.Flags().StringVarP(&username, "username", "", "",
-		"username to use for authentication")
-	loginCmd.Flags().StringVarP(&password, "password", "", "",
-		"password to use for authentication")
+	loginCmd.Flags().StringVarP(&username, "username", "u", "",
+		"username for authenticating with the osprey server")
+	loginCmd.Flags().StringVarP(&password, "password", "p", "",
+		"password for authenticating with the osprey server")
 }
 
 func login(_ *cobra.Command, _ []string) {
