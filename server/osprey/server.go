@@ -54,6 +54,11 @@ type Osprey interface {
 	GetClusterInfo(ctx context.Context) (*pb.ClusterInfoResponse, error)
 	// Ready returns false if the oidcProvider has not been created
 	Ready(ctx context.Context) error
+
+	// AuthenticationEnabled FIXME
+	AuthenticationEnabled() bool
+	// ClusterInfoEnabled FIXME
+	ClusterInfoEnabled() bool
 }
 
 // NewAuthenticationServer returns a new osprey server with authentication enabled
@@ -248,6 +253,14 @@ func (o *osprey) getOrCreateOidcProvider() (*oidc.Provider, error) {
 		o.verifier = provider.Verifier(&oidc.Config{ClientID: o.Environment})
 	}
 	return o.provider, nil
+}
+
+func (o *osprey) AuthenticationEnabled() bool {
+	return o.authenticationEnabled
+}
+
+func (o *osprey) ClusterInfoEnabled() bool {
+	return o.ServeClusterInfo
 }
 
 type claims struct {

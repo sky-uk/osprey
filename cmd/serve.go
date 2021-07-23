@@ -126,7 +126,7 @@ func computeApiServerCa(cmd *cobra.Command, args []string) error {
 }
 
 func startServer(osprey osprey.Osprey) {
-	s := webServer.NewServer(port, tlsCert, tlsKey, shutdownGracePeriod, true, false)
+	s := webServer.NewServer(port, tlsCert, tlsKey, shutdownGracePeriod, osprey)
 	s.RegisterService(osprey)
 	err := s.Start()
 	if err != nil {

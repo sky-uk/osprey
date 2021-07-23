@@ -19,15 +19,15 @@ import (
 var signals chan os.Signal
 
 // NewServer creates a new Server definition with an empty ServeMux
-func NewServer(port int32, tlsCertFile, tlsKeyFile string, shutdownGracePeriod time.Duration, serveClusterInfo bool, authenticationEnabled bool) *Server {
+func NewServer(port int32, tlsCertFile, tlsKeyFile string, shutdownGracePeriod time.Duration, osprey osprey.Osprey) *Server {
 	return &Server{
 		addr:                  fmt.Sprintf(":%d", port),
 		shutdownGracePeriod:   shutdownGracePeriod,
 		tlsCertFile:           tlsCertFile,
 		tlsCertKey:            tlsKeyFile,
 		mux:                   http.NewServeMux(),
-		authenticationEnabled: authenticationEnabled,
-		serveClusterInfo:      serveClusterInfo,
+		authenticationEnabled: osprey.AuthenticationEnabled(),
+		serveClusterInfo:      osprey.ClusterInfoEnabled(),
 	}
 }
 
