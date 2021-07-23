@@ -21,7 +21,7 @@ var signals chan os.Signal
 // NewServer creates a new Server definition with an empty ServeMux
 func NewServer(port int32, tlsCertFile, tlsKeyFile string, shutdownGracePeriod time.Duration, serveClusterInfo bool, authenticationEnabled bool) *Server {
 	return &Server{
-		addr:                  fmt.Sprintf("0.0.0.0:%d", port),
+		addr:                  fmt.Sprintf(":%d", port),
 		shutdownGracePeriod:   shutdownGracePeriod,
 		tlsCertFile:           tlsCertFile,
 		tlsCertKey:            tlsKeyFile,
