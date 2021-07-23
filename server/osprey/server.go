@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"sync"
 
-	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 
+	"github.com/sky-uk/osprey/common/pb"
+
 	"github.com/coreos/go-oidc"
 	"github.com/sirupsen/logrus"
-	"github.com/sky-uk/osprey/common/pb"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,21 +21,25 @@ import (
 
 var log = logrus.New().WithFields(logrus.Fields{"logger": "osprey-server"})
 
+type OspreyServerConfig struct {
+	Environment      string
+	Secret           string
+	RedirectUrl      string
+	IssuerHost       string
+	IssuerPath       string
+	ApiServerUrl     string
+	ApiServerCaData  string
+	IssuerCaData     string
+	ServeClusterInfo bool
+	HttpClient       *http.Client
+}
+
 type osprey struct {
-	environment           string
-	secret                string
-	issuerHost            string
-	issuerPath            string
-	redirectURL           string
-	apiServerURL          string
-	apiServerCAData       string
-	issuerCAData          string
-	provider              *oidc.Provider
-	serveClusterInfo      bool
 	authenticationEnabled bool
+	provider              *oidc.Provider
 	verifier              *oidc.IDTokenVerifier
-	client                *http.Client
 	mux                   sync.Mutex
+	OspreyServerConfig
 }
 
 const ospreyState = "as78*sadf$212"
@@ -53,29 +57,12 @@ type Osprey interface {
 }
 
 // NewAuthenticationServer returns a new osprey server with authentication enabled
-func NewAuthenticationServer(environment, secret, redirectURL, issuerHost, issuerPath, issuerCA, apiServerURL, apiServerCA string, serveClusterInfo bool, client *http.Client) (Osprey, error) {
-	apiServerCAData, err := ReadAndEncodeFile(apiServerCA)
-	if err != nil {
-		return nil, err
-	}
-	issuerCAData, err := ReadAndEncodeFile(issuerCA)
-	if err != nil {
-		return nil, err
-	}
+func NewAuthenticationServer(config OspreyServerConfig) (Osprey, error) {
 	o := &osprey{
-		client:                client,
-		secret:                secret,
-		environment:           environment,
-		apiServerURL:          apiServerURL,
-		apiServerCAData:       apiServerCAData,
-		redirectURL:           redirectURL,
-		issuerHost:            issuerHost,
-		issuerPath:            issuerPath,
-		issuerCAData:          issuerCAData,
 		authenticationEnabled: true,
-		serveClusterInfo:      serveClusterInfo,
+		OspreyServerConfig:    config,
 	}
-	_, err = o.getOrCreateOidcProvider()
+	_, err := o.getOrCreateOidcProvider()
 	if err != nil {
 		log.Errorf("unable to create oidc provider %q: %v", o.issuerURL(), err)
 	}
@@ -83,24 +70,18 @@ func NewAuthenticationServer(environment, secret, redirectURL, issuerHost, issue
 }
 
 // NewClusterInfoServer returns a new osprey server for use when serving cluster-info only
-func NewClusterInfoServer(apiServerURL, apiServerCA string) (Osprey, error) {
-	apiServerCAData, err := ReadAndEncodeFile(apiServerCA)
-	if err != nil {
-		return nil, err
-	}
+func NewClusterInfoServer(config OspreyServerConfig) (Osprey, error) {
 	return &osprey{
-		apiServerURL:          apiServerURL,
-		apiServerCAData:       apiServerCAData,
 		authenticationEnabled: false,
-		serveClusterInfo:      true,
+		OspreyServerConfig:    config,
 	}, nil
 }
 
 func (o *osprey) issuerURL() string {
-	if o.issuerPath != "" {
-		return fmt.Sprintf("%s/%s", o.issuerHost, o.issuerPath)
+	if o.IssuerPath != "" {
+		return fmt.Sprintf("%s/%s", o.IssuerHost, o.IssuerPath)
 	}
-	return o.issuerHost
+	return o.IssuerHost
 }
 
 func (o *osprey) Ready(ctx context.Context) error {
@@ -135,7 +116,7 @@ func (o *osprey) requestAuth(ctx context.Context, username, password string) (*l
 	}
 	authCodeURL := oauthConfig.AuthCodeURL(ospreyState)
 
-	authResponse, err := o.client.Get(authCodeURL)
+	authResponse, err := o.HttpClient.Get(authCodeURL)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("failed to request auth: %v", err))
 	}
@@ -144,8 +125,8 @@ func (o *osprey) requestAuth(ctx context.Context, username, password string) (*l
 }
 
 func (o *osprey) login(form *loginForm) (*pb.LoginResponse, error) {
-	target := fmt.Sprintf("%s%s", o.issuerHost, form.Action)
-	response, err := o.client.PostForm(target, url.Values{
+	target := fmt.Sprintf("%s%s", o.IssuerHost, form.Action)
+	response, err := o.HttpClient.PostForm(target, url.Values{
 		form.LoginField:    {form.LoginValue},
 		form.PasswordField: {form.PasswordValue},
 	})
@@ -162,8 +143,8 @@ func (o *osprey) login(form *loginForm) (*pb.LoginResponse, error) {
 func (o *osprey) GetClusterInfo(ctx context.Context) (*pb.ClusterInfoResponse, error) {
 	return &pb.ClusterInfoResponse{
 		Cluster: &pb.Cluster{
-			ApiServerURL: o.apiServerURL,
-			ApiServerCA:  o.apiServerCAData,
+			ApiServerURL: o.ApiServerUrl,
+			ApiServerCA:  o.ApiServerCaData,
 		},
 	}, nil
 }
@@ -179,7 +160,7 @@ func (o *osprey) Authorise(ctx context.Context, code, state, failure string) (*p
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("state %s does not match expected", state))
 	}
 
-	clientCtx := oidc.ClientContext(ctx, o.client)
+	clientCtx := oidc.ClientContext(ctx, o.HttpClient)
 
 	oauthConfig, err := o.oauth2Config(ctx)
 	if err != nil {
@@ -202,15 +183,15 @@ func (o *osprey) Authorise(ctx context.Context, code, state, failure string) (*p
 
 	return &pb.LoginResponse{
 		Cluster: &pb.Cluster{
-			Name:         o.environment,
-			ApiServerURL: o.apiServerURL,
-			ApiServerCA:  o.apiServerCAData,
+			Name:         o.Environment,
+			ApiServerURL: o.ApiServerUrl,
+			ApiServerCA:  o.ApiServerCaData,
 		},
 		Provider: &pb.AuthProvider{
 			ClientID:     tokenClaims.Aud,
-			ClientSecret: o.secret,
+			ClientSecret: o.Secret,
 			IssuerURL:    tokenClaims.Iss,
-			IssuerCA:     o.issuerCAData,
+			IssuerCA:     o.IssuerCaData,
 		},
 		User: &pb.User{
 			Username: tokenClaims.Name,
@@ -246,11 +227,11 @@ func (o *osprey) oauth2Config(ctx context.Context) (*oauth2.Config, error) {
 		return nil, err
 	}
 	return &oauth2.Config{
-		ClientID:     o.environment,
-		ClientSecret: o.secret,
+		ClientID:     o.Environment,
+		ClientSecret: o.Secret,
 		Endpoint:     oidcProvider.Endpoint(),
 		Scopes:       []string{"groups", "openid", "profile", "email", "offline_access"},
-		RedirectURL:  o.redirectURL,
+		RedirectURL:  o.RedirectUrl,
 	}, nil
 }
 
@@ -258,24 +239,15 @@ func (o *osprey) getOrCreateOidcProvider() (*oidc.Provider, error) {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 	if o.provider == nil {
-		ctx := oidc.ClientContext(context.Background(), o.client)
+		ctx := oidc.ClientContext(context.Background(), o.HttpClient)
 		provider, err := oidc.NewProvider(ctx, o.issuerURL())
 		if err != nil {
 			return nil, fmt.Errorf("unable to create oidc provider %q: %v", o.issuerURL(), err)
 		}
 		o.provider = provider
-		o.verifier = provider.Verifier(&oidc.Config{ClientID: o.environment})
+		o.verifier = provider.Verifier(&oidc.Config{ClientID: o.Environment})
 	}
 	return o.provider, nil
-}
-
-// ReadAndEncodeFile load the file contents and base64 encodes it
-func ReadAndEncodeFile(file string) (string, error) {
-	contents, err := ioutil.ReadFile(file)
-	if err != nil {
-		return "", err
-	}
-	return base64.StdEncoding.EncodeToString(contents), nil
 }
 
 type claims struct {

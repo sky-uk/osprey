@@ -102,6 +102,5 @@ var _ = Describe("Server", func() {
 			Expect(err).To(BeNil(), "called healthcheck")
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		})
-
 	})
 })

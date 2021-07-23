@@ -9,8 +9,8 @@ import (
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
+	"github.com/sky-uk/osprey/common"
 	"github.com/sky-uk/osprey/common/web"
-	"github.com/sky-uk/osprey/server/osprey"
 	"k8s.io/client-go/tools/clientcmd"
 	clientgo "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -52,7 +52,7 @@ func (o *TestOsprey) ToKubeconfigCluster(locationOfOrigin string) *clientgo.Clus
 
 // ToKubeconfigUserWithoutToken returns an *AuthInfo representation, with an empty id-token, of the TestOsprey instance.
 func (o *TestOsprey) ToKubeconfigUserWithoutToken(locationOfOrigin string) *clientgo.AuthInfo {
-	caData, _ := osprey.ReadAndEncodeFile(o.IssuerCA)
+	caData, _ := common.ReadAndEncodeFile(o.IssuerCA)
 	authInfo := clientgo.NewAuthInfo()
 	authProviderConfig := make(map[string]string)
 	authProviderConfig["client-secret"] = o.Secret

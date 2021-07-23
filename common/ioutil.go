@@ -2,7 +2,9 @@ package common
 
 import (
 	"bufio"
+	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"strings"
 )
 
@@ -20,4 +22,13 @@ func Input(inputName string, reader *bufio.Reader) (string, error) {
 		return value, nil
 	}
 	return "", fmt.Errorf("failed to read %s: %v", inputName, err)
+}
+
+// ReadAndEncodeFile load the file contents and base64 encodes it
+func ReadAndEncodeFile(file string) (string, error) {
+	contents, err := ioutil.ReadFile(file)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(contents), nil
 }
