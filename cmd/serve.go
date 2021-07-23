@@ -20,7 +20,7 @@ var serveCmd = &cobra.Command{
 var (
 	apiServerURL        string
 	apiServerCA         string
-	shutdownGracePeriod time.Duration
+	shutdownGracePeriod time.Duration = 5 * time.Second
 )
 
 func init() {
