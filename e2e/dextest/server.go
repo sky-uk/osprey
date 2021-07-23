@@ -178,7 +178,7 @@ func setupHTTPS(certFile, keyFile string, port int32, server *dex.Server) (*http
 	if err != nil {
 		return nil, err
 	}
-	host := fmt.Sprintf("localhost:%d", port)
+	host := fmt.Sprintf("127.0.0.1:%d", port)
 	listener, err := net.Listen("tcp", host)
 	if err != nil {
 		return nil, err
