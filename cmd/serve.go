@@ -10,7 +10,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -53,7 +52,6 @@ func init() {
 
 	serveCmd.PersistentFlags().StringVarP(&apiServerUrl, "apiServerURL", "l", "", "URL of the apiserver in the environment (https://host:port)")
 	serveCmd.PersistentFlags().StringVarP(&apiServerCa, "apiServerCA", "r", defaultApiServerCaPath, "(deprecated) path to the root certificate authorities for the apiserver in the environment")
-	serveCmd.PersistentFlags().BoolVar(&inCluster, "inCluster", false, "whether to find the cluster CA from the in-cluster service account or look it up from the api server remotely")
 }
 
 func checkCerts() {
@@ -69,8 +67,10 @@ func setApiServerCaDataFromFile() error {
 	var err error
 	apiServerCaData, err = util.ReadAndEncodeFile(apiServerCa)
 	if err != nil {
+		print("error in setting from file\n")
 		return err
 	}
+	print("success in setting from file\n")
 	return nil
 }
 
@@ -107,13 +107,9 @@ func setApiServerCaDataFromApi(clientset kubernetes.Interface) error {
 func computeApiServerCa(cmd *cobra.Command, args []string) error {
 	checkRequired(apiServerUrl, "apiServerUrl")
 	checkURL(apiServerUrl, "apiServerUrl")
-	if inCluster {
-		apiServerCa = defaultApiServerCaPath
-	}
 	if apiServerCa == defaultApiServerCaPath {
 		// We're running with an in-cluster secret; no need to faff around
-		// with the API.  Eventually the second half of the "or" will be
-		// removed once the deprecations are complete
+		// with the API
 		return setApiServerCaDataFromFile()
 	}
 	// Let's faff
@@ -123,16 +119,8 @@ func computeApiServerCa(cmd *cobra.Command, args []string) error {
 	}
 	err = setApiServerCaDataFromApi(cs)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			// Eventually we will deprecate this fallback code path (once the
-			// cluster-info configmap is fully rolled out to all clusters and
-			// the --apiServerCA arg is fully deprecated) and just do `if
-			// err != nil return err`
-			log.Infof("Cluster-info config map not found, falling back to %s", apiServerCa)
-			return setApiServerCaDataFromFile()
-		} else {
-			return err
-		}
+		log.Infof("Problem with clusterinfo configmap: %v.  Falling back to reading CA from file %s", err, apiServerCa)
+		return setApiServerCaDataFromFile()
 	}
 	return nil
 }
