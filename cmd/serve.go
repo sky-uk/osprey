@@ -18,14 +18,14 @@ import (
 
 const (
 	defaultGraceShutdownPeriod = 15 * time.Second
-	defaultApiServerCaPath     = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	defaultAPIServerCAPath     = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 )
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
 	Use:               "serve",
 	Short:             "Starts osprey server",
-	PersistentPreRunE: computeApiServerCa,
+	PersistentPreRunE: computeAPIServerCA,
 }
 
 var (
@@ -33,9 +33,9 @@ var (
 	tlsCert string
 	tlsKey  string
 
-	apiServerUrl        string
-	apiServerCa         string
-	apiServerCaData     string
+	apiServerURL        string
+	apiServerCA         string
+	apiServerCAData     string
 	inCluster           bool
 	shutdownGracePeriod time.Duration = 5 * time.Second
 )
@@ -50,8 +50,8 @@ func init() {
 	serveCmd.PersistentFlags().StringVarP(&tlsCert, "tls-cert", "C", "", "path to the x509 cert file to present when serving TLS")
 	serveCmd.PersistentFlags().StringVarP(&tlsKey, "tls-key", "K", "", "path to the private key for the TLS cert")
 
-	serveCmd.PersistentFlags().StringVarP(&apiServerUrl, "apiServerURL", "l", "", "URL of the apiserver in the environment (https://host:port)")
-	serveCmd.PersistentFlags().StringVarP(&apiServerCa, "apiServerCA", "r", defaultApiServerCaPath, "(deprecated) path to the root certificate authorities for the apiserver in the environment")
+	serveCmd.PersistentFlags().StringVarP(&apiServerURL, "apiServerURL", "l", "", "URL of the apiserver in the environment (https://host:port)")
+	serveCmd.PersistentFlags().StringVarP(&apiServerCA, "apiServerCA", "r", defaultAPIServerCAPath, "(deprecated) path to the root certificate authorities for the apiserver in the environment")
 }
 
 func checkCerts() {
@@ -62,10 +62,10 @@ func checkCerts() {
 	checkFile(issuerCA, "issuerCA")
 }
 
-func setApiServerCaDataFromFile() error {
-	checkFile(apiServerCa, "apiServerCa")
+func setAPIServerCADataFromFile() error {
+	checkFile(apiServerCA, "apiServerCa")
 	var err error
-	apiServerCaData, err = util.ReadAndEncodeFile(apiServerCa)
+	apiServerCAData, err = util.ReadAndEncodeFile(apiServerCA)
 	if err != nil {
 		print("error in setting from file\n")
 		return err
@@ -74,9 +74,9 @@ func setApiServerCaDataFromFile() error {
 	return nil
 }
 
-func getClientsetForUrl(serverUrl string) (*kubernetes.Clientset, error) {
+func getClientsetForURL(serverURL string) (*kubernetes.Clientset, error) {
 	kubeconfig := &rest.Config{
-		Host: apiServerUrl,
+		Host: apiServerURL,
 		TLSClientConfig: rest.TLSClientConfig{
 			Insecure: true,
 		},
@@ -88,8 +88,8 @@ func getClientsetForUrl(serverUrl string) (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func setApiServerCaDataFromApi(clientset kubernetes.Interface) error {
-	log.Infof("Attempting to read cluster-info map from %s", apiServerUrl)
+func setAPIServerCADataFromAPI(clientset kubernetes.Interface) error {
+	log.Infof("Attempting to read cluster-info map from %s", apiServerURL)
 	configmap, err := clientset.CoreV1().ConfigMaps("kube-public").Get(
 		context.TODO(), "cluster-info", metav1.GetOptions{},
 	)
@@ -100,27 +100,27 @@ func setApiServerCaDataFromApi(clientset kubernetes.Interface) error {
 	if err != nil {
 		return err
 	}
-	apiServerCaData = string(config.Clusters[""].CertificateAuthorityData)
+	apiServerCAData = string(config.Clusters[""].CertificateAuthorityData)
 	return nil
 }
 
-func computeApiServerCa(cmd *cobra.Command, args []string) error {
-	checkRequired(apiServerUrl, "apiServerUrl")
-	checkURL(apiServerUrl, "apiServerUrl")
-	if apiServerCa == defaultApiServerCaPath {
+func computeAPIServerCA(cmd *cobra.Command, args []string) error {
+	checkRequired(apiServerURL, "apiServerUrl")
+	checkURL(apiServerURL, "apiServerUrl")
+	if apiServerCA == defaultAPIServerCAPath {
 		// We're running with an in-cluster secret; no need to faff around
 		// with the API
-		return setApiServerCaDataFromFile()
+		return setAPIServerCADataFromFile()
 	}
 	// Let's faff
-	cs, err := getClientsetForUrl(apiServerUrl)
+	cs, err := getClientsetForURL(apiServerURL)
 	if err != nil {
 		return err
 	}
-	err = setApiServerCaDataFromApi(cs)
+	err = setAPIServerCADataFromAPI(cs)
 	if err != nil {
-		log.Infof("Problem with clusterinfo configmap: %v.  Falling back to reading CA from file %s", err, apiServerCa)
-		return setApiServerCaDataFromFile()
+		log.Infof("Problem with clusterinfo configmap: %v.  Falling back to reading CA from file %s", err, apiServerCA)
+		return setAPIServerCADataFromFile()
 	}
 	return nil
 }

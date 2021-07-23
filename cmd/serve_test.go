@@ -27,9 +27,9 @@ var _ = Describe("Serve command", func() {
 				f.Close()
 				defer os.Remove(f.Name())
 
-				apiServerCa = f.Name()
-				Expect(setApiServerCaDataFromFile()).To(Succeed())
-				Expect(apiServerCaData).To(Equal(base64.StdEncoding.EncodeToString(fileContents)))
+				apiServerCA = f.Name()
+				Expect(setAPIServerCADataFromFile()).To(Succeed())
+				Expect(apiServerCAData).To(Equal(base64.StdEncoding.EncodeToString(fileContents)))
 			})
 		})
 		Describe("setApiServerCaFromApi", func() {
@@ -54,8 +54,8 @@ var _ = Describe("Serve command", func() {
 					},
 				}, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(setApiServerCaDataFromApi(cs)).To(Succeed())
-				Expect(apiServerCaData).To(Equal("foobar"))
+				Expect(setAPIServerCADataFromAPI(cs)).To(Succeed())
+				Expect(apiServerCAData).To(Equal("foobar"))
 			})
 		})
 

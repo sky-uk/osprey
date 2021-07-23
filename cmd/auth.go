@@ -55,17 +55,17 @@ func auth(cmd *cobra.Command, args []string) {
 		log.Fatal("Failed to create http client")
 	}
 
-	serverConfig := osprey.OspreyServerConfig{
+	serverConfig := osprey.ServerConfig{
 		Environment:      environment,
 		Secret:           secret,
-		RedirectUrl:      redirectURL,
+		RedirectURL:      redirectURL,
 		IssuerHost:       issuerURL,
 		IssuerPath:       issuerPath,
-		ApiServerUrl:     apiServerUrl,
-		ApiServerCaData:  apiServerCaData,
-		IssuerCaData:     issuerCAData,
+		APIServerURL:     apiServerURL,
+		APIServerCAData:  apiServerCAData,
+		IssuerCAData:     issuerCAData,
 		ServeClusterInfo: serveClusterInfo,
-		HttpClient:       httpClient,
+		HTTPClient:       httpClient,
 	}
 	service, err = osprey.NewAuthenticationServer(serverConfig)
 	if err != nil {

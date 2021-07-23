@@ -19,9 +19,9 @@ func init() {
 
 func clusterInfo(cmd *cobra.Command, args []string) {
 	var service osprey.Osprey
-	serverConfig := osprey.OspreyServerConfig{
-		ApiServerUrl:    apiServerUrl,
-		ApiServerCaData: apiServerCaData,
+	serverConfig := osprey.ServerConfig{
+		APIServerURL:    apiServerURL,
+		APIServerCAData: apiServerCAData,
 	}
 	service, err := osprey.NewClusterInfoServer(serverConfig)
 	if err != nil {
