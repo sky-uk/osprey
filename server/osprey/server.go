@@ -56,9 +56,9 @@ type Osprey interface {
 	// Ready returns false if the oidcProvider has not been created
 	Ready(ctx context.Context) error
 
-	// AuthenticationEnabled FIXME
+	// AuthenticationEnabled indicates whether authentication is enabled
 	AuthenticationEnabled() bool
-	// ClusterInfoEnabled FIXME
+	// ClusterInfoEnabled indicates whenter cluster-info endpoint is enabled
 	ClusterInfoEnabled() bool
 }
 
