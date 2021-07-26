@@ -39,18 +39,18 @@ var _ = Describe("Server", func() {
 	}
 
 	Context("Start and stop osprey", func() {
-		Specify("With TLS", func() {
-			startLocalOsprey(true, false)
+		AfterEach(func() {
 			localOsprey.Stop()
 			localOsprey.AssertStoppedRunning()
 			localOsprey.AssertSuccess()
 		})
 
+		Specify("With TLS", func() {
+			startLocalOsprey(true, false)
+		})
+
 		Specify("Without TLS", func() {
 			startLocalOsprey(false, false)
-			localOsprey.Stop()
-			localOsprey.AssertStoppedRunning()
-			localOsprey.AssertSuccess()
 		})
 	})
 
