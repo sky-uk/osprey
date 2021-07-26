@@ -101,12 +101,10 @@ func (o *TestOsprey) buildArgs() []string {
 	if o.ClusterInfoOnly {
 		return []string{"serve", "cluster-info", "-X",
 			portFlag, apiServerURLFlag, apiServerCAFlag, tlsKeyFlag, tlsCertFlag}
-	} else {
-		return []string{"serve", "auth", "-X",
-			portFlag, envFlag, secretFlag, apiServerURLFlag, apiServerCAFlag, redirectURLFlag,
-			issuerURLFlag, issuerCAFlag, tlsKeyFlag, tlsCertFlag, serveClusterInfoFlag}
 	}
-
+	return []string{"serve", "auth", "-X",
+		portFlag, envFlag, secretFlag, apiServerURLFlag, apiServerCAFlag, redirectURLFlag,
+		issuerURLFlag, issuerCAFlag, tlsKeyFlag, tlsCertFlag, serveClusterInfoFlag}
 }
 
 // Stop stops the TestOsprey server.

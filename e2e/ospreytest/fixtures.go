@@ -136,7 +136,6 @@ func (o *TestOsprey) ToGroupClaims(authInfo *clientgo.AuthInfo) ([]string, error
 	return extractClaims(token)
 }
 
-// CallHealthcheck returns the current status of osprey's healthcheck as an http response and error
 func (o *TestOsprey) callEndpoint(endpoint string) (*http.Response, error) {
 	certData, _ := web.LoadTLSCert(o.CertFile)
 	httpClient, err := web.NewTLSClient(certData)
@@ -151,9 +150,12 @@ func (o *TestOsprey) callEndpoint(endpoint string) (*http.Response, error) {
 	return httpClient.Do(req)
 }
 
+// CallHealthcheck returns the current status of osprey's healthcheck as an http response and error
 func (o *TestOsprey) CallHealthcheck() (*http.Response, error) {
 	return o.callEndpoint("healthz")
 }
+
+// CallClusterInfo returns the cluster info endpoint result as an http response and error
 func (o *TestOsprey) CallClusterInfo() (*http.Response, error) {
 	return o.callEndpoint("cluster-info")
 }
