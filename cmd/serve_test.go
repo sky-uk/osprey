@@ -8,6 +8,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -16,24 +17,35 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+func createTempFile(contents string) string {
+	fileContents := []byte("foo")
+	f, err := ioutil.TempFile("", "server-ca-data-")
+	Expect(err).ToNot(HaveOccurred())
+	f.Write([]byte(fileContents))
+	f.Close()
+	return f.Name()
+}
+
+func dummyClientset(_ string) (kubernetes.Interface, error) {
+	Expect(false).To(Equal(true))
+	return nil, nil
+}
+
 var _ = Describe("Serve command", func() {
 	Describe("helper functions", func() {
-		Describe("setApiServerCaDataFromFile", func() {
-			It("should set the value of the variable according to the contents of the file", func() {
-				fileContents := []byte("foo")
-				f, err := ioutil.TempFile("", "server-ca-data-")
-				Expect(err).ToNot(HaveOccurred())
-				f.Write([]byte(fileContents))
-				f.Close()
-				defer os.Remove(f.Name())
-
-				apiServerCA = f.Name()
-				Expect(setAPIServerCADataFromFile()).To(Succeed())
-				Expect(apiServerCAData).To(Equal(base64.StdEncoding.EncodeToString(fileContents)))
+		Describe("computeApiServerCa", func() {
+			BeforeEach(func() {
+				apiServerURL = "http://example.com"
 			})
-		})
-		Describe("setApiServerCaFromApi", func() {
-			It("should set the data according to the api response", func() {
+			It("should use a file if told to do so", func() {
+				apiServerCASource = "file"
+				apiServerCA = createTempFile("foo")
+				defer os.Remove(apiServerCA)
+				Expect(computeAPIServerCA(dummyClientset)).To(Succeed())
+				Expect(apiServerCAData).To(Equal(base64.StdEncoding.EncodeToString([]byte("foo"))))
+			})
+			It("should use the configmap if told to do so", func() {
+				apiServerCASource = "config-map"
 				configBytes, err := clientcmd.Write(clientcmdapi.Config{
 					APIVersion: "v1",
 					Clusters: map[string]*clientcmdapi.Cluster{
@@ -54,28 +66,14 @@ var _ = Describe("Serve command", func() {
 					},
 				}, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(setAPIServerCADataFromAPI(cs)).To(Succeed())
+				Expect(computeAPIServerCA(func(_ string) (kubernetes.Interface, error) { return cs, nil })).To(Succeed())
 				Expect(apiServerCAData).To(Equal("foobar"))
 			})
-		})
 
-		Describe("computeApiServerCa", func() {
-			// FIXME: tricky because of the need to mock getClientsetForUrl
-			// It("should fallback to the file if configmap is not found", func() {
-			// 	// transitional behavior, will delete this test eventually
-			// 	cs := fake.NewSimpleClientset()
-			// 	fileContents := []byte("foo")
-			// 	f, err := ioutil.TempFile("", "server-ca-data-*")
-			// 	Expect(err).ToNot(HaveOccurred())
-			// 	f.Write([]byte(fileContents))
-			// 	f.Close()
-			// 	defer os.Remove(f.Name())
-
-			// 	apiServerCa = f.Name()
-			// 	apiServerUrl = "http://example.com"
-			// 	Expect(setApiServerCaDataFromApi(cs)).To(Succeed())
-			// 	Expect(apiServerCaData).To(Equal("foo"))
-			// })
+			It("should return an error if an unknown source is specified", func() {
+				apiServerCASource = "foo"
+				Expect(computeAPIServerCA(dummyClientset)).To(MatchError("apiServerCASource argument must be file, config-map, or in-cluster, but it was: foo"))
+			})
 		})
 	})
 })

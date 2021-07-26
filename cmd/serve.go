@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	util "github.com/sky-uk/osprey/common"
@@ -34,6 +35,7 @@ var (
 	tlsKey  string
 
 	apiServerURL        string
+	apiServerCASource   string
 	apiServerCA         string
 	apiServerCAData     string
 	inCluster           bool
@@ -51,7 +53,14 @@ func init() {
 	serveCmd.PersistentFlags().StringVarP(&tlsKey, "tls-key", "K", "", "path to the private key for the TLS cert")
 
 	serveCmd.PersistentFlags().StringVarP(&apiServerURL, "apiServerURL", "l", "", "URL of the apiserver in the environment (https://host:port)")
-	serveCmd.PersistentFlags().StringVarP(&apiServerCA, "apiServerCA", "r", defaultAPIServerCAPath, "(deprecated) path to the root certificate authorities for the apiserver in the environment")
+	serveCmd.PersistentFlags().StringVar(&apiServerCASource, "apiServerCASource", "file", `Where to read the API server CA from.
+Choices are:
+- file: from a file specified by the apiServerCA flag(the default behavior)
+- config-map: from the cluster-info public config map created by kubeadm
+- in-cluster: from the in-cluster service account token
+  (only if running in the same cluster it is serving)
+`)
+	serveCmd.PersistentFlags().StringVarP(&apiServerCA, "apiServerCA", "r", defaultAPIServerCAPath, "path to the root certificate authorities for the apiserver in the environment")
 }
 
 func checkCerts() {
@@ -62,7 +71,6 @@ func checkCerts() {
 }
 
 func setAPIServerCADataFromFile() error {
-	checkFile(apiServerCA, "apiServerCa")
 	var err error
 	apiServerCAData, err = util.ReadAndEncodeFile(apiServerCA)
 	if err != nil {
@@ -73,7 +81,7 @@ func setAPIServerCADataFromFile() error {
 	return nil
 }
 
-func getClientsetForURL(serverURL string) (*kubernetes.Clientset, error) {
+func getClientsetForURL(serverURL string) (kubernetes.Interface, error) {
 	kubeconfig := &rest.Config{
 		Host: apiServerURL,
 		TLSClientConfig: rest.TLSClientConfig{
@@ -103,30 +111,30 @@ func setAPIServerCADataFromAPI(clientset kubernetes.Interface) error {
 	return nil
 }
 
-func computeAPIServerCA() error {
+func computeAPIServerCA(getCs func(string) (kubernetes.Interface, error)) error {
 	checkRequired(apiServerURL, "apiServerUrl")
 	checkURL(apiServerURL, "apiServerUrl")
-	if apiServerCA == defaultAPIServerCAPath {
-		// We're running with an in-cluster secret; no need to faff around
-		// with the API
+	switch apiServerCASource {
+	case "file":
+		checkFile(apiServerCA, "apiServerCa")
 		return setAPIServerCADataFromFile()
-	}
-	// Let's faff
-	cs, err := getClientsetForURL(apiServerURL)
-	if err != nil {
-		return err
-	}
-	err = setAPIServerCADataFromAPI(cs)
-	if err != nil {
-		log.Infof("Problem with clusterinfo configmap: %v.  Falling back to reading CA from file %s", err, apiServerCA)
+	case "config-map":
+		cs, err := getCs(apiServerURL)
+		if err != nil {
+			return err
+		}
+		return setAPIServerCADataFromAPI(cs)
+	case "in-cluster":
+		apiServerCA = defaultAPIServerCAPath
 		return setAPIServerCADataFromFile()
+	default:
+		return fmt.Errorf("apiServerCASource argument must be file, config-map, or in-cluster, but it was: %s", apiServerCASource)
 	}
-	return nil
 }
 
 func serverPreRun(cmd *cobra.Command, args []string) error {
 	checkCerts()
-	return computeAPIServerCA()
+	return computeAPIServerCA(getClientsetForURL)
 }
 
 func startServer(osprey osprey.Osprey) {
