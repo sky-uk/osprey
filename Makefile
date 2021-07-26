@@ -24,10 +24,10 @@ else ifeq ("$(os)", "Darwin")
 	cross_os = linux
 endif
 
-.PHONY: all build check check-format check-os clean cross-compile docker format install lint prepare-release-binaries proto release-docker setup test vet
+.PHONY: all build check check-format check-os clean cross-compile docker format install lint prepare-release-bintray proto release-docker setup test vet
 
 all : check install test
-check : check-os check-format vet lint test
+check : check-os check-format vet lint
 travis : clean setup check build test cross-compile docker
 
 check-os:
@@ -39,7 +39,6 @@ setup:
 	@echo "== setup"
 	go get -u golang.org/x/lint/golint
 	go get -u golang.org/x/tools/cmd/goimports
-	go mod download
 
 format :
 	@echo "== format"
@@ -71,10 +70,11 @@ unformatted = $(shell goimports -l $(files))
 
 check-format :
 	@echo "== check formatting"
-	@if [ "`goimports -l $(files)`" != "" ]; then \
-		echo "code needs formatting. Run make format"; \
-		exit 1; \
-	fi;
+ifneq "$(unformatted)" ""
+	@echo "needs formatting:"
+	@echo "$(unformatted)" | tr ' ' '\n'
+	$(error run 'make format')
+endif
 
 vet :
 	@echo "== vet"
@@ -94,12 +94,38 @@ proto :
 	@echo "== compiling proto files"
 	@docker run -v `pwd`/common/pb:/pb -w / grpc/go:1.0 protoc -I /pb /pb/osprey.proto --go_out=plugins=grpc:pb
 
-# Deprecated alias
-prepare-release-bintray : prepare-release-binaries
-
-prepare-release-binaries :
-	@echo "No binary release strategy yet"
-	@exit 1
+prepare-release-bintray :
+ifeq ($(strip $(SKIP_PREPARE_RELEASE_BINTRAY)), )
+	@echo "== prepare bintray release"
+ifeq ($(strip $(git_tag)),)
+	@echo "no tag on $(git_rev), skipping bintray release"
+else
+	mkdir -p $(dist_dir)
+	sed 's/@version/$(git_tag)/g; s/@release_date/$(release_date)/g; s/@publish/$(BINTRAY_PUBLISH)/g' $(cwd)/.bintray.template > $(dist_dir)/bintray.json
+	@for distribution in `ls $(build_dir)`; do \
+		echo "== $$distribution"; \
+		release=$(dist_dir)/$(git_tag)/$$distribution; \
+		mkdir -p $$release; \
+		cd $(build_dir)/$$distribution; \
+		artifact=osprey; \
+		case $$distribution in \
+			windows*) \
+				cp osprey osprey.exe; \
+				artifact=$$artifact.zip; \
+				zip -9 $$artifact osprey.exe; \
+				;; \
+			*) \
+				artifact=$$artifact.tar.gz; \
+				tar -zcf `pwd`/$$artifact osprey; \
+				;; \
+		esac ;\
+		mv $$artifact $$release; \
+	done;
+	@echo
+	@echo artifacts:
+	@tree $(dist_dir)
+endif
+endif
 
 image := skycirrus/osprey
 
