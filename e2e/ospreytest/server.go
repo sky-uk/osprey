@@ -19,18 +19,19 @@ const ospreyBinary = "osprey"
 // TestOsprey represents an Osprey server instance used for testing.
 type TestOsprey struct {
 	clitest.AsyncTestCommand
-	Port         int32
-	Environment  string
-	APIServerURL string
-	APIServerCA  string
-	Secret       string
-	URL          string
-	IssuerURL    string
-	IssuerPath   string
-	IssuerCA     string
-	KeyFile      string
-	CertFile     string
-	TestDir      string
+	Port            int32
+	Environment     string
+	APIServerURL    string
+	APIServerCA     string
+	Secret          string
+	URL             string
+	IssuerURL       string
+	IssuerPath      string
+	IssuerCA        string
+	KeyFile         string
+	CertFile        string
+	TestDir         string
+	ClusterInfoOnly bool
 }
 
 // TestConfig represents an Osprey client configuration file used for testing.
@@ -44,14 +45,14 @@ type TestConfig struct {
 func StartOspreys(testDir string, dexes []*dextest.TestDex, portsFrom int32) ([]*TestOsprey, error) {
 	var servers []*TestOsprey
 	for i, dex := range dexes {
-		servers = append(servers, Start(testDir, true, portsFrom+int32(i), dex))
+		servers = append(servers, Start(testDir, true, false, portsFrom+int32(i), dex))
 	}
 	return servers, nil
 }
 
 // Start creates one Osprey test server for the dex Server.
 // Its directory will be testDir/dex.Environment
-func Start(testDir string, useTLS bool, port int32, dex *dextest.TestDex) *TestOsprey {
+func Start(testDir string, useTLS, clusterInfoOnly bool, port int32, dex *dextest.TestDex) *TestOsprey {
 	ospreyDir := fmt.Sprintf("%s/%s", testDir, dex.Environment)
 	serverDir := filepath.Join(ospreyDir, "osprey")
 	ospreyCert, ospreyKey := ssltest.CreateCertificates("localhost", serverDir)
@@ -62,15 +63,16 @@ func Start(testDir string, useTLS bool, port int32, dex *dextest.TestDex) *TestO
 	apiServerURL := fmt.Sprintf("https://%s", apiServerCN)
 	issuerHost := dex.URL()
 	server := &TestOsprey{
-		Port:         port,
-		Environment:  dex.Environment,
-		Secret:       ospreySecret,
-		APIServerURL: apiServerURL,
-		APIServerCA:  apiServerCert,
-		URL:          ospreyURL,
-		IssuerURL:    issuerHost,
-		IssuerCA:     dex.DexCA,
-		TestDir:      serverDir,
+		Port:            port,
+		Environment:     dex.Environment,
+		Secret:          ospreySecret,
+		APIServerURL:    apiServerURL,
+		APIServerCA:     apiServerCert,
+		URL:             ospreyURL,
+		IssuerURL:       issuerHost,
+		IssuerCA:        dex.DexCA,
+		TestDir:         serverDir,
+		ClusterInfoOnly: clusterInfoOnly,
 	}
 	if useTLS {
 		server.KeyFile = ospreyKey
@@ -96,9 +98,15 @@ func (o *TestOsprey) buildArgs() []string {
 	tlsKeyFlag := "--tls-key=" + o.KeyFile
 	tlsCertFlag := "--tls-cert=" + o.CertFile
 	serveClusterInfoFlag := "--serve-cluster-info=true"
-	return []string{"serve", "auth", "-X",
-		portFlag, envFlag, secretFlag, apiServerURLFlag, apiServerCAFlag, redirectURLFlag,
-		issuerURLFlag, issuerCAFlag, tlsKeyFlag, tlsCertFlag, serveClusterInfoFlag}
+	if o.ClusterInfoOnly {
+		return []string{"serve", "cluster-info", "-X",
+			portFlag, apiServerURLFlag, apiServerCAFlag, tlsKeyFlag, tlsCertFlag}
+	} else {
+		return []string{"serve", "auth", "-X",
+			portFlag, envFlag, secretFlag, apiServerURLFlag, apiServerCAFlag, redirectURLFlag,
+			issuerURLFlag, issuerCAFlag, tlsKeyFlag, tlsCertFlag, serveClusterInfoFlag}
+	}
+
 }
 
 // Stop stops the TestOsprey server.

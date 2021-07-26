@@ -77,6 +77,7 @@ func NewAuthenticationServer(config ServerConfig) (Osprey, error) {
 
 // NewClusterInfoServer returns a new osprey server for use when serving cluster-info only
 func NewClusterInfoServer(config ServerConfig) (Osprey, error) {
+	config.ServeClusterInfo = true
 	return &osprey{
 		authenticationEnabled: false,
 		ServerConfig:          config,

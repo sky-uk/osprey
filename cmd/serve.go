@@ -25,7 +25,7 @@ const (
 var serveCmd = &cobra.Command{
 	Use:               "serve",
 	Short:             "Starts osprey server",
-	PersistentPreRunE: computeAPIServerCA,
+	PersistentPreRunE: serverPreRun,
 }
 
 var (
@@ -59,7 +59,6 @@ func checkCerts() {
 		checkFile(tlsCert, "tlsCert")
 		checkFile(tlsKey, "tlsKey")
 	}
-	checkFile(issuerCA, "issuerCA")
 }
 
 func setAPIServerCADataFromFile() error {
@@ -104,7 +103,7 @@ func setAPIServerCADataFromAPI(clientset kubernetes.Interface) error {
 	return nil
 }
 
-func computeAPIServerCA(cmd *cobra.Command, args []string) error {
+func computeAPIServerCA() error {
 	checkRequired(apiServerURL, "apiServerUrl")
 	checkURL(apiServerURL, "apiServerUrl")
 	if apiServerCA == defaultAPIServerCAPath {
@@ -123,6 +122,11 @@ func computeAPIServerCA(cmd *cobra.Command, args []string) error {
 		return setAPIServerCADataFromFile()
 	}
 	return nil
+}
+
+func serverPreRun(cmd *cobra.Command, args []string) error {
+	checkCerts()
+	return computeAPIServerCA()
 }
 
 func startServer(osprey osprey.Osprey) {

@@ -32,25 +32,25 @@ var _ = Describe("Server", func() {
 		dextest.Stop(localDex)
 	})
 
-	startLocalOsprey := func(useTLS bool) {
-		localOsprey = ospreytest.Start(testDir, useTLS, ospreyPort, localDex)
+	startLocalOsprey := func(useTLS, clusterInfo bool) {
+		localOsprey = ospreytest.Start(testDir, useTLS, clusterInfo, ospreyPort, localDex)
 		time.Sleep(100 * time.Millisecond)
 		localOsprey.AssertStillRunning()
 	}
 
 	Context("Start and stop osprey", func() {
-		AfterEach(func() {
+		Specify("With TLS", func() {
+			startLocalOsprey(true, false)
 			localOsprey.Stop()
 			localOsprey.AssertStoppedRunning()
 			localOsprey.AssertSuccess()
 		})
 
-		Specify("With TLS", func() {
-			startLocalOsprey(true)
-		})
-
 		Specify("Without TLS", func() {
-			startLocalOsprey(false)
+			startLocalOsprey(false, false)
+			localOsprey.Stop()
+			localOsprey.AssertStoppedRunning()
+			localOsprey.AssertSuccess()
 		})
 	})
 
@@ -62,7 +62,7 @@ var _ = Describe("Server", func() {
 		})
 
 		It("Should return ok when healthy", func() {
-			startLocalOsprey(true)
+			startLocalOsprey(true, false)
 
 			resp, err := localOsprey.CallHealthcheck()
 
@@ -73,7 +73,7 @@ var _ = Describe("Server", func() {
 		It("Should return unavailable when dex not started", func() {
 			dextest.Stop(localDex)
 
-			startLocalOsprey(true)
+			startLocalOsprey(true, false)
 
 			resp, err := localOsprey.CallHealthcheck()
 
@@ -84,7 +84,7 @@ var _ = Describe("Server", func() {
 		It("Should return available when dex is up", func() {
 			By("Dex not started")
 			dextest.Stop(localDex)
-			startLocalOsprey(true)
+			startLocalOsprey(true, false)
 
 			resp, err := localOsprey.CallHealthcheck()
 			Expect(err).To(BeNil(), "called healthcheck")
@@ -99,6 +99,30 @@ var _ = Describe("Server", func() {
 			resp, err = localOsprey.CallHealthcheck()
 
 			localOsprey.PrintOutput()
+			Expect(err).To(BeNil(), "called healthcheck")
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+	})
+
+	Context("cluster-info server", func() {
+		BeforeEach(func() {
+			startLocalOsprey(true, true)
+		})
+		AfterEach(func() {
+			localOsprey.Stop()
+			localOsprey.AssertStoppedRunning()
+			localOsprey.AssertSuccess()
+		})
+
+		It("should respond to the healthcheck", func() {
+			resp, err := localOsprey.CallHealthcheck()
+
+			Expect(err).To(BeNil(), "called healthcheck")
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+		It("should respond to the cluster-info endpoint", func() {
+			resp, err := localOsprey.CallHealthcheck()
+
 			Expect(err).To(BeNil(), "called healthcheck")
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		})

@@ -80,7 +80,7 @@ func checkServeAuthParams(cmd *cobra.Command, args []string) {
 	checkRequired(issuerURL, "issuerURL")
 	checkRequired(issuerCA, "issuerCA")
 	checkRequired(redirectURL, "redirectURL")
+	checkFile(issuerCA, "issuerCA")
 	checkURL(issuerURL, "issuerURL")
 	checkURL(redirectURL, "redirectURL")
-	checkCerts()
 }
