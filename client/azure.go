@@ -142,7 +142,7 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 	}
 
 	var client = &http.Client{}
-	client, err := web.NewTLSClient(target.CertificateAuthorityData())
+	client, err := web.NewTLSClient(false, target.CertificateAuthorityData())
 	if err != nil {
 		return nil, fmt.Errorf("unable to create TLS client: %v", err)
 	}

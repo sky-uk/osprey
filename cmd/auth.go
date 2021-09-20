@@ -48,7 +48,7 @@ func init() {
 
 func auth(cmd *cobra.Command, args []string) {
 	var service osprey.Osprey
-	httpClient, err := webClient.NewTLSClient()
+	httpClient, err := webClient.NewTLSClient(false)
 	issuerCAData, err := webClient.LoadTLSCert(issuerCA)
 	if err != nil {
 		log.Fatalf("Failed to load issuerCA: %v", err)
@@ -59,7 +59,7 @@ func auth(cmd *cobra.Command, args []string) {
 		log.Fatalf("Failed to load tls-cert: %v", err)
 	}
 
-	httpClient, err = webClient.NewTLSClient(issuerCAData, tlsCertData)
+	httpClient, err = webClient.NewTLSClient(false, issuerCAData, tlsCertData)
 	if err != nil {
 		log.Fatal("Failed to create http client")
 	}
