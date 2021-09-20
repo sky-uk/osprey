@@ -126,6 +126,7 @@ func (c *asyncCommandWrapper) AssertSuccess() {
 }
 
 func (c *asyncCommandWrapper) EventuallyAssertSuccess(timeoutDuration, pollingInterval time.Duration) {
+	c.finishedFlag.Wait()
 	assertNoExitError(c.GetOutput(), c.error)
 	gomega.Eventually(func() bool {
 		c.Lock()
