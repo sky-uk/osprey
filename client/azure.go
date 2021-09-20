@@ -29,13 +29,14 @@ type AzureConfig struct {
 	ClientID string `yaml:"client-id,omitempty"`
 	// ClientSecret is the oidc client secret used for osprey
 	ClientSecret string `yaml:"client-secret,omitempty"`
-	// RedirectURI is the redirect URI that the oidc application is configured to call back to
+	// CertificateAuthority is the filesystem path from which to read the CA certificate
 	CertificateAuthority string `yaml:"certificate-authority,omitempty"`
 	// CertificateAuthorityData is base64-encoded CA cert data.
 	// This will override any cert file specified in CertificateAuthority.
 	// +optional
 	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
-	RedirectURI              string `yaml:"redirect-uri,omitempty"`
+	// RedirectURI is the redirect URI that the oidc application is configured to call back to
+	RedirectURI string `yaml:"redirect-uri,omitempty"`
 	// Scopes is the list of scopes to request when performing the oidc login request
 	Scopes []string `yaml:"scopes"`
 	// AzureTenantID is the Azure Tenant ID assigned to your organisation
