@@ -32,6 +32,17 @@ func (m *Target) Server() string {
 	return m.targetEntry.Server
 }
 
+// APIServer returns the API server of the Target
+func (m *Target) APIServer() string {
+	return m.targetEntry.APIServer
+}
+
+// ShouldFetchCAFromAPIServer returns true iff the CA should be fetched from the kube-public ConfigMap
+// instead of the other methods (e.g. inline in Osprey config file or from Osprey server)
+func (m *Target) ShouldFetchCAFromAPIServer() bool {
+	return m.targetEntry.APIServer != ""
+}
+
 // ProviderType returns the authentication provider of the Target
 func (m *Target) ProviderType() string {
 	return m.providerType

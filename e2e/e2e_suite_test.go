@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/sky-uk/osprey/e2e/apiservertest"
+
 	"github.com/sky-uk/osprey/e2e/oidctest"
 
 	. "github.com/onsi/ginkgo"
@@ -23,6 +25,7 @@ func TestOspreySuite(t *testing.T) {
 const (
 	dexPortsFrom       = int32(11980)
 	ospreyPortsFrom    = int32(12980)
+	apiServerPort      = int32(13080)
 	azureProviderName  = "azure"
 	ospreyProviderName = "osprey"
 )
@@ -42,6 +45,7 @@ var (
 	dexes          []*dextest.TestDex
 	ldapServer     *ldaptest.TestLDAP
 	oidcTestServer oidctest.Server
+	apiTestServer  apiservertest.Server
 	testDir        string
 
 	// Suite variables modifiable per test scenario
@@ -53,6 +57,7 @@ var (
 	defaultGroup      string
 	targetGroup       string
 	targetGroupFlag   string
+	apiServerURL      string
 )
 
 var _ = BeforeSuite(func() {
@@ -76,6 +81,9 @@ var _ = BeforeSuite(func() {
 	ospreys, err = ospreytest.StartOspreys(testDir, dexes, ospreyPortsFrom)
 	Expect(err).To(BeNil(), "Starts the osprey servers")
 
+	apiTestServer, err = apiservertest.Start("localhost", apiServerPort)
+	Expect(err).To(BeNil(), "Starts the mock API server")
+
 	oidcTestServer, err = oidctest.Start("localhost", oidcPort)
 	Expect(err).To(BeNil(), "Starts the mock oidc server")
 })
@@ -88,12 +96,13 @@ var _ = AfterSuite(func() {
 		dextest.Stop(aDex)
 	}
 	oidcTestServer.Stop()
+	apiTestServer.Stop()
 	ldaptest.Stop(ldapServer)
 	os.RemoveAll(testDir)
 })
 
-func setupClientForEnvironments(providerName string, envs map[string][]string, clientID string) {
-	ospreyconfig, err = ospreytest.BuildConfig(testDir, providerName, defaultGroup, envs, ospreys, clientID)
+func setupClientForEnvironments(providerName string, envs map[string][]string, clientID, apiServerURL string) {
+	ospreyconfig, err = ospreytest.BuildConfig(testDir, providerName, defaultGroup, envs, ospreys, clientID, apiServerURL)
 	Expect(err).To(BeNil(), "Creates the osprey config with groups")
 	ospreyconfigFlag = "--ospreyconfig=" + ospreyconfig.ConfigFile
 
@@ -112,6 +121,7 @@ func resetDefaults() {
 	defaultGroup = ""
 	targetGroup = ""
 	targetGroupFlag = ""
+	apiServerURL = ""
 }
 
 func cleanup() {

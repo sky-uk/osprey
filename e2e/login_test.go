@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"fmt"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -19,7 +20,7 @@ var _ = Describe("Login", func() {
 	})
 
 	JustBeforeEach(func() {
-		setupClientForEnvironments(ospreyProviderName, environmentsToUse, "")
+		setupClientForEnvironments(ospreyProviderName, environmentsToUse, "", "")
 		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag, "--disable-browser-popup")
 	})
 
@@ -42,7 +43,7 @@ var _ = Describe("Login", func() {
 	})
 
 	It("logs in with certificate-authority-data", func() {
-		caDataConfig, err := BuildCADataConfig(testDir, ospreyProviderName, ospreys, true, "", "")
+		caDataConfig, err := BuildCADataConfig(testDir, ospreyProviderName, ospreys, true, "", "", "")
 		Expect(err).To(BeNil(), "Creates the osprey config")
 		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
 		caDataLogin := Login("user", "login", caDataConfigFlag)
@@ -51,12 +52,23 @@ var _ = Describe("Login", func() {
 	})
 
 	It("logs in overriding certificate-authority with certificate-authority-data", func() {
-		caDataConfig, err := BuildCADataConfig(testDir, ospreyProviderName, ospreys, true, dexes[0].DexCA, "")
+		caDataConfig, err := BuildCADataConfig(testDir, ospreyProviderName, ospreys, true, dexes[0].DexCA, "", "")
 		Expect(err).To(BeNil(), "Creates the osprey config")
 		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
 		caDataLogin := Login("user", "login", caDataConfigFlag)
 
 		caDataLogin.LoginAndAssertSuccess("jane", "foo")
+	})
+
+	It("does not allow fetching CA from API Server for Osprey targets", func() {
+		caDataConfig, err := BuildCADataConfig(testDir, ospreyProviderName, ospreys, true,
+			dexes[0].DexCA, "", fmt.Sprintf("http://localhost:%d", apiServerPort))
+		Expect(err).To(BeNil(), "Creates the osprey config")
+		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
+		caDataLogin := Login("user", "login", caDataConfigFlag)
+
+		caDataLogin.LoginAndAssertFailure("jane", "foo")
+		Expect(caDataLogin.GetOutput()).To(ContainSubstring("Osprey targets may not fetch the CA from the API Server"))
 	})
 
 	Context("kubeconfig file", func() {

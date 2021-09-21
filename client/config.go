@@ -33,7 +33,11 @@ type Providers struct {
 // TargetEntry contains information about how to communicate with an osprey server
 type TargetEntry struct {
 	// Server is the address of the osprey server (hostname:port).
+	// +optional
 	Server string `yaml:"server,omitempty"`
+	// APIServer is the address of the API server (hostname:port).
+	// +optional
+	APIServer string `yaml:"api-server,omitempty"`
 	// CertificateAuthority is the path to a cert file for the certificate authority.
 	// +optional
 	CertificateAuthority string `yaml:"certificate-authority,omitempty"`

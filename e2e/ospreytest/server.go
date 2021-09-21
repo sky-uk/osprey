@@ -116,22 +116,28 @@ func Stop(server *TestOsprey) error {
 
 // BuildConfig creates an ospreyconfig file using the groups provided for the targets.
 // It uses testDir as the home for the .kube and .osprey folders.
-func BuildConfig(testDir, providerName, defaultGroup string, targetGroups map[string][]string, servers []*TestOsprey, clientID string) (*TestConfig, error) {
-	return BuildFullConfig(testDir, providerName, defaultGroup, targetGroups, servers, false, "", clientID)
+func BuildConfig(testDir, providerName, defaultGroup string, targetGroups map[string][]string,
+	servers []*TestOsprey, clientID, apiServerURL string) (*TestConfig, error) {
+	return BuildFullConfig(testDir, providerName, defaultGroup, targetGroups, servers,
+		false, "", clientID, apiServerURL)
 }
 
 // BuildCADataConfig creates an ospreyconfig file with as many targets as servers are provided.
 // It uses testDir as the home for the .kube and .osprey folders.
 // It also base64 encodes the CA data instead of using the file path.
-func BuildCADataConfig(testDir, providerName string, servers []*TestOsprey, caData bool, caPath string, clientID string) (*TestConfig, error) {
-	return BuildFullConfig(testDir, providerName, "", map[string][]string{}, servers, caData, caPath, clientID)
+func BuildCADataConfig(testDir, providerName string, servers []*TestOsprey,
+	caData bool, caPath, clientID, apiServerURL string) (*TestConfig, error) {
+	return BuildFullConfig(testDir, providerName, "", map[string][]string{}, servers,
+		caData, caPath, clientID, apiServerURL)
 }
 
 // BuildFullConfig creates an ospreyconfig file with as many targets as servers are provided. The targets will contain
 // the groups that have been specified.
 // It uses testDir as the home for the .kube and .osprey folders.
 // If caData is true, it base64 encodes the CA data instead of using the file path.
-func BuildFullConfig(testDir, providerName, defaultGroup string, targetGroups map[string][]string, servers []*TestOsprey, caData bool, caPath string, clientID string) (*TestConfig, error) {
+func BuildFullConfig(testDir, providerName, defaultGroup string,
+	targetGroups map[string][]string, servers []*TestOsprey,
+	caData bool, caPath, clientID, apiServerURL string) (*TestConfig, error) {
 	config := client.NewConfig()
 	config.Kubeconfig = fmt.Sprintf("%s/.kube/config", testDir)
 	ospreyconfigFile := fmt.Sprintf("%s/.osprey/config", testDir)
@@ -149,8 +155,14 @@ func BuildFullConfig(testDir, providerName, defaultGroup string, targetGroups ma
 		targetName := osprey.OspreyconfigTargetName()
 
 		target := &client.TargetEntry{
-			Server:  osprey.URL,
 			Aliases: []string{osprey.OspreyconfigAliasName()},
+		}
+
+		shouldFetchCAFromAPIServer := apiServerURL != ""
+		if shouldFetchCAFromAPIServer {
+			target.APIServer = apiServerURL
+		} else {
+			target.Server = osprey.URL
 		}
 
 		if caData {

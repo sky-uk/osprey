@@ -2,8 +2,11 @@ package client
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -141,30 +144,79 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 		r.accessToken = oauthToken.AccessToken
 	}
 
-	var client = &http.Client{}
-	client, err := web.NewTLSClient(false, target.CertificateAuthorityData())
-	if err != nil {
-		return nil, fmt.Errorf("unable to create TLS client: %v", err)
-	}
+	var apiServerURL, apiServerCA string
 
-	req, err := createClusterInfoRequest(target.Server())
-	if err != nil {
-		return nil, fmt.Errorf("unable to create cluster-info request: %v", err)
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve cluster-info: %v", err)
-	}
-	clusterInfo, err := pb.ConsumeClusterInfoResponse(resp)
-	if err != nil {
-		return nil, err
+	if target.ShouldFetchCAFromAPIServer() {
+		tlsClient, err := web.NewTLSClient(true)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create TLS client: %v", err)
+		}
+		req, err := createCAConfigMapRequest(target.APIServer())
+		if err != nil {
+			return nil, fmt.Errorf("unable to create API Server request for CA ConfigMap: %v", err)
+		}
+		resp, err := tlsClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve CA from API Server endpoint: %v", err)
+		}
+		caConfigMap, err := r.consumeCAConfigMapResponse(resp)
+		if err != nil {
+			return nil, err
+		}
+		apiServerURL = target.APIServer()
+		apiServerCA = base64.StdEncoding.EncodeToString([]byte(caConfigMap.Data.CACertData))
+
+	} else {
+		tlsClient, err := web.NewTLSClient(false, target.CertificateAuthorityData())
+		if err != nil {
+			return nil, fmt.Errorf("unable to create TLS client: %v", err)
+		}
+
+		req, err := createClusterInfoRequest(target.Server())
+		if err != nil {
+			return nil, fmt.Errorf("unable to create cluster-info request: %v", err)
+		}
+		resp, err := tlsClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve cluster-info: %v", err)
+		}
+		clusterInfo, err := pb.ConsumeClusterInfoResponse(resp)
+		if err != nil {
+			return nil, err
+		}
+		apiServerURL = clusterInfo.Cluster.ApiServerURL
+		apiServerCA = clusterInfo.Cluster.ApiServerCA
 	}
 
 	return &TargetInfo{
 		AccessToken:         r.accessToken,
-		ClusterAPIServerURL: clusterInfo.Cluster.ApiServerURL,
-		ClusterCA:           clusterInfo.Cluster.ApiServerCA,
+		ClusterAPIServerURL: apiServerURL,
+		ClusterCA:           apiServerCA,
 	}, nil
+}
+
+type configMap struct {
+	Data configMapData `json:"data"`
+}
+type configMapData struct {
+	CACertData string `json:"ca.crt"`
+}
+
+func (r *azureRetriever) consumeCAConfigMapResponse(response *http.Response) (*configMap, error) {
+	data, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read CA response from API Server: %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode == http.StatusOK {
+		var configMap = &configMap{}
+		err := json.Unmarshal(data, configMap)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse response: %v", err)
+		}
+		return configMap, nil
+	}
+	return nil, fmt.Errorf("error fetching CA ConfigMap from API Server: %s", response.Status)
 }
 
 func (r *azureRetriever) GetAuthInfo(config *api.Config, target Target) *api.AuthInfo {

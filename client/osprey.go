@@ -35,6 +35,9 @@ func (oc *OspreyConfig) ValidateConfig() error {
 		return errors.New("at least one target server should be present for osprey")
 	}
 	for name, target := range oc.Targets {
+		if target.APIServer != "" {
+			return fmt.Errorf("%s: Osprey targets may not fetch the CA from the API Server", name)
+		}
 		if target.Server == "" {
 			return fmt.Errorf("%s's server is required for osprey targets", name)
 		}
@@ -162,6 +165,17 @@ func createClusterInfoRequest(host string) (*http.Request, error) {
 		return nil, fmt.Errorf("unable to create cluster-info request: %v", err)
 	}
 	req.Header.Add("Accept", "application/octet-stream")
+
+	return req, nil
+}
+
+func createCAConfigMapRequest(host string) (*http.Request, error) {
+	url := fmt.Sprintf("%s/api/v1/namespaces/kube-public/configmaps/kube-root-ca.crt", host)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create CA ConfigMap request: %v", err)
+	}
+	req.Header.Add("Accept", "application/json")
 
 	return req, nil
 }
