@@ -1,3 +1,8 @@
+# Release 2.5.0
+- Add ability for osprey client to fetch the API server CA from the API server itself,
+  rather than needing an osprey server deployment to serve it. See the Kubernetes feature
+  gate RootCAConfigMap introduced in v1.13, which became enabled by default in 1.20.
+
 # Release 2.4.0
 - Add username/password command line options for Osprey login
 
