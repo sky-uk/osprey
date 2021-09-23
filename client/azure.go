@@ -147,7 +147,7 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 	var apiServerURL, apiServerCA string
 
 	if target.ShouldFetchCAFromAPIServer() {
-		tlsClient, err := web.NewTLSClient(true)
+		tlsClient, err := web.NewTLSClient()
 		if err != nil {
 			return nil, fmt.Errorf("unable to create TLS client: %v", err)
 		}
@@ -167,7 +167,7 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 		apiServerCA = base64.StdEncoding.EncodeToString([]byte(caConfigMap.Data.CACertData))
 
 	} else {
-		tlsClient, err := web.NewTLSClient(false, target.CertificateAuthorityData())
+		tlsClient, err := web.NewTLSClient(target.CertificateAuthorityData())
 		if err != nil {
 			return nil, fmt.Errorf("unable to create TLS client: %v", err)
 		}

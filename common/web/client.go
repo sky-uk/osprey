@@ -28,15 +28,15 @@ func LoadTLSCert(path string) (string, error) {
 
 // NewTLSClient creates a new http.Client configured for TLS. It uses the system
 // certs by default if possible and appends all of the provided certs.
-func NewTLSClient(skipVerify bool, certs ...string) (*http.Client, error) {
+func NewTLSClient(caCerts ...string) (*http.Client, error) {
 	certPool, err := x509.SystemCertPool()
 	if err != nil {
-		if len(certs) == 0 {
+		if len(caCerts) == 0 {
 			return nil, fmt.Errorf("no CA certs specified and could not load the system's CA certs: %v", err)
 		}
 		certPool = x509.NewCertPool()
 	}
-	for _, ca := range certs {
+	for _, ca := range caCerts {
 		if ca != "" {
 			serverCA, err := base64.StdEncoding.DecodeString(ca)
 			if err != nil {
@@ -49,6 +49,7 @@ func NewTLSClient(skipVerify bool, certs ...string) (*http.Client, error) {
 		}
 	}
 
+	skipVerify := len(caCerts) == 0
 	tlsConfig := &tls.Config{RootCAs: certPool, InsecureSkipVerify: skipVerify}
 
 	return &http.Client{
