@@ -46,7 +46,7 @@ type tokenResponse struct {
 func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Duration, disableBrowserPopup bool) (*oauth2.Token, error) {
 	redirectURL, err := url.Parse(c.oAuthConfig.RedirectURL)
 	if err != nil {
-		log.Fatalf("Unable to parse oidc redirect uri: %e", err)
+		log.Fatalf("pa OIDC redirect uri: %e", err)
 	}
 
 	authURL := c.oAuthConfig.AuthCodeURL(ospreyState)
@@ -95,7 +95,7 @@ func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Dur
 		_ = h.Shutdown(ctx)
 		return nil, fmt.Errorf("exceeded login deadline")
 	case err := <-ch:
-		return nil, fmt.Errorf("unable to start local call-back webserver %v", err)
+		return nil, fmt.Errorf("starting local call-back webserver %w", err)
 	case resp := <-c.stopChan:
 		_ = h.Shutdown(ctx)
 		if resp.responseError != nil {
@@ -120,7 +120,7 @@ func (c *Client) handleRedirectURI(ctx context.Context) http.HandlerFunc {
 
 		oauth2Token, err := c.doAuthRequest(ctx, r)
 		if err != nil {
-			err := fmt.Errorf("failed to exchange token: %v", err)
+			err := fmt.Errorf("exchanging token: %w", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			c.stopChan <- tokenResponse{
 				nil,

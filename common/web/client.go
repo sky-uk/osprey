@@ -20,7 +20,7 @@ func LoadTLSCert(path string) (string, error) {
 	}
 	fileData, err := ioutil.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to read certificate file %q: %v", path, err)
+		return "", fmt.Errorf("reading certificate file %q: %w", path, err)
 	}
 	certData := base64.StdEncoding.EncodeToString(fileData)
 	return certData, nil
@@ -32,7 +32,7 @@ func NewTLSClient(caCerts ...string) (*http.Client, error) {
 	certPool, err := x509.SystemCertPool()
 	if err != nil {
 		if len(caCerts) == 0 {
-			return nil, fmt.Errorf("no CA certs specified and could not load the system's CA certs: %v", err)
+			return nil, fmt.Errorf("no CA certs specified and could not load the system's CA certs: %w", err)
 		}
 		certPool = x509.NewCertPool()
 	}
@@ -40,7 +40,7 @@ func NewTLSClient(caCerts ...string) (*http.Client, error) {
 		if ca != "" {
 			serverCA, err := base64.StdEncoding.DecodeString(ca)
 			if err != nil {
-				return nil, fmt.Errorf("failed to decode CA data: %v", err)
+				return nil, fmt.Errorf("decoding CA data: %w", err)
 			}
 
 			if !certPool.AppendCertsFromPEM(serverCA) {

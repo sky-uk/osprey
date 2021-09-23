@@ -166,7 +166,7 @@ func handleResponse(w http.ResponseWriter, response proto.Message, err error) {
 			_, err = w.Write(data)
 			return
 		}
-		errMsg := fmt.Sprintf("Failed to marshal success response: %v", err)
+		errMsg := fmt.Sprintf("marshalling success response: %v", err)
 		log.Error(errMsg)
 		err = status.Error(codes.Internal, errMsg)
 	}
