@@ -203,14 +203,15 @@ type configMapData struct {
 }
 
 func (r *azureRetriever) consumeCAConfigMapResponse(response *http.Response) (*configMap, error) {
-	data, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, fmt.Errorf("reading CA response from API Server: %w", err)
-	}
-	defer response.Body.Close()
 	if response.StatusCode == http.StatusOK {
+		data, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, fmt.Errorf("reading CA response from API Server: %w", err)
+		}
+		defer response.Body.Close()
+
 		var configMap = &configMap{}
-		err := json.Unmarshal(data, configMap)
+		err = json.Unmarshal(data, configMap)
 		if err != nil {
 			return nil, fmt.Errorf("parsing CA response from API Server: %w", err)
 		}
