@@ -2,8 +2,11 @@ package client
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -29,13 +32,14 @@ type AzureConfig struct {
 	ClientID string `yaml:"client-id,omitempty"`
 	// ClientSecret is the oidc client secret used for osprey
 	ClientSecret string `yaml:"client-secret,omitempty"`
-	// RedirectURI is the redirect URI that the oidc application is configured to call back to
+	// CertificateAuthority is the filesystem path from which to read the CA certificate
 	CertificateAuthority string `yaml:"certificate-authority,omitempty"`
 	// CertificateAuthorityData is base64-encoded CA cert data.
 	// This will override any cert file specified in CertificateAuthority.
 	// +optional
 	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
-	RedirectURI              string `yaml:"redirect-uri,omitempty"`
+	// RedirectURI is the redirect URI that the oidc application is configured to call back to
+	RedirectURI string `yaml:"redirect-uri,omitempty"`
 	// Scopes is the list of scopes to request when performing the oidc login request
 	Scopes []string `yaml:"scopes"`
 	// AzureTenantID is the Azure Tenant ID assigned to your organisation
@@ -83,7 +87,7 @@ func NewAzureRetriever(provider *AzureConfig, options RetrieverOptions) (Retriev
 
 	oidcEndpoint, err := oidc.GetWellKnownConfig(provider.IssuerURL)
 	if err != nil {
-		return nil, fmt.Errorf("unable to query well-known oidc config: %v", err)
+		return nil, fmt.Errorf("unable to query well-known oidc config: %w", err)
 	}
 	config.Endpoint = *oidcEndpoint
 	retriever := &azureRetriever{
@@ -110,7 +114,7 @@ type azureRetriever struct {
 func (r *azureRetriever) RetrieveUserDetails(target Target, authInfo api.AuthInfo) (*UserInfo, error) {
 	jwt, err := jws.ParseJWT([]byte(authInfo.Token))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse user token for %s: %v", target.Name(), err)
+		return nil, fmt.Errorf("failed to parse user token for %s: %w", target.Name(), err)
 	}
 
 	if jwt.Claims().Get("unique_name") != nil {
@@ -140,30 +144,79 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 		r.accessToken = oauthToken.AccessToken
 	}
 
-	var client = &http.Client{}
-	client, err := web.NewTLSClient(target.CertificateAuthorityData())
-	if err != nil {
-		return nil, fmt.Errorf("unable to create TLS client: %v", err)
-	}
+	var apiServerURL, apiServerCA string
 
-	req, err := createClusterInfoRequest(target.Server())
-	if err != nil {
-		return nil, fmt.Errorf("unable to create cluster-info request: %v", err)
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve cluster-info: %v", err)
-	}
-	clusterInfo, err := pb.ConsumeClusterInfoResponse(resp)
-	if err != nil {
-		return nil, err
+	if target.ShouldFetchCAFromAPIServer() {
+		tlsClient, err := web.NewTLSClient()
+		if err != nil {
+			return nil, fmt.Errorf("unable to create TLS client: %w", err)
+		}
+		req, err := createCAConfigMapRequest(target.APIServer())
+		if err != nil {
+			return nil, fmt.Errorf("unable to create API Server request for CA ConfigMap: %w", err)
+		}
+		resp, err := tlsClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve CA from API Server endpoint: %w", err)
+		}
+		caConfigMap, err := r.consumeCAConfigMapResponse(resp)
+		if err != nil {
+			return nil, err
+		}
+		apiServerURL = target.APIServer()
+		apiServerCA = base64.StdEncoding.EncodeToString([]byte(caConfigMap.Data.CACertData))
+
+	} else {
+		tlsClient, err := web.NewTLSClient(target.CertificateAuthorityData())
+		if err != nil {
+			return nil, fmt.Errorf("unable to create TLS client: %w", err)
+		}
+
+		req, err := createClusterInfoRequest(target.Server())
+		if err != nil {
+			return nil, fmt.Errorf("unable to create cluster-info request: %w", err)
+		}
+		resp, err := tlsClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve cluster-info: %w", err)
+		}
+		clusterInfo, err := pb.ConsumeClusterInfoResponse(resp)
+		if err != nil {
+			return nil, err
+		}
+		apiServerURL = clusterInfo.Cluster.ApiServerURL
+		apiServerCA = clusterInfo.Cluster.ApiServerCA
 	}
 
 	return &TargetInfo{
 		AccessToken:         r.accessToken,
-		ClusterAPIServerURL: clusterInfo.Cluster.ApiServerURL,
-		ClusterCA:           clusterInfo.Cluster.ApiServerCA,
+		ClusterAPIServerURL: apiServerURL,
+		ClusterCA:           apiServerCA,
 	}, nil
+}
+
+type configMap struct {
+	Data configMapData `json:"data"`
+}
+type configMapData struct {
+	CACertData string `json:"ca.crt"`
+}
+
+func (r *azureRetriever) consumeCAConfigMapResponse(response *http.Response) (*configMap, error) {
+	if response.StatusCode == http.StatusOK {
+		data, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA response from API Server: %w", err)
+		}
+		defer response.Body.Close()
+		var configMap = &configMap{}
+		err = json.Unmarshal(data, configMap)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse response: %w", err)
+		}
+		return configMap, nil
+	}
+	return nil, fmt.Errorf("error fetching CA ConfigMap from API Server: %s", response.Status)
 }
 
 func (r *azureRetriever) GetAuthInfo(config *api.Config, target Target) *api.AuthInfo {

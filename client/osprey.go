@@ -35,6 +35,9 @@ func (oc *OspreyConfig) ValidateConfig() error {
 		return errors.New("at least one target server should be present for osprey")
 	}
 	for name, target := range oc.Targets {
+		if target.APIServer != "" {
+			return fmt.Errorf("%s: Osprey targets may not fetch the CA from the API Server", name)
+		}
 		if target.Server == "" {
 			return fmt.Errorf("%s's server is required for osprey targets", name)
 		}
@@ -77,7 +80,7 @@ func (r *ospreyRetriever) RetrieveUserDetails(target Target, authInfo api.AuthIn
 
 	jwt, err := jws.ParseJWT([]byte(idToken))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse user token for %s: %v", target.Name(), err)
+		return nil, fmt.Errorf("failed to parse user token for %s: %w", target.Name(), err)
 	}
 
 	user := jwt.Claims().Get("email")
@@ -110,11 +113,11 @@ func (r *ospreyRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*T
 
 	req, err := createAccessTokenRequest(target.Server(), r.credentials)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create access-token request: %v", err)
+		return nil, fmt.Errorf("unable to create access-token request: %w", err)
 	}
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve access-token: %v", err)
+		return nil, fmt.Errorf("failed to retrieve access-token: %w", err)
 	}
 	defer resp.Body.Close()
 	accessToken, err := pb.ConsumeLoginResponse(resp)
@@ -146,7 +149,7 @@ func createAccessTokenRequest(host string, credentials *LoginCredentials) (*http
 	url := fmt.Sprintf("%s/access-token", host)
 	req, err := http.NewRequest(http.MethodPost, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create access-token request: %v", err)
+		return nil, fmt.Errorf("unable to create access-token request: %w", err)
 	}
 	authToken := basicAuth(credentials)
 	req.Header.Add("Authorization", fmt.Sprintf("Basic %s", authToken))
@@ -159,9 +162,20 @@ func createClusterInfoRequest(host string) (*http.Request, error) {
 	url := fmt.Sprintf("%s/cluster-info", host)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create cluster-info request: %v", err)
+		return nil, fmt.Errorf("unable to create cluster-info request: %w", err)
 	}
 	req.Header.Add("Accept", "application/octet-stream")
+
+	return req, nil
+}
+
+func createCAConfigMapRequest(host string) (*http.Request, error) {
+	url := fmt.Sprintf("%s/api/v1/namespaces/kube-public/configmaps/kube-root-ca.crt", host)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create CA ConfigMap request: %w", err)
+	}
+	req.Header.Add("Accept", "application/json")
 
 	return req, nil
 }

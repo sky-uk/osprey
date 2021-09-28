@@ -106,7 +106,7 @@ func (o *osprey) issuerURL() string {
 func (o *osprey) Ready(ctx context.Context) error {
 	if o.authenticationEnabled {
 		if _, err := o.getOrCreateOidcProvider(); err != nil {
-			return fmt.Errorf("unhealthy: %v", err)
+			return fmt.Errorf("unhealthy: %w", err)
 		}
 	}
 	return nil
@@ -261,7 +261,7 @@ func (o *osprey) getOrCreateOidcProvider() (*oidc.Provider, error) {
 		ctx := oidc.ClientContext(context.Background(), o.client)
 		provider, err := oidc.NewProvider(ctx, o.issuerURL())
 		if err != nil {
-			return nil, fmt.Errorf("unable to create oidc provider %q: %v", o.issuerURL(), err)
+			return nil, fmt.Errorf("unable to create oidc provider %q: %w", o.issuerURL(), err)
 		}
 		o.provider = provider
 		o.verifier = provider.Verifier(&oidc.Config{ClientID: o.environment})

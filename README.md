@@ -33,7 +33,7 @@ on your behalf.
 
 ## Installation
 
-Osprey is currently supported in linux, mac OS and windows and it can be
+Osprey is currently supported in linux, macOS and windows and it can be
 installed as a standalone executable, or it can be run as a container (only
 linux).
 The docker container is aimed to be used for the server side, while the
@@ -46,7 +46,7 @@ Osprey's executable binaries can be downloaded from our [Bintray repository](htt
 To install a specific version replace `<version>` with the release version
 (e.g `v9.9.0`; mind the `v` prefix).
 
-**Linux and Mac OS**
+**Linux and macOS**
 ```
   curl -fsSL https://dl.bintray.com/sky-uk/oss-generic/osprey/<version>/osprey-<version>_linux_amd64.tar.gz -o osprey.tar.gz
 
@@ -56,7 +56,7 @@ To install a specific version replace `<version>` with the release version
 `$HOME/.local/bin` should be in your `$PATH`, or replace it with one that
 better suits your setup.
 
-To install for Mac OS replace `linux` for `darwin`
+To install for macOS replace `linux` for `darwin`
 
 **Windows**
 ```
@@ -241,7 +241,7 @@ The client installation script gets the configuration supported by the
 installed version.
 
 The client uses a yaml configuration file. It's recommended location is:
-`$HOME/.osprey/config`. Its contents are as follow:
+`$HOME/.osprey/config`. Its contents are as follows:
 ```
 # Optional path to the kubeconfig file to load/update when loging in.
 # Uses kubectl defaults if absent ($HOME/.kube/config).
@@ -306,6 +306,11 @@ providers:
     targets:
       foo.cluster:
         server: http://osprey.foo.cluster
+        # If api-server is specified, osprey will fetch the CA cert from the API server itself. Overrides "server".
+        # A ConfigMap in kube-publiuc called kube-root-ca.crt should be made accessible to system:anonymous
+        # This ConfigMap is created automatically with the Kubernetes feature gate RootCAConfigMap which was
+        # alpha in Kubernetes v1.13 and became enabled by default in v1.20+
+        # api-server: http://apiserver.foo.cluster
         aliases: [foo.alias]
         groups: [foo]
 
@@ -383,6 +388,8 @@ In this mode, the required flags are:
 is the default location of the CA when running inside a kubernetes cluster.
 - `apiServerURL`, the api-server URL to return to the osprey client
 
+Note that since v2.5.0 osprey client can fetch the CA cert directly from the API server without needing a
+deployment of osprey server.
 
 ### `osprey serve auth`
 Starts an instance of the osprey server that will listen for authentication

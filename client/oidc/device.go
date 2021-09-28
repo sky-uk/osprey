@@ -43,17 +43,17 @@ func (c *Client) AuthWithDeviceFlow(ctx context.Context, loginTimeout time.Durat
 
 	req, err := http.NewRequest(http.MethodPost, deviceAuthURL, strings.NewReader(urlParams.Encode()))
 	if err != nil {
-		return nil, fmt.Errorf("unable to create request: %v", err)
+		return nil, fmt.Errorf("unable to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	response, err := ctxhttp.Do(ctx, nil, req)
 	if err != nil {
-		return nil, fmt.Errorf("unable to post form to %s: %v", deviceAuthURL, err)
+		return nil, fmt.Errorf("unable to post form to %s: %w", deviceAuthURL, err)
 	}
 
 	body, err := ioutil.ReadAll(io.LimitReader(response.Body, 1<<20))
 	if err != nil {
-		return nil, fmt.Errorf("unable to read device-flow response: %v", err)
+		return nil, fmt.Errorf("unable to read device-flow response: %w", err)
 	}
 
 	if code := response.StatusCode; code < 200 || code > 299 {
@@ -62,7 +62,7 @@ func (c *Client) AuthWithDeviceFlow(ctx context.Context, loginTimeout time.Durat
 
 	deviceAuth := &DeviceFlowAuth{}
 	if err = json.Unmarshal(body, deviceAuth); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal device-flow response: %v", err)
+		return nil, fmt.Errorf("unable to unmarshal device-flow response: %w", err)
 	}
 
 	// Print the message that is obtained from the previous request. This contains the message and URL from the OIDC provider
@@ -81,7 +81,7 @@ func (c *Client) AuthWithDeviceFlow(ctx context.Context, loginTimeout time.Durat
 		return nil, fmt.Errorf("exceeded device-code login deadline")
 	case deviceCodePoll := <-ch:
 		if deviceCodePoll.error != nil {
-			return nil, fmt.Errorf("failed to fetch device-flow token: %v", err)
+			return nil, fmt.Errorf("failed to fetch device-flow token: %w", err)
 		}
 		c.authenticated = true
 		return deviceCodePoll.Token, nil

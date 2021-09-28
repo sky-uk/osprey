@@ -20,7 +20,7 @@ func LoadTLSCert(path string) (string, error) {
 	}
 	fileData, err := ioutil.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to read certificate file %q: %v", path, err)
+		return "", fmt.Errorf("failed to read certificate file %q: %w", path, err)
 	}
 	certData := base64.StdEncoding.EncodeToString(fileData)
 	return certData, nil
@@ -28,19 +28,19 @@ func LoadTLSCert(path string) (string, error) {
 
 // NewTLSClient creates a new http.Client configured for TLS. It uses the system
 // certs by default if possible and appends all of the provided certs.
-func NewTLSClient(certs ...string) (*http.Client, error) {
+func NewTLSClient(caCerts ...string) (*http.Client, error) {
 	certPool, err := x509.SystemCertPool()
 	if err != nil {
-		if len(certs) == 0 {
-			return nil, fmt.Errorf("no CA certs specified and could not load the system's CA certs: %v", err)
+		if len(caCerts) == 0 {
+			return nil, fmt.Errorf("no CA certs specified and could not load the system's CA certs: %w", err)
 		}
 		certPool = x509.NewCertPool()
 	}
-	for _, ca := range certs {
+	for _, ca := range caCerts {
 		if ca != "" {
 			serverCA, err := base64.StdEncoding.DecodeString(ca)
 			if err != nil {
-				return nil, fmt.Errorf("failed to decode CA data: %v", err)
+				return nil, fmt.Errorf("failed to decode CA data: %w", err)
 			}
 
 			if !certPool.AppendCertsFromPEM(serverCA) {
@@ -49,7 +49,8 @@ func NewTLSClient(certs ...string) (*http.Client, error) {
 		}
 	}
 
-	tlsConfig := &tls.Config{RootCAs: certPool}
+	skipVerify := len(caCerts) == 0
+	tlsConfig := &tls.Config{RootCAs: certPool, InsecureSkipVerify: skipVerify}
 
 	return &http.Client{
 		Transport: &http.Transport{
