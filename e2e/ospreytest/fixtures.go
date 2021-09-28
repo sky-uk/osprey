@@ -23,7 +23,7 @@ const targetAliasPrefix = "alias."
 func AddCustomNamespaceToContexts(namespaceSuffix, kubeconfig string, targetedOspreys []*TestOsprey) error {
 	existingConfig, err := clientcmd.LoadFromFile(kubeconfig)
 	if err != nil {
-		return fmt.Errorf("unable to load kubeconfig file %s: %v", kubeconfig, err)
+		return fmt.Errorf("unable to load kubeconfig file %s: %w", kubeconfig, err)
 	}
 	for _, target := range targetedOspreys {
 		targetName := target.OspreyconfigTargetName()
@@ -34,7 +34,7 @@ func AddCustomNamespaceToContexts(namespaceSuffix, kubeconfig string, targetedOs
 	}
 	err = clientcmd.WriteToFile(*existingConfig, kubeconfig)
 	if err != nil {
-		return fmt.Errorf("unable to write kubeconfig file %s: %v", kubeconfig, err)
+		return fmt.Errorf("unable to write kubeconfig file %s: %w", kubeconfig, err)
 	}
 	return nil
 }

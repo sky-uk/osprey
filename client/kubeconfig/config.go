@@ -37,13 +37,13 @@ func LoadConfig(kubeconfigFile string) error {
 func UpdateConfig(name string, aliases []string, tokenData *client.TargetInfo) error {
 	config, err := GetConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load existing kubeconfig at %s: %v", pathOptions.GetDefaultFilename(), err)
+		return fmt.Errorf("failed to load existing kubeconfig at %s: %w", pathOptions.GetDefaultFilename(), err)
 	}
 
 	cluster := clientgo.NewCluster()
 	cluster.CertificateAuthorityData, err = base64.StdEncoding.DecodeString(tokenData.ClusterCA)
 	if err != nil {
-		return fmt.Errorf("failed to decode certificate authority data: %v", err)
+		return fmt.Errorf("failed to decode certificate authority data: %w", err)
 	}
 
 	cluster.Server = tokenData.ClusterAPIServerURL
@@ -86,7 +86,7 @@ func UpdateConfig(name string, aliases []string, tokenData *client.TargetInfo) e
 func Remove(name string) error {
 	config, err := GetConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load existing kubeconfig at %s: %v", pathOptions.GetDefaultFilename(), err)
+		return fmt.Errorf("failed to load existing kubeconfig at %s: %w", pathOptions.GetDefaultFilename(), err)
 	}
 	if config.AuthInfos[name] != nil {
 		if config.AuthInfos[name].Token != "" {
@@ -108,7 +108,7 @@ func GetConfig() (*clientgo.Config, error) {
 	}
 	config, err := pathOptions.GetStartingConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load kubeconfig from %s: %v", pathOptions.GetDefaultFilename(), err)
+		return nil, fmt.Errorf("failed to load kubeconfig from %s: %w", pathOptions.GetDefaultFilename(), err)
 	}
 	return config, nil
 }

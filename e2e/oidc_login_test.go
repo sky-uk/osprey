@@ -254,14 +254,14 @@ func doOIDCMockRequest(endpoint, clientID, redirectURI, state string, scopes []s
 
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%d%s?%s", oidcPort, endpoint, httpParameters.Encode()), nil)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create request: %v", err)
+		return nil, fmt.Errorf("unable to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch response: %v", err)
+		return nil, fmt.Errorf("unable to fetch response: %w", err)
 	}
 
 	time.Sleep(time.Second)

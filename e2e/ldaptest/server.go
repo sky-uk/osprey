@@ -139,16 +139,16 @@ func generateSLAPDConfig(ldapDir string) (config *SLAPDConfig, err error) {
 func writeTemplateToFile(templatePath, targetPath string, config interface{}) error {
 	t, err := template.ParseFiles(templatePath)
 	if err != nil {
-		return fmt.Errorf("failed to parse %s: %v", templatePath, err)
+		return fmt.Errorf("failed to parse %s: %w", templatePath, err)
 	}
 	file, err := os.Create(targetPath)
 	if err != nil {
-		return fmt.Errorf("failed to create %s: %v", targetPath, err)
+		return fmt.Errorf("failed to create %s: %w", targetPath, err)
 	}
 	defer file.Close()
 	err = t.Execute(file, config)
 	if err != nil {
-		return fmt.Errorf("failed to write %s: %v", targetPath, err)
+		return fmt.Errorf("failed to write %s: %w", targetPath, err)
 	}
 	return nil
 }
@@ -167,7 +167,7 @@ func includes(wd string) (paths []string, err error) {
 	for _, f := range includeFiles {
 		p := filepath.Join(wd, f)
 		if _, err := os.Stat(p); err != nil {
-			return []string{}, fmt.Errorf("failed to find schema file: %s %v", p, err)
+			return []string{}, fmt.Errorf("failed to find schema file: %s %w", p, err)
 		}
 		paths = append(paths, p)
 	}
