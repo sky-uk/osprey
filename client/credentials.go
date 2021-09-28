@@ -57,5 +57,5 @@ func hiddenInput(inputName string, reader *bufio.Reader) (string, error) {
 	if err == nil {
 		return strings.TrimSpace(string(passwordBytes)), nil
 	}
-	return "", fmt.Errorf("reading %s: %w", inputName, err)
+	return "", fmt.Errorf("failed to read %s: %v", inputName, err)
 }

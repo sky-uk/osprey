@@ -19,5 +19,5 @@ func Input(inputName string, reader *bufio.Reader) (string, error) {
 		value = strings.TrimSpace(value)
 		return value, nil
 	}
-	return "", fmt.Errorf("reading %s: %w", inputName, err)
+	return "", fmt.Errorf("failed to read %s: %v", inputName, err)
 }

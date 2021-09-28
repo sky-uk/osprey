@@ -77,7 +77,7 @@ func NewAuthenticationServer(environment, secret, redirectURL, issuerHost, issue
 	}
 	_, err = o.getOrCreateOidcProvider()
 	if err != nil {
-		log.Errorf("creating OIDC provider %q: %v", o.issuerURL(), err)
+		log.Errorf("unable to create oidc provider %q: %v", o.issuerURL(), err)
 	}
 	return o, nil
 }
@@ -106,7 +106,7 @@ func (o *osprey) issuerURL() string {
 func (o *osprey) Ready(ctx context.Context) error {
 	if o.authenticationEnabled {
 		if _, err := o.getOrCreateOidcProvider(); err != nil {
-			return fmt.Errorf("unhealthy: %w", err)
+			return fmt.Errorf("unhealthy: %v", err)
 		}
 	}
 	return nil
@@ -183,7 +183,7 @@ func (o *osprey) Authorise(ctx context.Context, code, state, failure string) (*p
 
 	oauthConfig, err := o.oauth2Config(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create OAuth config: %v", err))
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create oauth config: %v", err))
 	}
 	token, err := oauthConfig.Exchange(clientCtx, code)
 	if err != nil {
@@ -261,7 +261,7 @@ func (o *osprey) getOrCreateOidcProvider() (*oidc.Provider, error) {
 		ctx := oidc.ClientContext(context.Background(), o.client)
 		provider, err := oidc.NewProvider(ctx, o.issuerURL())
 		if err != nil {
-			return nil, fmt.Errorf("creating OIDC provider %q: %w", o.issuerURL(), err)
+			return nil, fmt.Errorf("unable to create oidc provider %q: %v", o.issuerURL(), err)
 		}
 		o.provider = provider
 		o.verifier = provider.Verifier(&oidc.Config{ClientID: o.environment})

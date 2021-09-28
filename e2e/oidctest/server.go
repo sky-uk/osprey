@@ -244,17 +244,17 @@ func returnAuthRequest(callbackURL string) error {
 	successfulLoginResponse, _ := url.Parse(fmt.Sprintf("%s?state=%s&code=AWORKINGJTW", callbackURL, ospreyState))
 	resp, err := http.PostForm(successfulLoginResponse.String(), nil)
 	if err != nil {
-		return fmt.Errorf("posting form: %w", err)
+		return fmt.Errorf("unable to post form: %v", err)
 	}
 	defer resp.Body.Close()
 
 	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("reading body: %w", err)
+		return fmt.Errorf("unable to read body: %v", err)
 	}
 
 	if err != nil {
-		return fmt.Errorf("creating call-back request: %w", err)
+		return fmt.Errorf("unable to create call-back request: %v", err)
 	}
 	return nil
 }

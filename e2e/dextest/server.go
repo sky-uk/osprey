@@ -59,7 +59,7 @@ func StartDexes(testDir string, ldap *ldaptest.TestLDAP, environments []string, 
 			dexes = append(dexes, aDex)
 		}
 		if err != nil {
-			return dexes, fmt.Errorf("creating dex server for environment %s (port: %d): %w", env, port, err)
+			return dexes, fmt.Errorf("failed to create dex server for environment %s (port: %d): %v", env, port, err)
 		}
 	}
 
@@ -102,7 +102,7 @@ func newServerWithTLS(ctx context.Context, dexCA, dexKey string, port int32, env
 
 	server, err = dex.NewServer(ctx, *config)
 	if err != nil {
-		return nil, fmt.Errorf("starting server: %w", err)
+		return nil, fmt.Errorf("failed to start server: %v", err)
 	}
 
 	httpServer, err := setupHTTPS(dexCA, dexKey, port, server)
@@ -128,7 +128,7 @@ func newServerWithTLS(ctx context.Context, dexCA, dexKey string, port int32, env
 func createLdapConnector(ldapConfig *dex_ldap.Config, config *dex.Config) error {
 	ldapConfigBytes, err := json.Marshal(ldapConfig)
 	if err != nil {
-		return fmt.Errorf("marshalling ldapConfig: %w", err)
+		return fmt.Errorf("failed to mashal ldapConfig: %v", err)
 	}
 	connector := dex_storage.Connector{
 		ID:     "ldap",
@@ -137,7 +137,7 @@ func createLdapConnector(ldapConfig *dex_ldap.Config, config *dex.Config) error 
 		Config: ldapConfigBytes,
 	}
 	if err = config.Storage.CreateConnector(connector); err != nil {
-		return fmt.Errorf("creating LDAP connector: %w", err)
+		return fmt.Errorf("failed to create ldap connector: %v", err)
 	}
 	return nil
 }

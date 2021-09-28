@@ -62,12 +62,12 @@ func NewConfig() *Config {
 func LoadConfig(path string) (*Config, error) {
 	in, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("reading config file %s: %w", path, err)
+		return nil, fmt.Errorf("failed to read config file %s: %v", path, err)
 	}
 	config := &Config{}
 	err = yaml.Unmarshal(in, config)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshalling config file %s: %w", path, err)
+		return nil, fmt.Errorf("failed to unmarshal config file %s: %v", path, err)
 	}
 
 	if config.Providers.Azure != nil {
@@ -87,11 +87,11 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("invalid config %s: %w", path, err)
+		return nil, fmt.Errorf("invalid config %s: %v", path, err)
 	}
 	err = config.validateGroups()
 	if err != nil {
-		return nil, fmt.Errorf("invalid groups: %w", err)
+		return nil, fmt.Errorf("invalid groups: %v", err)
 	}
 	return config, err
 }
@@ -100,15 +100,15 @@ func LoadConfig(path string) (*Config, error) {
 func SaveConfig(config *Config, path string) error {
 	err := os.MkdirAll(filepath.Dir(path), 0755)
 	if err != nil {
-		return fmt.Errorf("accessing config dir %s: %w", path, err)
+		return fmt.Errorf("failed to access config dir %s: %v", path, err)
 	}
 	out, err := yaml.Marshal(config)
 	if err != nil {
-		return fmt.Errorf("marshalling config file %s: %w", path, err)
+		return fmt.Errorf("failed to marshal config file %s: %v", path, err)
 	}
 	err = ioutil.WriteFile(path, out, 0755)
 	if err != nil {
-		return fmt.Errorf("writing config file %s: %w", path, err)
+		return fmt.Errorf("failed to write config file %s: %v", path, err)
 	}
 	return nil
 }
@@ -169,7 +169,7 @@ func setTargetCA(certificateAuthority, certificateAuthorityData string, targets 
 	if ospreyCertData == "" && certificateAuthority != "" {
 		ospreyCertData, err = web.LoadTLSCert(certificateAuthority)
 		if err != nil {
-			return fmt.Errorf("loading global CA certificate: %w", err)
+			return fmt.Errorf("failed to load global CA certificate: %v", err)
 		}
 	}
 
@@ -181,7 +181,7 @@ func setTargetCA(certificateAuthority, certificateAuthorityData string, targets 
 		} else if target.CertificateAuthority != "" && target.CertificateAuthorityData == "" {
 			certData, err := web.LoadTLSCert(target.CertificateAuthority)
 			if err != nil {
-				return fmt.Errorf("loading global CA certificate for target %s: %w", name, err)
+				return fmt.Errorf("failed to load global CA certificate for target %s: %v", name, err)
 			}
 			target.CertificateAuthorityData = certData
 		} else if target.CertificateAuthorityData != "" {

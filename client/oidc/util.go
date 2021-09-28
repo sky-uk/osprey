@@ -30,24 +30,24 @@ func GetWellKnownConfig(issuerURL string) (*oauth2.Endpoint, error) {
 	wellknownConfig := &wellKnownConfiguration{}
 	_, err := url.Parse(issuerURL)
 	if err != nil {
-		return nil, fmt.Errorf("parsing issuer-url: %w", err)
+		return nil, fmt.Errorf("unable to parse issuer-url: %v", err)
 	}
 	client := http.DefaultClient
 	request, err := http.NewRequest(http.MethodGet, issuerURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("creating request: %w", err)
+		return nil, fmt.Errorf("unable to create request: %v", err)
 	}
 	response, err := client.Do(request)
 	if err != nil {
-		return nil, fmt.Errorf("making request: %w", err)
+		return nil, fmt.Errorf("unable to make request: %v", err)
 	}
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, fmt.Errorf("fetching well-known configuration: %w", err)
+		return nil, fmt.Errorf("unable to fetch well-known configuration: %v", err)
 	}
 	if err := json.Unmarshal(body, wellknownConfig); err != nil {
-		return nil, fmt.Errorf("unmarshalling well-known configuration response: %w", err)
+		return nil, fmt.Errorf("unable to unmarshal well-known configuration response: %v", err)
 	}
 	return &oauth2.Endpoint{
 		AuthURL:  wellknownConfig.AuthEndpoint,

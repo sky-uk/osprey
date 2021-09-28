@@ -19,13 +19,13 @@ func ConsumeLoginResponse(response *http.Response) (*LoginResponse, error) {
 	defer response.Body.Close()
 	data, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, fmt.Errorf("reading response: %w", err)
+		return nil, fmt.Errorf("failed to read response: %v", err)
 	}
 	if response.StatusCode == http.StatusOK {
 		accessToken := &LoginResponse{}
 		err = proto.Unmarshal(data, accessToken)
 		if err != nil {
-			return nil, fmt.Errorf("parsing response: %w", err)
+			return nil, fmt.Errorf("failed to parse response: %v", err)
 		}
 		return accessToken, nil
 	}
@@ -37,14 +37,14 @@ func ConsumeLoginResponse(response *http.Response) (*LoginResponse, error) {
 func ConsumeClusterInfoResponse(response *http.Response) (*ClusterInfoResponse, error) {
 	data, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, fmt.Errorf("reading response: %w", err)
+		return nil, fmt.Errorf("failed to read response: %v", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode == http.StatusOK {
 		clusterInfo := &ClusterInfoResponse{}
 		err = proto.Unmarshal(data, clusterInfo)
 		if err != nil {
-			return nil, fmt.Errorf("parsing response: %w", err)
+			return nil, fmt.Errorf("failed to parse response: %v", err)
 		}
 		return clusterInfo, nil
 	}
@@ -59,13 +59,13 @@ func HandleErrorResponse(body []byte, response *http.Response) (err error) {
 		err = proto.Unmarshal(body, s)
 		state := status.FromProto(s)
 		if err != nil {
-			return fmt.Errorf("parsing pb error response: %w", err)
+			return fmt.Errorf("failed to parse pb error response: %v", err)
 		}
 		return state.Err()
 	}
 	responseText, err := html2text.FromString(string(body), html2text.Options{PrettyTables: true})
 	if err != nil {
-		return fmt.Errorf("parsing HTML error response: %w", err)
+		return fmt.Errorf("failed to parse html error response: %v", err)
 	}
 	return fmt.Errorf("\n%s", responseText)
 }

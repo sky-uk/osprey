@@ -87,7 +87,7 @@ func NewAzureRetriever(provider *AzureConfig, options RetrieverOptions) (Retriev
 
 	oidcEndpoint, err := oidc.GetWellKnownConfig(provider.IssuerURL)
 	if err != nil {
-		return nil, fmt.Errorf("querying well-known OIDC config: %w", err)
+		return nil, fmt.Errorf("unable to query well-known oidc config: %v", err)
 	}
 	config.Endpoint = *oidcEndpoint
 	retriever := &azureRetriever{
@@ -114,7 +114,7 @@ type azureRetriever struct {
 func (r *azureRetriever) RetrieveUserDetails(target Target, authInfo api.AuthInfo) (*UserInfo, error) {
 	jwt, err := jws.ParseJWT([]byte(authInfo.Token))
 	if err != nil {
-		return nil, fmt.Errorf("parsing user token for %s: %w", target.Name(), err)
+		return nil, fmt.Errorf("failed to parse user token for %s: %v", target.Name(), err)
 	}
 
 	if jwt.Claims().Get("unique_name") != nil {
@@ -124,7 +124,7 @@ func (r *azureRetriever) RetrieveUserDetails(target Target, authInfo api.AuthInf
 		}, nil
 	}
 
-	return nil, fmt.Errorf("extracting the 'unique_name' field from JWT token")
+	return nil, fmt.Errorf("jwt does not contain the 'unique_name' field")
 }
 
 func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*TargetInfo, error) {
@@ -149,15 +149,15 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 	if target.ShouldFetchCAFromAPIServer() {
 		tlsClient, err := web.NewTLSClient()
 		if err != nil {
-			return nil, fmt.Errorf("creating TLS client: %w", err)
+			return nil, fmt.Errorf("unable to create TLS client: %v", err)
 		}
 		req, err := createCAConfigMapRequest(target.APIServer())
 		if err != nil {
-			return nil, fmt.Errorf("creating API Server request for CA ConfigMap: %w", err)
+			return nil, fmt.Errorf("unable to create API Server request for CA ConfigMap: %v", err)
 		}
 		resp, err := tlsClient.Do(req)
 		if err != nil {
-			return nil, fmt.Errorf("retrieving CA from API Server endpoint: %w", err)
+			return nil, fmt.Errorf("failed to retrieve CA from API Server endpoint: %v", err)
 		}
 		caConfigMap, err := r.consumeCAConfigMapResponse(resp)
 		if err != nil {
@@ -169,16 +169,16 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 	} else {
 		tlsClient, err := web.NewTLSClient(target.CertificateAuthorityData())
 		if err != nil {
-			return nil, fmt.Errorf("creating TLS client: %w", err)
+			return nil, fmt.Errorf("unable to create TLS client: %v", err)
 		}
 
 		req, err := createClusterInfoRequest(target.Server())
 		if err != nil {
-			return nil, fmt.Errorf("creating cluster-info request: %w", err)
+			return nil, fmt.Errorf("unable to create cluster-info request: %v", err)
 		}
 		resp, err := tlsClient.Do(req)
 		if err != nil {
-			return nil, fmt.Errorf("retrieving cluster-info: %w", err)
+			return nil, fmt.Errorf("failed to retrieve cluster-info: %v", err)
 		}
 		clusterInfo, err := pb.ConsumeClusterInfoResponse(resp)
 		if err != nil {
@@ -206,18 +206,17 @@ func (r *azureRetriever) consumeCAConfigMapResponse(response *http.Response) (*c
 	if response.StatusCode == http.StatusOK {
 		data, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			return nil, fmt.Errorf("reading CA response from API Server: %w", err)
+			return nil, fmt.Errorf("failed to read CA response from API Server: %v", err)
 		}
 		defer response.Body.Close()
-
 		var configMap = &configMap{}
 		err = json.Unmarshal(data, configMap)
 		if err != nil {
-			return nil, fmt.Errorf("parsing CA response from API Server: %w", err)
+			return nil, fmt.Errorf("failed to parse response: %v", err)
 		}
 		return configMap, nil
 	}
-	return nil, fmt.Errorf("fetching CA ConfigMap from API Server: %s", response.Status)
+	return nil, fmt.Errorf("error fetching CA ConfigMap from API Server: %s", response.Status)
 }
 
 func (r *azureRetriever) GetAuthInfo(config *api.Config, target Target) *api.AuthInfo {
