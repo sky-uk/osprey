@@ -1,10 +1,10 @@
 language: go
 
 go:
-  - 1.13
+  - 1.13.x
 
 env:
-  - GO111MODULE=on
+  - GO111MODULE=on SKIP_PREPARE_RELEASE_BINTRAY=true
 
 before_install:
   - sudo apt-get -y update
@@ -19,7 +19,6 @@ script: make travis
 
 before_deploy:
 - make prepare-release-bintray
-- if [ "SKIP_PREPARE_RELEASE_BINTRAY" != "true" ]; then export SKIP_PREPARE_RELEASE_BINTRAY=true; fi
 deploy:
 - provider: bintray
   skip_cleanup: true
@@ -27,6 +26,7 @@ deploy:
   user: $BINTRAY_USER
   key: $BINTRAY_API_KEY
   on:
+    condition: $SKIP_PREPARE_RELEASE_BINTRAY != "true"
     tags: true
 - provider: script
   script: make release-docker
