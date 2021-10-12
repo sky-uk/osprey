@@ -88,7 +88,7 @@ lint :
 
 test :
 	@echo "== run tests"
-	GODEBUG=x509ignoreCN=0 go test -v -race $(pkgs)
+	go test -v -race $(pkgs)
 
 proto :
 	@echo "== compiling proto files"
