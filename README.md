@@ -41,33 +41,9 @@ binaries main use are the client commands.
 
 ### Binaries
 
-Osprey's executable binaries can be downloaded from our [Bintray repository](https://dl.bintray.com/sky-uk/oss-generic/osprey).
-
-To install a specific version replace `<version>` with the release version
-(e.g `v9.9.0`; mind the `v` prefix).
-
-**Linux and macOS**
-```
-  curl -fsSL https://dl.bintray.com/sky-uk/oss-generic/osprey/<version>/osprey-<version>_linux_amd64.tar.gz -o osprey.tar.gz
-
-  tar -xvf osprey.tar.gz -C $HOME/.local/bin
-  chmod +x $HOME/.local/bin/osprey
-```
-`$HOME/.local/bin` should be in your `$PATH`, or replace it with one that
-better suits your setup.
-
-To install for macOS replace `linux` for `darwin`
-
-**Windows**
-```
-  mkdir c:\osprey
-  Invoke-WebRequest -method Get -uri https://dl.bintray.com/sky-uk/oss-generic/osprey/<version>/osprey-<version>_windows_amd64.zip -OutFile c:\osprey\osprey.zip
-
-  Unzip c:\osprey\osprey.zip c:\osprey
-
-  $env:Path = "c:\osprey;" + $env:Path
-  [Environment]::SetEnvironmentVariable( "Path", $env:Path, [System.EnvironmentVariableTarget]::Machine )
-```
+There is currently no binary install option for osprey, due to the
+sunsetting of our old binary host.  You will need to build from source
+or install with docker.
 
 ### Docker
 
@@ -738,7 +714,6 @@ Tag the commit in master using an annotated tag and push it to release it.
 Only maintainers can do this.
 
 Osprey gets released to:
-- [Bintray](https://bintray.com/sky-uk/oss-generic/osprey) as binaries for the supported platforms.
 - [Docker-Hub](https://hub.docker.com/r/skycirrus/osprey/) as an alpine based docker image.
 
 # Code guidelines
