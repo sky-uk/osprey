@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/osprey/client/oidc"
