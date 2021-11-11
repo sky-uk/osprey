@@ -38,6 +38,10 @@ type TargetEntry struct {
 	// APIServer is the address of the API server (hostname:port).
 	// +optional
 	APIServer string `yaml:"api-server,omitempty"`
+	// UseGKEClientConfig true if Osprey should fetch the CA cert and server URL from the
+	//kube-public/ClientConfig resource provided by the OIDC Identity Service in GKE clusters.
+	// +optional
+	UseGKEClientConfig bool `yaml:"use-gke-clientconfig,omitempty"`
 	// CertificateAuthority is the path to a cert file for the certificate authority.
 	// +optional
 	CertificateAuthority string `yaml:"certificate-authority,omitempty"`

@@ -68,6 +68,12 @@ func (ac *AzureConfig) ValidateConfig() error {
 	if ac.RedirectURI == "" {
 		return errors.New("oauth2 redirect-uri is required for azure targets")
 	}
+
+	for name, target := range ac.Targets {
+		if target.UseGKEClientConfig && target.APIServer == "" {
+			return fmt.Errorf("%s: use-gke-clientconfig:true requires api-server to be set", name)
+		}
+	}
 	return nil
 }
 
@@ -146,12 +152,32 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 
 	var apiServerURL, apiServerCA string
 
-	if target.ShouldFetchCAFromAPIServer() {
+	if target.ShouldFetchServerAndCAFromClientConfig() {
 		tlsClient, err := web.NewTLSClient()
 		if err != nil {
 			return nil, fmt.Errorf("unable to create TLS client: %w", err)
 		}
-		req, err := createCAConfigMapRequest(target.APIServer())
+		req, err := createKubePublicRequest(target.APIServer(), "apis/authentication.gke.io/v2alpha1", "clientconfigs", "default")
+		if err != nil {
+			return nil, fmt.Errorf("unable to create API Server request for OIDC ClientConfig: %w", err)
+		}
+		resp, err := tlsClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve OIDC ClientConfig from API Server endpoint: %w", err)
+		}
+		clientConfig, err := r.consumeClientConfigResponse(resp)
+		if err != nil {
+			return nil, err
+		}
+		apiServerURL = clientConfig.Spec.Server
+		apiServerCA = clientConfig.Spec.CaCertBase64
+
+	} else if target.ShouldFetchCAFromAPIServer() {
+		tlsClient, err := web.NewTLSClient()
+		if err != nil {
+			return nil, fmt.Errorf("unable to create TLS client: %w", err)
+		}
+		req, err := createKubePublicRequest(target.APIServer(), "api/v1", "configmaps", "kube-root-ca.crt")
 		if err != nil {
 			return nil, fmt.Errorf("unable to create API Server request for CA ConfigMap: %w", err)
 		}
@@ -193,6 +219,31 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 		ClusterAPIServerURL: apiServerURL,
 		ClusterCA:           apiServerCA,
 	}, nil
+}
+
+type clientConfig struct {
+	Spec clientConfigSpec `json:"spec"`
+}
+type clientConfigSpec struct {
+	Server       string `json:"server"`
+	CaCertBase64 string `json:"certificateAuthorityData"`
+}
+
+func (r *azureRetriever) consumeClientConfigResponse(response *http.Response) (*clientConfig, error) {
+	if response.StatusCode == http.StatusOK {
+		data, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read ClientConfig response from API Server: %w", err)
+		}
+		defer response.Body.Close()
+		var clientConfig = &clientConfig{}
+		err = json.Unmarshal(data, clientConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse response: %w", err)
+		}
+		return clientConfig, nil
+	}
+	return nil, fmt.Errorf("error fetching ClientConfig from API Server: %s", response.Status)
 }
 
 type configMap struct {

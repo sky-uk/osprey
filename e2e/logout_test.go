@@ -20,7 +20,7 @@ var _ = Describe("Logout", func() {
 	})
 
 	JustBeforeEach(func() {
-		setupClientForEnvironments(ospreyProviderName, environmentsToUse, "", "")
+		setupClientForEnvironments(ospreyProviderName, environmentsToUse, "", "", false)
 
 		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag)
 		logout = Client("user", "logout", ospreyconfigFlag, targetGroupFlag)

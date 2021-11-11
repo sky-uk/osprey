@@ -169,11 +169,11 @@ func createClusterInfoRequest(host string) (*http.Request, error) {
 	return req, nil
 }
 
-func createCAConfigMapRequest(host string) (*http.Request, error) {
-	url := fmt.Sprintf("%s/api/v1/namespaces/kube-public/configmaps/kube-root-ca.crt", host)
+func createKubePublicRequest(host, api, kind, name string) (*http.Request, error) {
+	url := fmt.Sprintf("%s/%s/namespaces/kube-public/%s/%s", host, api, kind, name)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create CA ConfigMap request: %w", err)
+		return nil, fmt.Errorf("unable to create request for %s: %w", url, err)
 	}
 	req.Header.Add("Accept", "application/json")
 
