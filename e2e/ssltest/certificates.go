@@ -29,6 +29,7 @@ func CreateCertificates(cn, destDir string) (certFile, keyFile string) {
 			Subject: pkix.Name{
 				CommonName: cn,
 			},
+			DNSNames: []string{cn},
 
 			NotBefore: time.Now(),
 			NotAfter:  time.Now().Add(1 * time.Hour),
