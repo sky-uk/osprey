@@ -18,17 +18,15 @@ dist_dir := $(cwd)/dist
 os := $(shell uname)
 ifeq ("$(os)", "Linux")
 	target_os = linux
-	cross_os = darwin
 else ifeq ("$(os)", "Darwin")
 	target_os = darwin
-	cross_os = linux
 endif
 
-.PHONY: all build check check-format check-os clean cross-compile docker format install lint prepare-release-binaries proto release-docker setup test vet
+.PHONY: all build check check-format check-os clean docker format install lint proto release-docker setup test vet
 
 all : check install test
 check : check-os check-format vet lint test
-travis : clean setup check build test cross-compile docker
+travis : clean setup check build test docker
 
 check-os:
 ifndef target_os
@@ -60,13 +58,6 @@ install :
 	@echo "Installing binary for ${target_os}"
 	GOOS=${target_os} GOARCH=amd64 go install -ldflags '$(ldflags)' -v
 
-cross-compile:
-	@echo "== cross compile"
-	@echo "Cross compiling binary for ${cross_os}"
-	GOOS=${cross_os} GOARCH=amd64 go build -ldflags '-s $(ldflags)' -o ${build_dir}/${cross_os}_amd64/osprey -v
-	@echo "Cross compiling binary for windows"
-	GOOS=windows GOARCH=amd64 go build -ldflags '-s $(ldflags)' -o ${build_dir}/windows_amd64/osprey -v
-
 unformatted = $(shell goimports -l $(files))
 
 check-format :
@@ -93,13 +84,6 @@ test :
 proto :
 	@echo "== compiling proto files"
 	@docker run -v `pwd`/common/pb:/pb -w / grpc/go:1.0 protoc -I /pb /pb/osprey.proto --go_out=plugins=grpc:pb
-
-# Deprecated alias
-prepare-release-bintray : prepare-release-binaries
-
-prepare-release-binaries :
-	@echo "No binary release strategy yet"
-	@exit 1
 
 image := skycirrus/osprey
 
