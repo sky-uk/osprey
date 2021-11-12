@@ -15,22 +15,19 @@ before_install:
 services:
   - docker
 
-script: make travis
+script:
+  - make travis
+  - curl -sfL https://git.io/goreleaser | sh -s -- check # check goreleaser config for deprecations
 
-before_deploy:
-- make prepare-release-bintray
 deploy:
-- provider: bintray
-  skip_cleanup: true
-  file: dist/bintray.json
-  user: $BINTRAY_USER
-  key: $BINTRAY_API_KEY
-  on:
-    condition: $SKIP_PREPARE_RELEASE_BINTRAY != "true"
-    tags: true
-- provider: script
-  script: make release-docker
-  skip_cleanup: true
-  on:
-    tags: true
-
+  - provider: script
+    skip_cleanup: true
+    script: curl -sL https://git.io/goreleaser | bash
+    on:
+      tags: true
+      condition: $TRAVIS_OS_NAME = linux
+  - provider: script
+    script: make release-docker
+    skip_cleanup: true
+    on:
+      tags: true
