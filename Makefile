@@ -35,8 +35,8 @@ endif
 
 setup:
 	@echo "== setup"
-	go get -u golang.org/x/lint/golint
-	go get -u golang.org/x/tools/cmd/goimports
+	go install golang.org/x/lint/golint@latest
+	go install golang.org/x/tools/cmd/goimports@latest
 	go mod download
 
 format :
