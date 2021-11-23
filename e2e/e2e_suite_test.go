@@ -49,15 +49,16 @@ var (
 	testDir        string
 
 	// Suite variables modifiable per test scenario
-	err               error
-	environmentsToUse map[string][]string
-	targetedOspreys   []*ospreytest.TestOsprey
-	ospreyconfig      *ospreytest.TestConfig
-	ospreyconfigFlag  string
-	defaultGroup      string
-	targetGroup       string
-	targetGroupFlag   string
-	apiServerURL      string
+	err                error
+	environmentsToUse  map[string][]string
+	targetedOspreys    []*ospreytest.TestOsprey
+	ospreyconfig       *ospreytest.TestConfig
+	ospreyconfigFlag   string
+	defaultGroup       string
+	targetGroup        string
+	targetGroupFlag    string
+	apiServerURL       string
+	useGKEClientConfig bool
 )
 
 var _ = BeforeSuite(func() {
@@ -101,8 +102,8 @@ var _ = AfterSuite(func() {
 	os.RemoveAll(testDir)
 })
 
-func setupClientForEnvironments(providerName string, envs map[string][]string, clientID, apiServerURL string) {
-	ospreyconfig, err = ospreytest.BuildConfig(testDir, providerName, defaultGroup, envs, ospreys, clientID, apiServerURL)
+func setupClientForEnvironments(providerName string, envs map[string][]string, clientID, apiServerURL string, useGKEClientConfig bool) {
+	ospreyconfig, err = ospreytest.BuildConfig(testDir, providerName, defaultGroup, envs, ospreys, clientID, apiServerURL, useGKEClientConfig)
 	Expect(err).To(BeNil(), "Creates the osprey config with groups")
 	ospreyconfigFlag = "--ospreyconfig=" + ospreyconfig.ConfigFile
 
@@ -122,6 +123,7 @@ func resetDefaults() {
 	targetGroup = ""
 	targetGroupFlag = ""
 	apiServerURL = ""
+	useGKEClientConfig = false
 }
 
 func cleanup() {

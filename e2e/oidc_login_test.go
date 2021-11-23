@@ -37,7 +37,7 @@ var _ = Describe("Login with a cloud provider", func() {
 	})
 
 	JustBeforeEach(func() {
-		setupClientForEnvironments(azureProviderName, environmentsToUse, oidcClientID, apiServerURL)
+		setupClientForEnvironments(azureProviderName, environmentsToUse, oidcClientID, apiServerURL, useGKEClientConfig)
 		userLoginArgs = []string{"user", "login", ospreyconfigFlag, "--disable-browser-popup"}
 	})
 
@@ -96,13 +96,52 @@ var _ = Describe("Login with a cloud provider", func() {
 					login.AssertSuccess()
 					Expect(apiTestServer.RequestCount("/api/v1/namespaces/kube-public/configmaps/kube-root-ca.crt")).To(Equal(1))
 					kubeconfig := getKubeConfig()
-					Expect(kubeconfig.Clusters["kubectl.local"].CertificateAuthorityData).To(ContainSubstring(apiservertest.CaCertIdentifyingPortion))
+					Expect(kubeconfig.Clusters["kubectl.local"].CertificateAuthorityData).To(Equal([]byte(apiservertest.CaCert1Pem)))
+				})
+			})
+		})
+
+		Describe("fetches the API server URL from the requested location", func() {
+			Describe("with use-gke-clientconfig provided", func() {
+				BeforeEach(func() {
+					apiServerURL = fmt.Sprintf("http://localhost:%d", apiServerPort)
+					useGKEClientConfig = true
+				})
+				It("URL should be fetched from GKE's ClientConfig resource", func() {
+					login := loginCommand(ospreyBinary, userLoginArgs...)
+
+					_, err := doOIDCMockRequest("/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
+					Expect(err).NotTo(HaveOccurred())
+
+					login.AssertSuccess()
+					Expect(apiTestServer.RequestCount("/apis/authentication.gke.io/v2alpha1/namespaces/kube-public/clientconfigs/default")).To(Equal(1))
+					kubeconfig := getKubeConfig()
+					Expect(kubeconfig.Clusters["kubectl.local"].Server).To(Equal(apiservertest.InternalAPIServerURL))
+					Expect(kubeconfig.Clusters["kubectl.local"].CertificateAuthorityData).To(Equal([]byte(apiservertest.CaCert2Pem)))
+				})
+			})
+			Describe("without use-gke-clientconfig provided", func() {
+				BeforeEach(func() {
+					apiServerURL = fmt.Sprintf("http://localhost:%d", apiServerPort)
+					useGKEClientConfig = false
+				})
+				It("URL should be the same as the configured api-server field", func() {
+					login := loginCommand(ospreyBinary, userLoginArgs...)
+
+					_, err := doOIDCMockRequest("/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
+					Expect(err).NotTo(HaveOccurred())
+
+					login.AssertSuccess()
+					Expect(apiTestServer.RequestCount("/apis/authentication.gke.io/v2alpha1/namespaces/kube-public/clientconfigs/default")).To(Equal(0))
+					kubeconfig := getKubeConfig()
+					Expect(kubeconfig.Clusters["kubectl.local"].Server).To(Equal(apiServerURL))
+					Expect(kubeconfig.Clusters["kubectl.local"].CertificateAuthorityData).To(Equal([]byte(apiservertest.CaCert1Pem)))
 				})
 			})
 		})
 
 		It("provides the same JWT token for multiple targets in group for the same provider", func() {
-			setupClientForEnvironments(azureProviderName, map[string][]string{"dev": {"development"}, "stage": {"development"}}, oidcClientID, "")
+			setupClientForEnvironments(azureProviderName, map[string][]string{"dev": {"development"}, "stage": {"development"}}, oidcClientID, "", false)
 			targetGroupArgs := append(userLoginArgs, "--group=development")
 			login := loginCommand(ospreyBinary, targetGroupArgs...)
 
@@ -141,7 +180,7 @@ var _ = Describe("Login with a cloud provider", func() {
 		})
 
 		It("provides the same JWT token for multiple targets in group for the same provider", func() {
-			setupClientForEnvironments(azureProviderName, map[string][]string{"dev": {"development"}, "stage": {"development"}}, oidcClientID, "")
+			setupClientForEnvironments(azureProviderName, map[string][]string{"dev": {"development"}, "stage": {"development"}}, oidcClientID, "", false)
 			targetGroupArgs := append(userLoginArgs, "--group=development", "--use-device-code")
 			login := loginCommand(ospreyBinary, targetGroupArgs...)
 
@@ -157,7 +196,7 @@ var _ = Describe("Login with a cloud provider", func() {
 		})
 
 		It("Polls the token endpoint at server specified intervals when token status is pending", func() {
-			setupClientForEnvironments(azureProviderName, environmentsToUse, "pending_client_id", "")
+			setupClientForEnvironments(azureProviderName, environmentsToUse, "pending_client_id", "", false)
 			useDeviceCodeArgs := append(userLoginArgs, "--use-device-code")
 			login := loginCommand(ospreyBinary, useDeviceCodeArgs...)
 
@@ -170,7 +209,7 @@ var _ = Describe("Login with a cloud provider", func() {
 		})
 
 		It("Handles client id is not authorised error code", func() {
-			setupClientForEnvironments(azureProviderName, environmentsToUse, "bad_verification_client_id", "")
+			setupClientForEnvironments(azureProviderName, environmentsToUse, "bad_verification_client_id", "", false)
 			useDeviceCodeArgs := append(userLoginArgs, "--use-device-code")
 			login := loginCommand(ospreyBinary, useDeviceCodeArgs...)
 
@@ -181,7 +220,7 @@ var _ = Describe("Login with a cloud provider", func() {
 		})
 
 		It("Handles device code expired error code", func() {
-			setupClientForEnvironments(azureProviderName, environmentsToUse, "expired_client_id", "")
+			setupClientForEnvironments(azureProviderName, environmentsToUse, "expired_client_id", "", false)
 			useDeviceCodeArgs := append(userLoginArgs, "--use-device-code")
 			login := loginCommand(ospreyBinary, useDeviceCodeArgs...)
 
@@ -194,7 +233,7 @@ var _ = Describe("Login with a cloud provider", func() {
 
 	Context("Specifiying the --login-timeout flag", func() {
 		It("logs in successfully if the flow is complete before the timeout", func() {
-			setupClientForEnvironments(azureProviderName, environmentsToUse, "login_timeout_exceeded_client_id", "")
+			setupClientForEnvironments(azureProviderName, environmentsToUse, "login_timeout_exceeded_client_id", "", false)
 			timeoutArgs := append(userLoginArgs, "--login-timeout=20s")
 			login := loginCommand(ospreyBinary, timeoutArgs...)
 
@@ -205,7 +244,7 @@ var _ = Describe("Login with a cloud provider", func() {
 		})
 
 		It("callback flow times out if not logged in within the stipulated time", func() {
-			setupClientForEnvironments(azureProviderName, environmentsToUse, "login_timeout_exceeded_client_id", "")
+			setupClientForEnvironments(azureProviderName, environmentsToUse, "login_timeout_exceeded_client_id", "", false)
 			timeoutArgs := append(userLoginArgs, "--login-timeout=1s")
 			login := loginCommand(ospreyBinary, timeoutArgs...)
 
@@ -214,7 +253,7 @@ var _ = Describe("Login with a cloud provider", func() {
 		})
 
 		It("device-code flow times out if not logged in within the stipulated time", func() {
-			setupClientForEnvironments(azureProviderName, environmentsToUse, "login_timeout_exceeded_client_id", "")
+			setupClientForEnvironments(azureProviderName, environmentsToUse, "login_timeout_exceeded_client_id", "", false)
 			deviceCodeTimeoutArgs := append(userLoginArgs, "--use-device-code=true", "--login-timeout=1s")
 			login := loginCommand(ospreyBinary, deviceCodeTimeoutArgs...)
 

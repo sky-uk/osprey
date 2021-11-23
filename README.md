@@ -282,10 +282,17 @@ providers:
     targets:
       foo.cluster:
         server: http://osprey.foo.cluster
-        # If api-server is specified, osprey will fetch the CA cert from the API server itself. Overrides "server".
-        # A ConfigMap in kube-publiuc called kube-root-ca.crt should be made accessible to system:anonymous
-        # This ConfigMap is created automatically with the Kubernetes feature gate RootCAConfigMap which was
-        # alpha in Kubernetes v1.13 and became enabled by default in v1.20+
+        # If use-gke-clientconfig is specified (default false) osprey will fetch the API server URL and its
+        # CA cert from the GKE-specific ClientConfig resource in kube-public. This resource is created automatically
+        # by GKE when you enable to OIDC Identity Service. The api-server config element is also required.
+        # Usually api-server would be set to the public API server endpoint; the fetched API server URL will be
+        # the internal load balancer that proxies requests through the OIDC service.
+        # use-gke-clientconfig: true
+        #
+        # If api-server is specified (default ""), osprey will fetch the CA cert from the API server itself.
+        # Overrides "server". A ConfigMap in kube-publiuc called kube-root-ca.crt should be made accessible
+        # to the system:anonymous group. This ConfigMap is created automatically with the Kubernetes feature
+        # gate RootCAConfigMap which was alpha in Kubernetes v1.13 and became enabled by default in v1.20+
         # api-server: http://apiserver.foo.cluster
         aliases: [foo.alias]
         groups: [foo]

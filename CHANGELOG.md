@@ -1,3 +1,7 @@
+# Release 2.6.0
+- Allow osprey client to retrieve the API server URL and CA cert from the GKE-specific
+  OIDC ClientConfig resource. See the `use-gke-clientconfig` osprey config element.
+
 # Release 2.5.0
 - Add ability for osprey client to fetch the API server CA from the API server itself,
   rather than needing an osprey server deployment to serve it. See the Kubernetes feature
