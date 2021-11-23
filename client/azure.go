@@ -152,7 +152,7 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 
 	var apiServerURL, apiServerCA string
 
-	if target.ShouldFetchServerAndCAFromClientConfig() {
+	if target.ShouldConfigureForGKE() {
 		tlsClient, err := web.NewTLSClient()
 		if err != nil {
 			return nil, fmt.Errorf("unable to create TLS client: %w", err)

@@ -37,10 +37,10 @@ func (m *Target) APIServer() string {
 	return m.targetEntry.APIServer
 }
 
-// ShouldFetchServerAndCAFromClientConfig returns true iff the API server URL and CA
+// ShouldConfigureForGKE returns true iff the API server URL and CA
 // should be fetched from the kube-public ClientConfig provided by GKE clusters
 // instead of the other methods (e.g. inline in Osprey config file or from Osprey server)
-func (m *Target) ShouldFetchServerAndCAFromClientConfig() bool {
+func (m *Target) ShouldConfigureForGKE() bool {
 	return m.targetEntry.UseGKEClientConfig
 }
 
