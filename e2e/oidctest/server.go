@@ -57,7 +57,7 @@ type wellKnownConfig struct {
 func setup(m *mockOidcServer) *http.Server {
 	return &http.Server{
 		Addr:      m.IssuerURL,
-		Handler:   m.mux,
+		Handler:   http.AllowQuerySemicolons(m.mux),
 		TLSConfig: nil,
 	}
 }
@@ -89,7 +89,7 @@ func Start(host string, port int) (Server, error) {
 	}
 	server.httpServer = &http.Server{
 		Addr:      server.IssuerURL,
-		Handler:   server.mux,
+		Handler:   http.AllowQuerySemicolons(server.mux),
 		TLSConfig: nil,
 	}
 
