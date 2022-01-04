@@ -108,8 +108,7 @@ func (c *Client) poll(ctx context.Context, df *DeviceFlowAuth) *pollResponse {
 		time.Sleep(time.Duration(interval) * time.Second)
 		token, err := c.oAuthConfig.Exchange(ctx, df.DeviceCode,
 			oauth2.SetAuthURLParam("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
-			oauth2.SetAuthURLParam("device_code", df.DeviceCode),
-			oauth2.SetAuthURLParam("resource", fmt.Sprintf("spn:%s", c.serverApplicationID)))
+			oauth2.SetAuthURLParam("device_code", df.DeviceCode))
 		if err == nil {
 			return &pollResponse{
 				Token: token,
