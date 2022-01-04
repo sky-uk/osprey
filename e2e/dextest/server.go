@@ -190,7 +190,7 @@ func setupHTTPS(certFile, keyFile string, port int32, server *dex.Server) (*http
 	httpServer := &httptest.Server{
 		Listener: listener,
 		TLS:      tlsConfig,
-		Config:   &http.Server{Handler: handler},
+		Config:   &http.Server{Handler: http.AllowQuerySemicolons(handler)},
 	}
 	return httpServer, nil
 }

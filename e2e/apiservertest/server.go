@@ -39,7 +39,7 @@ type mockAPIServer struct {
 func setup(m *mockAPIServer) *http.Server {
 	return &http.Server{
 		Addr:      m.URL,
-		Handler:   m.mux,
+		Handler:   http.AllowQuerySemicolons(m.mux),
 		TLSConfig: nil,
 	}
 }
@@ -67,7 +67,7 @@ func Start(host string, port int32) (Server, error) {
 	}
 	server.httpServer = &http.Server{
 		Addr:      server.URL,
-		Handler:   server.mux,
+		Handler:   http.AllowQuerySemicolons(server.mux),
 		TLSConfig: nil,
 	}
 
