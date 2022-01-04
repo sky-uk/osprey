@@ -21,7 +21,7 @@ import (
 const (
 	// AzureProviderName is the constant string value for the azure provider
 	AzureProviderName         = "azure"
-	wellKnownConfigurationURI = ".well-known/openid-configuration"
+	wellKnownConfigurationURI = "v2.0/.well-known/openid-configuration"
 )
 
 // AzureConfig holds the configuration for Azure

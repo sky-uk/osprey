@@ -64,9 +64,9 @@ func setup(m *mockOidcServer) *http.Server {
 
 func initialiseRequestStates() map[string]int {
 	endpoints := []string{
-		"/token",
+		"/v2.0/token",
 		"/v2.0/devicecode",
-		"/authorize",
+		"/v2.0/authorize",
 	}
 	requestStates := make(map[string]int)
 
@@ -94,8 +94,8 @@ func Start(host string, port int) (Server, error) {
 	}
 
 	server.mux.Handle(wellKnownConfigurationURI, handleWellKnownConfigRequest(server))
-	server.mux.Handle("/authorize", handleAuthorizeRequest(server))
-	server.mux.Handle("/token", handleTokenRequest(server))
+	server.mux.Handle("/v2.0/authorize", handleAuthorizeRequest(server))
+	server.mux.Handle("/v2.0/token", handleTokenRequest(server))
 	server.mux.Handle("/v2.0/devicecode", handleDeviceCodeFlowRequest(server))
 
 	go func() {
@@ -213,9 +213,9 @@ func handleWellKnownConfigRequest(m *mockOidcServer) http.HandlerFunc {
 		defer r.Body.Close()
 		config := &wellKnownConfig{
 			Issuer:                m.IssuerURL,
-			AuthorizationEndpoint: fmt.Sprintf("http://%s/authorize", m.IssuerURL),
-			TokenEndpoint:         fmt.Sprintf("http://%s/token", m.IssuerURL),
-			DeviceEndpoint:        fmt.Sprintf("http://%s/2.0/devicecode", m.IssuerURL),
+			AuthorizationEndpoint: fmt.Sprintf("http://%s/v2.0/authorize", m.IssuerURL),
+			TokenEndpoint:         fmt.Sprintf("http://%s/v2.0/token", m.IssuerURL),
+			DeviceEndpoint:        fmt.Sprintf("http://%s/v2.0/devicecode", m.IssuerURL),
 		}
 		resp, err := json.Marshal(config)
 		if err != nil {
