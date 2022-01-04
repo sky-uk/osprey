@@ -77,7 +77,7 @@ func initialiseRequestStates() map[string]int {
 	return requestStates
 }
 
-const wellKnownConfigurationURI = "/.well-known/openid-configuration"
+const wellKnownConfigurationURI = "/v2.0/.well-known/openid-configuration"
 
 // Start returns and starts a new OIDC test server server
 func Start(host string, port int) (Server, error) {
