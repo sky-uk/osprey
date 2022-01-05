@@ -155,9 +155,7 @@ window.onload = setTimeout(closeWindow, 1000);
 
 func (c *Client) doAuthRequest(ctx context.Context, r *http.Request) (*oauth2.Token, error) {
 	authCode := r.URL.Query().Get("code")
-	authCodeOptions := []oauth2.AuthCodeOption{
-		oauth2.SetAuthURLParam("resource", fmt.Sprintf("spn:%s", c.serverApplicationID)),
-	}
+	var authCodeOptions []oauth2.AuthCodeOption
 	return c.oAuthConfig.Exchange(ctx, authCode, authCodeOptions...)
 }
 

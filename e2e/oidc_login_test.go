@@ -58,7 +58,7 @@ var _ = Describe("Login with a cloud provider", func() {
 			By("logging in", func() {
 				login := loginCommand(ospreyBinary, userLoginArgs...)
 
-				_, err := doOIDCMockRequest("/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
+				_, err := doOIDCMockRequest("/v2.0/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
 				Expect(err).NotTo(HaveOccurred())
 
 				login.AssertSuccess()
@@ -76,7 +76,7 @@ var _ = Describe("Login with a cloud provider", func() {
 				It("should fetch from the Osprey server", func() {
 					login := loginCommand(ospreyBinary, userLoginArgs...)
 
-					_, err := doOIDCMockRequest("/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
+					_, err := doOIDCMockRequest("/v2.0/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
 					Expect(err).NotTo(HaveOccurred())
 
 					login.AssertSuccess()
@@ -90,7 +90,7 @@ var _ = Describe("Login with a cloud provider", func() {
 				It("should fetch from the API Server", func() {
 					login := loginCommand(ospreyBinary, userLoginArgs...)
 
-					_, err := doOIDCMockRequest("/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
+					_, err := doOIDCMockRequest("/v2.0/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
 					Expect(err).NotTo(HaveOccurred())
 
 					login.AssertSuccess()
@@ -110,7 +110,7 @@ var _ = Describe("Login with a cloud provider", func() {
 				It("URL should be fetched from GKE's ClientConfig resource", func() {
 					login := loginCommand(ospreyBinary, userLoginArgs...)
 
-					_, err := doOIDCMockRequest("/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
+					_, err := doOIDCMockRequest("/v2.0/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
 					Expect(err).NotTo(HaveOccurred())
 
 					login.AssertSuccess()
@@ -128,7 +128,7 @@ var _ = Describe("Login with a cloud provider", func() {
 				It("URL should be the same as the configured api-server field", func() {
 					login := loginCommand(ospreyBinary, userLoginArgs...)
 
-					_, err := doOIDCMockRequest("/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
+					_, err := doOIDCMockRequest("/v2.0/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
 					Expect(err).NotTo(HaveOccurred())
 
 					login.AssertSuccess()
@@ -145,12 +145,12 @@ var _ = Describe("Login with a cloud provider", func() {
 			targetGroupArgs := append(userLoginArgs, "--group=development")
 			login := loginCommand(ospreyBinary, targetGroupArgs...)
 
-			_, err := doOIDCMockRequest("/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
+			_, err := doOIDCMockRequest("/v2.0/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
 			Expect(err).NotTo(HaveOccurred())
 
 			login.AssertSuccess()
 
-			Expect(oidcTestServer.RequestCount("/authorize")).To(Equal(1))
+			Expect(oidcTestServer.RequestCount("/v2.0/authorize")).To(Equal(1))
 
 			kubeconfig := getKubeConfig()
 			Expect(kubeconfig.AuthInfos["kubectl.dev"].Token).To(Equal(kubeconfig.AuthInfos["kubectl.stage"].Token))
@@ -237,7 +237,7 @@ var _ = Describe("Login with a cloud provider", func() {
 			timeoutArgs := append(userLoginArgs, "--login-timeout=20s")
 			login := loginCommand(ospreyBinary, timeoutArgs...)
 
-			_, err := doOIDCMockRequest("/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
+			_, err := doOIDCMockRequest("/v2.0/authorize", oidcClientID, oidcRedirectURI, ospreyState, []string{"api://some-dummy-scope"})
 			Expect(err).NotTo(HaveOccurred())
 
 			login.AssertSuccess()

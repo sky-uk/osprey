@@ -34,8 +34,8 @@ type pollResponse struct {
 // AuthWithDeviceFlow attempts to authorise using the device code oAuth flow.
 func (c *Client) AuthWithDeviceFlow(ctx context.Context, loginTimeout time.Duration) (*oauth2.Token, error) {
 	c.oAuthConfig.RedirectURL = ""
-	// devicecode URL is not exposed by the Azure https://login.microsoftonline.com/<tenant-id>/.well-known/openid-configuration endpoint
-	deviceAuthURL := strings.Replace(c.oAuthConfig.AuthCodeURL(ospreyState), "/authorize", "/v2.0/devicecode", 1)
+	// potential refactor: device_authorization_endpoint is now exposed by the Azure https://login.microsoftonline.com/<tenant-id>/v2.0/.well-known/openid-configuration
+	deviceAuthURL := strings.Replace(c.oAuthConfig.AuthCodeURL(ospreyState), "/authorize", "/devicecode", 1)
 	urlParams := url.Values{"client_id": {c.oAuthConfig.ClientID}}
 	if len(c.oAuthConfig.Scopes) > 0 {
 		urlParams.Set("scope", strings.Join(c.oAuthConfig.Scopes, " "))
@@ -108,8 +108,7 @@ func (c *Client) poll(ctx context.Context, df *DeviceFlowAuth) *pollResponse {
 		time.Sleep(time.Duration(interval) * time.Second)
 		token, err := c.oAuthConfig.Exchange(ctx, df.DeviceCode,
 			oauth2.SetAuthURLParam("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
-			oauth2.SetAuthURLParam("device_code", df.DeviceCode),
-			oauth2.SetAuthURLParam("resource", fmt.Sprintf("spn:%s", c.serverApplicationID)))
+			oauth2.SetAuthURLParam("device_code", df.DeviceCode))
 		if err == nil {
 			return &pollResponse{
 				Token: token,
