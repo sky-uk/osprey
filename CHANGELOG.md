@@ -1,3 +1,7 @@
+# Release 2.7.0
+- Move to v2.0 of the `well-known/openid-configuration`. In turn this makes Osprey use v2.0 of the authorize
+  endpoint. This adds support for more recent features of OIDC.
+
 # Release 2.6.0
 - Allow osprey client to retrieve the API server URL and CA cert from the GKE-specific
   OIDC ClientConfig resource. See the `use-gke-clientconfig` osprey config element.
