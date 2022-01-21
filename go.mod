@@ -1,4 +1,4 @@
-module github.com/sky-uk/osprey
+module github.com/sky-uk/osprey/v2
 
 require (
 	github.com/SermoDigital/jose v0.9.1

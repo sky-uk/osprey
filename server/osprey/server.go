@@ -13,7 +13,7 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/sirupsen/logrus"
-	"github.com/sky-uk/osprey/common/pb"
+	"github.com/sky-uk/osprey/v2/common/pb"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

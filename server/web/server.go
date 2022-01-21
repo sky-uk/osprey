@@ -11,7 +11,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
-	"github.com/sky-uk/osprey/server/osprey"
+	"github.com/sky-uk/osprey/v2/server/osprey"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

@@ -8,7 +8,7 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
-	"github.com/sky-uk/osprey/common/web"
+	"github.com/sky-uk/osprey/v2/common/web"
 	"gopkg.in/yaml.v2"
 )
 

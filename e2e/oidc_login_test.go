@@ -8,14 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sky-uk/osprey/e2e/apiservertest"
+	"github.com/sky-uk/osprey/v2/e2e/apiservertest"
 
-	"github.com/sky-uk/osprey/client/kubeconfig"
+	"github.com/sky-uk/osprey/v2/client/kubeconfig"
 	"k8s.io/client-go/tools/clientcmd/api"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sky-uk/osprey/e2e/clitest"
+	"github.com/sky-uk/osprey/v2/e2e/clitest"
 )
 
 const (

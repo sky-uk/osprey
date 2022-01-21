@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"github.com/sky-uk/osprey/server/osprey"
+	"github.com/sky-uk/osprey/v2/server/osprey"
 	"github.com/spf13/cobra"
 
 	log "github.com/sirupsen/logrus"
-	webClient "github.com/sky-uk/osprey/common/web"
-	webServer "github.com/sky-uk/osprey/server/web"
+	webClient "github.com/sky-uk/osprey/v2/common/web"
+	webServer "github.com/sky-uk/osprey/v2/server/web"
 )
 
 var authCmd = &cobra.Command{

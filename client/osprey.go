@@ -8,8 +8,8 @@ import (
 
 	"github.com/SermoDigital/jose/jws"
 	log "github.com/sirupsen/logrus"
-	"github.com/sky-uk/osprey/common/pb"
-	webClient "github.com/sky-uk/osprey/common/web"
+	"github.com/sky-uk/osprey/v2/common/pb"
+	webClient "github.com/sky-uk/osprey/v2/common/web"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 

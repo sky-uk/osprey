@@ -3,8 +3,8 @@ package cmd
 import (
 	"path/filepath"
 
-	"github.com/sky-uk/osprey/client"
-	"github.com/sky-uk/osprey/client/kubeconfig"
+	"github.com/sky-uk/osprey/v2/client"
+	"github.com/sky-uk/osprey/v2/client/kubeconfig"
 	"github.com/spf13/cobra"
 
 	"os"

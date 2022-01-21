@@ -15,7 +15,7 @@ builds:
       - goos: windows
         goarch: arm64
     ldflags:
-      - -s -X "github.com/sky-uk/osprey/cmd.version={{.Version}}" -X "github.com/sky-uk/osprey/cmd.buildTime={{.Date}})"
+      - -s -X "github.com/sky-uk/osprey/v2/cmd.version={{.Version}}" -X "github.com/sky-uk/osprey/v2/cmd.buildTime={{.Date}})"
 archives:
   - replacements:
       darwin: Darwin

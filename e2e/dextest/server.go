@@ -19,9 +19,9 @@ import (
 	dex_memory "github.com/dexidp/dex/storage/memory"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/sky-uk/osprey/e2e/ldaptest"
-	"github.com/sky-uk/osprey/e2e/ssltest"
-	"github.com/sky-uk/osprey/e2e/util"
+	"github.com/sky-uk/osprey/v2/e2e/ldaptest"
+	"github.com/sky-uk/osprey/v2/e2e/ssltest"
+	"github.com/sky-uk/osprey/v2/e2e/util"
 )
 
 var logger = log.New()

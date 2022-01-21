@@ -12,7 +12,7 @@ import (
 	"github.com/golang-jwt/jwt"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/sky-uk/osprey/client/oidc"
+	"github.com/sky-uk/osprey/v2/client/oidc"
 	"golang.org/x/oauth2"
 )
 
