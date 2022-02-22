@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"github.com/sky-uk/osprey/server/osprey"
+	"github.com/sky-uk/osprey/v2/server/osprey"
 	"github.com/spf13/cobra"
 
 	log "github.com/sirupsen/logrus"
-	webServer "github.com/sky-uk/osprey/server/web"
+	webServer "github.com/sky-uk/osprey/v2/server/web"
 )
 
 var clusterInfoCmd = &cobra.Command{

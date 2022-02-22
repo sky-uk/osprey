@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/SermoDigital/jose/jws"
-	"github.com/sky-uk/osprey/client/oidc"
-	"github.com/sky-uk/osprey/common/pb"
-	"github.com/sky-uk/osprey/common/web"
+	"github.com/sky-uk/osprey/v2/client/oidc"
+	"github.com/sky-uk/osprey/v2/common/pb"
+	"github.com/sky-uk/osprey/v2/common/web"
 	"golang.org/x/oauth2"
 	"k8s.io/client-go/tools/clientcmd/api"
 )

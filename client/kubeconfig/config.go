@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/sky-uk/osprey/client"
+	"github.com/sky-uk/osprey/v2/client"
 
 	kubectl "k8s.io/client-go/tools/clientcmd"
 	clientgo "k8s.io/client-go/tools/clientcmd/api"

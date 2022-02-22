@@ -10,9 +10,9 @@ import (
 	"time"
 
 	dex_ldap "github.com/dexidp/dex/connector/ldap"
-	"github.com/sky-uk/osprey/e2e/clitest"
-	"github.com/sky-uk/osprey/e2e/ssltest"
-	"github.com/sky-uk/osprey/e2e/util"
+	"github.com/sky-uk/osprey/v2/e2e/clitest"
+	"github.com/sky-uk/osprey/v2/e2e/ssltest"
+	"github.com/sky-uk/osprey/v2/e2e/util"
 )
 
 const (

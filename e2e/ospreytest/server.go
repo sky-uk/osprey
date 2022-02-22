@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/sky-uk/osprey/client"
+	"github.com/sky-uk/osprey/v2/client"
 
 	"github.com/onsi/ginkgo"
-	"github.com/sky-uk/osprey/common/web"
-	"github.com/sky-uk/osprey/e2e/clitest"
-	"github.com/sky-uk/osprey/e2e/dextest"
-	"github.com/sky-uk/osprey/e2e/ssltest"
-	"github.com/sky-uk/osprey/e2e/util"
+	"github.com/sky-uk/osprey/v2/common/web"
+	"github.com/sky-uk/osprey/v2/e2e/clitest"
+	"github.com/sky-uk/osprey/v2/e2e/dextest"
+	"github.com/sky-uk/osprey/v2/e2e/ssltest"
+	"github.com/sky-uk/osprey/v2/e2e/util"
 )
 
 const ospreyBinary = "osprey"

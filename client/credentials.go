@@ -7,7 +7,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/sky-uk/osprey/common"
+	"github.com/sky-uk/osprey/v2/common"
 
 	"golang.org/x/crypto/ssh/terminal"
 )

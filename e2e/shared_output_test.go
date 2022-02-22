@@ -3,7 +3,7 @@ package e2e
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sky-uk/osprey/e2e/clitest"
+	"github.com/sky-uk/osprey/v2/e2e/clitest"
 )
 
 type commandFactory func() clitest.TestCommand

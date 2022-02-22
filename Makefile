@@ -8,7 +8,7 @@ latest_git_tag := $(shell git for-each-ref --format="%(tag)" --sort=-taggerdate 
 latest_git_rev := $(shell git rev-list --abbrev-commit -n 1 $(latest_git_tag))
 version := $(if $(git_tag),$(git_tag),dev-$(git_rev))
 build_time := $(shell date -u)
-ldflags := -X "github.com/sky-uk/osprey/cmd.version=$(version)" -X "github.com/sky-uk/osprey/cmd.buildTime=$(build_time)"
+ldflags := -X "github.com/sky-uk/osprey/v2/cmd.version=$(version)" -X "github.com/sky-uk/osprey/v2/cmd.buildTime=$(build_time)"
 
 cwd= $(shell pwd)
 build_dir := $(cwd)/build/bin

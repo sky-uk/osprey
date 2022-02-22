@@ -6,9 +6,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sky-uk/osprey/client/kubeconfig"
-	"github.com/sky-uk/osprey/e2e/clitest"
-	. "github.com/sky-uk/osprey/e2e/ospreytest"
+	"github.com/sky-uk/osprey/v2/client/kubeconfig"
+	"github.com/sky-uk/osprey/v2/e2e/clitest"
+	. "github.com/sky-uk/osprey/v2/e2e/ospreytest"
 	clientgo "k8s.io/client-go/tools/clientcmd/api"
 )
 

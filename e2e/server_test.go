@@ -7,8 +7,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sky-uk/osprey/e2e/dextest"
-	"github.com/sky-uk/osprey/e2e/ospreytest"
+	"github.com/sky-uk/osprey/v2/e2e/dextest"
+	"github.com/sky-uk/osprey/v2/e2e/ospreytest"
 )
 
 var _ = Describe("Server", func() {

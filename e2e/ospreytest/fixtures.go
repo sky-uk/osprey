@@ -9,8 +9,8 @@ import (
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
-	"github.com/sky-uk/osprey/common/web"
-	"github.com/sky-uk/osprey/server/osprey"
+	"github.com/sky-uk/osprey/v2/common/web"
+	"github.com/sky-uk/osprey/v2/server/osprey"
 	"k8s.io/client-go/tools/clientcmd"
 	clientgo "k8s.io/client-go/tools/clientcmd/api"
 )
