@@ -1,3 +1,6 @@
+# Release 2.8.0
+- Update imports for v2 compatibility
+
 # Release 2.7.0
 - Move to v2.0 of the `well-known/openid-configuration`. In turn this makes Osprey use v2.0 of the authorize
   endpoint. This adds support for more recent features of OIDC.
