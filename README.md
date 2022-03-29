@@ -45,6 +45,15 @@ There is currently no binary install option for Osprey, due to the
 sunsetting of our old binary host.  You will need to build from source
 or install with Docker.
 
+For example:
+```yaml
+$ go install github.com/sky-uk/osprey/v2@v2.8.1
+
+$ ~/go/bin/osprey --help
+User authentication for Kubernetes clusters
+...
+```
+
 ### Docker
 
 The Docker image is based on [Alpine Linux](https://hub.docker.com/_/alpine).
@@ -66,6 +75,17 @@ To get the version of the binary use the `--version` argument:
 ```
 $ osprey --version
 osprey version 2.8.1 (2022-03-17T16:25:26Z))
+```
+
+You can run Osprey client in Docker by bind-mounting your Osprey config and kubeconfig files:
+
+```
+$ docker run --rm \
+    --network=host \
+    --env HOME=/ \
+    -v $HOME/.config/osprey/config:/.config/osprey/config:ro \
+    -v $HOME/.kube/config:/.kube/config \
+    skycirrus/osprey:v2.8.1 user login
 ```
 
 ## Client usage
