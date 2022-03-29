@@ -3,9 +3,6 @@ language: go
 go:
   - 1.18.x
 
-env:
-  - SKIP_PREPARE_RELEASE_BINTRAY=true
-
 before_install:
   - sudo apt-get -y update
   - sudo apt-get -y install --no-install-recommends slapd
