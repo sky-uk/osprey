@@ -1,6 +1,6 @@
 # Osprey
 
-Client and service for providing access to Kubernetes clusters.
+Client and service for providing OIDC access to Kubernetes clusters.
 
 The client provides a `user login` command which will request a `username`
 and a `password` and forward them to the service. The service will forward
@@ -11,7 +11,7 @@ with some additional cluster information will be used to generate the
 
 ### Supported OIDC providers
 ##### Dex
-This implementation relies in one specific configuration detail of the OIDC
+This implementation relies on one specific configuration detail of the OIDC
 provider `SkipApprovalScreen : true` which eliminates the intermediate step
 requiring a client to explicitly approve the requested grants before the
 token is provided. If the target provider does not support this feature,
@@ -33,27 +33,37 @@ on your behalf.
 
 ## Installation
 
-Osprey is currently supported in linux, macOS and windows and it can be
-installed as a standalone executable, or it can be run as a container (only
-linux).
-The docker container is aimed to be used for the server side, while the
-binaries main use are the client commands.
+Osprey is currently supported on Linux, macOS and Windows. It can be
+installed as a standalone executable or run as a container (only
+Linux).
+The Docker container is aimed to be used for the server side, while the
+binaries' main use are the client commands.
 
 ### Binaries
 
-There is currently no binary install option for osprey, due to the
+There is currently no binary install option for Osprey, due to the
 sunsetting of our old binary host.  You will need to build from source
-or install with docker.
+or install with Docker.
+
+For example:
+```yaml
+$ go install github.com/sky-uk/osprey/v2@v2.8.1
+
+$ ~/go/bin/osprey --help
+User authentication for Kubernetes clusters
+...
+```
 
 ### Docker
 
-The docker image is based on alpine. It can be pulled from our [Docker Hub repository](https://hub.docker.com/r/skycirrus/osprey/)
+The Docker image is based on [Alpine Linux](https://hub.docker.com/_/alpine).
+It can be pulled from our [Docker Hub repository](https://hub.docker.com/r/skycirrus/osprey/)
 
 To pull a specific version replace `<version>` with the release version
 (e.g `v9.9.0`; mind the `v` prefix).
 
-```
-   docker pull skycirrus/osprey:<version>
+```sh
+$ docker pull skycirrus/osprey:<version>
 ```
 
 # Client
@@ -61,10 +71,21 @@ To pull a specific version replace `<version>` with the release version
 The `osprey client` will request the user credentials and generate a
 kubeconfig file based on the contents of its [configuration](#client-configuration).
 
-To get the version of the binary use the root command:
+To get the version of the binary use the `--version` argument:
 ```
-$  osprey --version
-osprey version dev-8c8751f (Tue 21 Aug 20:19:49 UTC 2018)
+$ osprey --version
+osprey version 2.8.1 (2022-03-17T16:25:26Z))
+```
+
+You can run Osprey client in Docker by bind-mounting your Osprey config and kubeconfig files:
+
+```
+$ docker run --rm \
+    --network=host \
+    --env HOME=/ \
+    -v $HOME/.config/osprey/config:/.config/osprey/config:ro \
+    -v $HOME/.kube/config:/.kube/config \
+    skycirrus/osprey:v2.8.1 user login
 ```
 
 ## Client usage
@@ -76,7 +97,7 @@ osprey version dev-8c8751f (Tue 21 Aug 20:19:49 UTC 2018)
 - [user](#user)
 
 With a [configuration](#client-configuration) file like:
-```
+```yaml
 providers:
   osprey:
     targets:
@@ -96,20 +117,20 @@ They can be used, for example, to split non-production and production clusters
 into different groups, thus making the interaction explicit.
 
 Most of the client commands accept a `--group <value>` flag which indicate
-osprey to execute the commands only against targets containing the specified
+Osprey to execute the commands only against targets containing the specified
 value in their `groups` definition.
 
 A `default-group` may be defined at the top of the configuration which will
 apply that group to any command if the `--group` flag is not used.
 When a default group exists *all targets should belong to at least one group*;
-otherwise the configuraiton will become invalid and an error will be displayed
+otherwise the configuration will become invalid and an error will be displayed
 when running any command.
 
 If no group is provided, and no `default-group` is defined, the operations
 will be performed against targets without group definitions.
 
 ### Login
-Requests a kubernetes access token for each of the configured targets and
+Requests a Kubernetes access token for each of the configured targets
 and creates the kubeconfig's cluster, user and context elements for them.
 
 ```
@@ -143,9 +164,9 @@ Logged in to bar.cluster
 At login, aliases are displayed after the pipes (i.e `| foo`)
 
 ### User
-Displays information about the currently logged in user (it shows the details
+Displays information about the currently logged-in user (it shows the details
 even if the token has already expired).
-It contains the email of the logged in user and the list of LDAP membership
+It contains the email of the logged-in user and the list of LDAP membership
 groups the user is a part of. The latter come from the claims in the
 user's token.
 
@@ -158,7 +179,7 @@ bar.cluster: someone@email.com [membership C]
 If no user is logged in, osprey displays `none` instead of the user details.
 
 ### Logout
-Removes the token for the currently logged in user for every configured
+Removes the token for the currently logged-in user for every configured
 target.
 
 ```
@@ -179,7 +200,7 @@ It allows displaying the list of targets per group and to target a specific
 group via flags.
 
 ```
-$  osprey config targets --by-groups
+$ osprey config targets --by-groups
 Configured targets:
 * <ungrouped>
     local.cluster
@@ -204,7 +225,7 @@ The targets command flag `--list-groups` is useful to display only the
 list of existing groups within the configuration, without any target
 information.
 ```
-$  osprey config targets --list-groups
+$ osprey config targets --list-groups
 Configured groups:
 * <ungrouped>
   bar
@@ -216,9 +237,9 @@ Configured groups:
 The client installation script gets the configuration supported by the
 installed version.
 
-The client uses a yaml configuration file. It's recommended location is:
+The client uses a YAML configuration file. Its recommended location is:
 `$HOME/.osprey/config`. Its contents are as follows:
-```
+```yaml
 # Optional path to the kubeconfig file to load/update when loging in.
 # Uses kubectl defaults if absent ($HOME/.kube/config).
 # kubeconfig: /home/jdoe/.kube/config
@@ -230,38 +251,34 @@ The client uses a yaml configuration file. It's recommended location is:
 # Named map of supported providers (currently `osprey` and `azure`)
 providers:
   osprey:
-    # Mandatory for windows, optional for unix systems.
-    # CA cert to use for HTTPS connections to osprey.
-    # Uses system's CA certs if absent (only in unix systems).
+    # CA cert to use for HTTPS connections to Osprey.
+    # Uses system's CA certs if absent.
     # certificate-authority: /tmp/osprey-238319279/cluster_ca.crt
 
-    # Alternatively, base64-encoded PEM format certificate.
+    # Alternatively, a Base64-encoded PEM format certificate.
     # This will override certificate-authority if specified.
-    # Same caveat for Windows systems applies.
     # certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5vdCB2YWxpZAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
 
-    # Named map of target osprey servers to contact for access-tokens
+    # Named map of target Osprey servers to contact for access-tokens
     targets:
-      # Target osprey's environment name.
+      # Target Osprey's environment name.
       # Used for the name of the cluster, context, and users generated
       foo.cluster:
         # hostname:port of the target osprey server
         server: https://osprey.foo.cluster
 
-        #  list of names to generate aditional contexts against the target.
+        #  list of names to generate additional contexts against the target.
         aliases: [foo.alias]
 
-        #  list of names that can be used to logically group different osprey servers.
+        #  list of names that can be used to logically group different Osprey servers.
         groups: [foo]
 
-        # Mandatory for windows, optional for unix systems.
-        # CA cert to use for HTTPS connections to osprey.
-        # Uses system's CA certs if absent (only in unix systems).
+        # CA cert to use for HTTPS connections to Osprey.
+        # Uses system's CA certs if absent.
         # certificate-authority: /tmp/osprey-238319279/cluster_ca.crt
 
-        # Alternatively, base64-encoded PEM format certificate.
+        # Alternatively, a Base64-encoded PEM format certificate.
         # This will override certificate-authority if specified.
-        # Same caveat for Windows systems applies.
         # certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5vdCB2YWxpZAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
 
   # Authenticating against Azure AD
@@ -272,31 +289,30 @@ providers:
     client-id: azure-ad-client-id
     client-secret: azure-ad-client-secret
 
-    # List of scopes to request as part of the request. This should be an azure link to the API exposed on the server application
+    # List of scopes to request as part of the request. This should be an Azure link to the API exposed on the server application
     scopes:
       - "api://azure-tenant-id/Kubernetes.API.All"
 
-    # This is required for the browser based authentication flow. The port is configurable, but it must conform to
+    # This is required for the browser-based authentication flow. The port is configurable, but it must conform to
     # the format: http://localhost:<port>/auth/callback
     redirect-uri: http://localhost:65525/auth/callback
     targets:
       foo.cluster:
         server: http://osprey.foo.cluster
-        # If use-gke-clientconfig is specified (default false) osprey will fetch the API server URL and its
+        # If "use-gke-clientconfig" is specified (default false) Osprey will fetch the API server URL and its
         # CA cert from the GKE-specific ClientConfig resource in kube-public. This resource is created automatically
-        # by GKE when you enable to OIDC Identity Service. The api-server config element is also required.
-        # Usually api-server would be set to the public API server endpoint; the fetched API server URL will be
+        # by GKE when you enable to OIDC Identity Service. The "api-server" config element is also required.
+        # Usually "api-server" would be set to the public API server endpoint; the fetched API server URL will be
         # the internal load balancer that proxies requests through the OIDC service.
         # use-gke-clientconfig: true
         #
-        # If api-server is specified (default ""), osprey will fetch the CA cert from the API server itself.
-        # Overrides "server". A ConfigMap in kube-publiuc called kube-root-ca.crt should be made accessible
+        # If api-server is specified (default ""), Osprey will fetch the CA cert from the API server itself.
+        # Overrides "server". A ConfigMap in kube-public called kube-root-ca.crt should be made accessible
         # to the system:anonymous group. This ConfigMap is created automatically with the Kubernetes feature
         # gate RootCAConfigMap which was alpha in Kubernetes v1.13 and became enabled by default in v1.20+
         # api-server: http://apiserver.foo.cluster
         aliases: [foo.alias]
         groups: [foo]
-
 ```
 
 The name of the configured targets will be used to name the managed clusters,
@@ -306,10 +322,13 @@ of the targets to create alias contexts in the kubeconfig.
 The previous configuration will result in the following `kubeconfig` file for the
 user `jdoe`:
 
-`osprey user login --ospreyconfig /tmp/osprey-238319279/.osprey/config`
-
 ```
+$ osprey user login --ospreyconfig /tmp/osprey-238319279/.osprey/config
+```
+
+```yaml
 apiVersion: v1
+kind: Config
 clusters:
 - cluster:
     certificate-authority-data: YUhSMGNITTZMeTloY0dselpYSjJaWEl1YzJGdVpHSnZlQzVqYjNOdGFXTXVjMnQ1
@@ -325,7 +344,6 @@ contexts:
     user: foo.cluster
   name: foo.alias
 current-context: ""
-kind: Config
 preferences: {}
 users:
 - name: foo.cluster
@@ -345,13 +363,13 @@ in the `kubeconfig` file per `target` in the `ospreyconfig` file. We use
 `client-go`'s config api to manipulate the `kubeconfig`.
 
 If previous contexts exist in the kubectl config file, they will get
-updated/overriden when performing a login. It overrides values by `name`
-(e.g. cluster.name, context.name, user.name).
-It is recommended that the first time using the osprey for a specific cluster
+updated/overridden when performing a login. It overrides values by `name`
+(e.g. `cluster.name`, `context.name`, `user.name`).
+It is recommended that the first time using the Osprey for a specific cluster
 old values are removed, to keep the config clean.
 
 The names of clusters, user and context will use the value defined in the
-osprey config.
+Osprey config.
 
 # Server
 
@@ -360,19 +378,19 @@ The Osprey server can be started in two different ways:
 - `osprey serve auth`
 
 ### `osprey serve cluster-info`
-Starts an instance of the osprey serve that will create a webserver that is capable of returning cluster information. In
+Starts an instance of the Osprey serve that will create a webserver that is capable of returning cluster information. In
 this mode, authentication is disabled. This endpoint is used for service discovery for an osprey target.
 
-This endpoint (`/cluster-info`) will return the api-server URL and the CA for the api-server.
+This endpoint (`/cluster-info`) will return the API server URL and the CA for the API server.
 
 In this mode, the required flags are:
 
-- `apiServerCA`, the path to the api-server CA (defaults to `/var/run/secrets/kubernetes.io/serviceaccount/ca.crt`) which
-is the default location of the CA when running inside a kubernetes cluster.
-- `apiServerURL`, the api-server URL to return to the osprey client
+- `apiServerCA`, the path to the API server CA (defaults to `/var/run/secrets/kubernetes.io/serviceaccount/ca.crt`) which
+is the default location of the CA when running inside a Kubernetes cluster.
+- `apiServerURL`, the API server URL to return to the Osprey client
 
-Note that since v2.5.0 osprey client can fetch the CA cert directly from the API server without needing a
-deployment of osprey server.
+Note that since v2.5.0 Osprey client can fetch the CA cert directly from the API server without needing a
+deployment of Osprey server.
 
 ### `osprey serve auth`
 Starts an instance of the osprey server that will listen for authentication
@@ -380,7 +398,7 @@ requests. The configuration is done through the commands flags. The Osprey servi
 and forward them to the OIDC provider (Dex) for authentication. On success it will return the token generated by the
 provider along with additional information about the cluster so that the client can generate the kubectl config file.
 ```
-    osprey serve auth --help
+$ osprey serve auth --help
 ```
 
 When Osprey is being used for authentication, the following flags require to be
@@ -388,19 +406,19 @@ the same across the specified components:
 
 - `environment`, id of the cluster to be used as a client id
   - Dex: registered client `id` (managed via the Dex api or `staticClients`)
-  - Kubernetes apiserver: `oidc-client-id` flag
+  - Kubernetes API server: `oidc-client-id` flag
 - `secret`, token to be shared between Dex and Osprey
   - Dex: registered client `secret` (managed via the Dex api or `staticClients`)
 - `redirectURL`, Osprey's callback url
   - Dex: registered client `redirectURIs` (managed via the Dex api or `staticClients`)
 - `issuerURL`, Dex's URL
   - Dex: `issuer` value
-  - Kubernetes apiserver: `oidc-issuer-url` flag
+  - Kubernetes API server: `oidc-issuer-url` flag
 - `issuerCA`, Dex's CA certificate path
-  - Kubernetes apiserver: `oidc-ca-file` flag
+  - Kubernetes API server: `oidc-ca-file` flag
 
 The following diagram depicts the authentication flow from the moment the
-osprey client requests a token.
+Osprey client requests a token.
 
 ```
                                        +------------------------+
@@ -426,13 +444,12 @@ osprey client requests a token.
                                        |                        |
                                        |      Environment       |
                                        +------------------------+
-
 ```
 
-After the user enters its credentials through the `Osprey Client`:
+After the user enters their credentials through the `Osprey Client`:
 1. An HTTPS call is made to an `Osprey Server` per environment configured.
 2. Per environment:
-   1. The `Osprey Server` will make an authentication request to `Dex` which will
+   1. The `Osprey Server` will make an authentication request to `Dex` which
       will return an authentication url to use and a request ID.
    2. The `Osprey Server` will post the user credentials using the auth request
       details.
@@ -451,7 +468,7 @@ startup.
 The client must be configured with the CA used to sign the certificate in
 order to be able to communicate with the server.
 
-A script to generate a test self signed certificate, key and CA can be found
+A script to generate a test self-signed certificate, key and CA can be found
 in the [examples](examples/local/generate-certs.sh)
 
 ### Dex templates and static content
@@ -459,7 +476,7 @@ By default Dex searches for web resources in a `web` folder located in the
 same directory where the server is started. This location can be overridden
 in Dex's configuration:
 
-```
+```yaml
 ...
 frontend:
   dir: /path/to/the/templates
@@ -492,13 +509,13 @@ Dex allows for configuration of the token expiry, and it also provides
 a refresh token, so that a client can request a new token without the need
 of user interaction.
 
-The current usage of osprey is such that it was decided to discard the
+The current usage of Osprey is such that it was decided to discard the
 refresh token, to prevent a compromised token to be active for more than
 a configured amount of time. If the need arises, this could be reintroduced
 and enabled/disabled by configuration.
 
-### Apiserver
-The Kubernetes apiserver needs to [enable the OIDC Authentication](https://kubernetes.io/docs/admin/authentication/#configuring-the-api-server)
+### API server
+The Kubernetes API server needs to [enable the OIDC Authentication](https://kubernetes.io/docs/admin/authentication/#configuring-the-api-server)
 in order for the kubectl requests to be authenticated and then authorised.
 
 Some of those flags have been mentioned in the [configuration](#osprey-serve-auth).
@@ -510,16 +527,16 @@ can be used for the examples.
 
 ## Kubernetes
 A set of examples resources has been provided to create the required resources
-to deploy Dex and Osprey to a kubernetes cluster.
+to deploy Dex and Osprey to a Kubernetes cluster.
 The templates can be found in `examples/kubernetes`.
 
 1. Provide the required properties in `examples/kubernetes/kubernetes.properties`:
    - `node`, the script uses a NodePort service, so in order to configure the
-     osprey and dex to talk to each other, a node ip from the target cluster
+     Osprey and Dex to talk to each other, a node IP from the target cluster
      must be provided.
-     A list of ips to chose from can be obtained via:
+     A list of IPs to chose from can be obtained via:
      ```
-     kubectl --context <context> get nodes -o template --template='{{range.items}}{{range.status.addresses}}{{if eq .type "InternalIP"}}  {{.address}}:{{end}}{{end}}{{end}}' | tr ":" "\n"
+     kubectl --context <context> get nodes -o template --template='{{range.items}}{{range.status.addresses}}{{if eq .type "InternalIP"}} {{.address}}:{{end}}{{end}}{{end}}' | tr ":" "\n"
      ```
    - `context`, the script uses kubectl to apply the resources and for this it
      needs a context to target.
@@ -529,18 +546,17 @@ The templates can be found in `examples/kubernetes`.
      in use, they must be changed.
    - `ospreyImage`, if you want to try a different version for the server.
 
-2. Run the shell script to render the templates and to to deploy the resources
+2. Run the shell script to render the templates and to deploy the resources
    to the specified cluster.
    ```
    examples/kubernetes/deploy-all.sh </full/path/to/runtime/dir>
    ```
-   To create an osprey-server that serves `/cluster-info` only, set `ospreyAuthenticationDisabled=true` in the properties
+   To create an Osprey server that serves `/cluster-info` only, set `ospreyAuthenticationDisabled=true` in the properties
    file.
-3. Use the osprey client
+3. Use the Osprey client
    ```
    osprey --ospreyconfig </full/path/to/runtime/dir/>osprey/ospreyconfig --help
    ```
-
 
 More properties are available to customize the resources at will.
 
@@ -554,21 +570,21 @@ logging in, checking details and logging out.
 
 From the root of the project:
 ```
-   mkdir /tmp/osprey_local
-   examples/local/end-to-end.sh /tmp/osprey_local
+$ mkdir /tmp/osprey_local
+$ examples/local/end-to-end.sh /tmp/osprey_local
 ```
 The [end-to-end.sh](examples/local/end-to-end.sh) script will:
 1. Start a Dex server ([start-dex.sh](examples/local/start-dex.sh))
 2. Start an Osprey server ([start-osprey.sh](examples/local/start-osprey.sh))
 3. Execute the `osprey user login` command. It will request credentials,
-   use user/pass: "jane@foo.cluster/doe", "john@foo.cluster/doe"
+   use user/pass: `jane@foo.cluster`/`doe`, `john@foo.cluster`/`doe`
 4. Execute the `osprey user` command
 5. Execute the `osprey user logout` command
 6. Execute the `osprey user` command
 7. Shutdown Osprey and Dex
 
 You can also start Dex and Osprey manually with the scripts and play with
-the osprey client yourself.
+the Osprey client yourself.
 
 The scripts use templates for the [Dex configuration](examples/local/dex/config.template.yml)
 and the [Osprey client configuration](examples/local/osprey/ospreyconfig.template).
@@ -581,12 +597,12 @@ render the templates.
 First install the required dependencies:
 
 * `make setup` - installs required golang binaries
-* `slapd`, usually part of the `openldap` package - needed for end to end tests
+* `slapd`, usually part of the `openldap` package - needed for end-to-end tests
 
 Then run the tests using make:
 
 ```sh
-make
+$ make
 ```
 
 ## Package structure
@@ -595,17 +611,17 @@ make
 * `/client` contains code for the osprey cli client.
 * `/server` contains code for the osprey server.
 * `/common` contains code common to both client and server.
-* `/e2e` contains the end to end tests, and test utils for dependencies.
+* `/e2e` contains the end-to-end tests, and test utils for dependencies.
 * `/examples` contains scripts to start Dex and Osprey in a Kubernetes clusters
   or locally.
 * `vendor` contains the dependencies of the project.
 
 ## Server and client
 
-We use [cobra](https://github.com/spf13/cobra), to generate the client and server commands.
+We use [Cobra](https://github.com/spf13/cobra), to generate the client and server commands.
 
 ### E2E tests
-The e2e tests are executed against local Dex and ldap servers.
+The e2e tests are executed against local Dex and LDAP servers.
 
 The setup is as follows:
 
@@ -619,26 +635,28 @@ environment.
 All `Dex` instances from the different environments will talk to the single
 `LDAP` instance.
 
-For cloud end to end tests, a mocked OIDC server is created and used to authenticate with.
+For cloud end-to-end tests, a mocked OIDC server is created and used to authenticate with.
 
 ## HTTPS/ProtocolBuffers
 
-Given that aws ELB's do not support HTTP/2 osprey needs to run over HTTP.
+Given that aws ELBs do not support HTTP/2 osprey needs to run over HTTP.
 We still use ProtocolBuffers for the requests and responses between osprey
 and its client.
 
 *Any changes made to the proto files should be backwards compatible.* This guarantees older clients can continue
-to work against osprey, and we don't need to worry about updates to older clients.
+to work against Osprey, and we don't need to worry about updates to older clients.
 
 To update, update `common/pb/osprey.proto` then run protoc.
 
-    make proto
+```
+$ make proto
+```
 
 Check in the `osprey.pb.go` file afterwards.
 
 ## Azure Active Directory setup
 
-The Azure AD Application setup requires two applications to be created. One for the Kubernetes api-servers to use, and
+The Azure AD Application setup requires two applications to be created. One for the Kubernetes API servers to use, and
 one for the Osprey client to use. The Osprey client is then configured to request access on behalf of the Kubernetes
 OIDC provider.
 
@@ -656,7 +674,7 @@ OIDC provider.
 5. Select 'Expose an API' from the side-bar and click '+ Add a scope'
 6. Create a scope with an appropriate/descriptive name. e.g. `Kubernetes.API.All`. The details in this form are what are
    shown to users when they first authorize the application to log in on their behalf.
-7. Select 'Manifest' from the side-bar and find the field 'groupMembershipClaims' in the JSON. Change this so that it's
+7. Select 'Manifest' from the side-bar and find the field `groupMembershipClaims` in the JSON. Change this so that its
    value is `"groupMembershipClaims": "All",` and not `"groupMembershipClaims": null,`
 8. The *server* client-id  is the Object ID of this application. This can be found in the Overview panel.
 
@@ -686,7 +704,7 @@ OIDC provider.
 7. The *osprey* client-id  is the Object ID of this application. This can be found in the Overview panel.
 
 
-The client ID and secrets generated in this section are used to fill out the osprey config file.
+The client ID and secrets generated in this section are used to fill out the Osprey config file.
 ```yaml
 providers:
   azure:
@@ -695,12 +713,12 @@ providers:
     client-id: azure-application-client-id               # Client ID for the "Osprey - Client" application
     client-secret: azure-application-client-secret       # Client Secret for the "Osprey - Client" application
     scopes:
-    # This must be in the format "api://" due to non-interactive logins appending this to the audience in the JWT.
+      # This must be in the format "api://" due to non-interactive logins appending this to the audience in the JWT.
       - "api://SERVER-APPLICATION-ID/Kubernetes.API.All"
     redirect-uri: http://localhost:65525/auth/callback   # Redirect URI configured for the "Osprey - Client" application
 ```
 
-Kubernetes api-server flags:
+Kubernetes API server flags:
 ```yaml
 - --oidc-issuer-url=https://sts.windows.net/<tenant-id>/
 - --oidc-client-id=api://9bd903fd-f8df-4390-9a45-ab2fa28673b4
@@ -710,14 +728,14 @@ Kubernetes api-server flags:
 
 ## Dependency management
 
-Dependencies are managed with [go modules](https://github.com/golang/go/wiki/Modules).
+Dependencies are managed with [Go modules](https://github.com/golang/go/wiki/Modules).
 Run `go mod download` to download all dependencies.
 
-Make sure any kubernetes dependencies are compatible with the `kubernetes-1.8.5`
+Make sure any Kubernetes dependencies are compatible with the `kubernetes-1.8.5`
 
 # Releasing
 
-Tag the commit in master using an annotated tag and push it to release it.
+Tag the commit in `master` using an annotated tag and push it to release it.
 Only maintainers can do this.
 
 Osprey gets released to:
@@ -725,4 +743,4 @@ Osprey gets released to:
 
 # Code guidelines
 
-* Follow Effective Go.
+* Follow [Effective Go](https://go.dev/doc/effective_go).
