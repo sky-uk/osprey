@@ -33,7 +33,7 @@ on your behalf.
 
 ## Installation
 
-Osprey is currently supported in Linux, macOS and Windows. It can be
+Osprey is currently supported on Linux, macOS and Windows. It can be
 installed as a standalone executable or run as a container (only
 Linux).
 The Docker container is aimed to be used for the server side, while the
