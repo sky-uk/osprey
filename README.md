@@ -306,6 +306,10 @@ providers:
         # the internal load balancer that proxies requests through the OIDC service.
         # use-gke-clientconfig: true
         #
+        # If "skip-tls-verify" is specified (default false) Osprey will skip TLS verification when attempting
+        # to make the connection to the specified server.  This can be used in conjunction with `server` or `api-server`.
+        # skip-tls-verify: true
+        #
         # If api-server is specified (default ""), Osprey will fetch the CA cert from the API server itself.
         # Overrides "server". A ConfigMap in kube-public called kube-root-ca.crt should be made accessible
         # to the system:anonymous group. This ConfigMap is created automatically with the Kubernetes feature
