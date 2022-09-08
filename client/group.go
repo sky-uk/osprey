@@ -37,7 +37,7 @@ func (g *Group) Name() string {
 	return g.name
 }
 
-//Contains returns true if it contains the target
+// Contains returns true if it contains the target
 func (g *Group) Contains(target Target) bool {
 	for _, current := range g.targets {
 		if target.name == current.name {

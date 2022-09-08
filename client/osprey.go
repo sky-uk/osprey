@@ -99,7 +99,7 @@ func (r *ospreyRetriever) RetrieveUserDetails(target Target, authInfo api.AuthIn
 }
 
 func (r *ospreyRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*TargetInfo, error) {
-	httpClient, err := webClient.NewTLSClient(r.serverCertificateAuthorityData, target.CertificateAuthorityData())
+	httpClient, err := webClient.NewTLSClient(target.ShouldSkipTLSVerify(), r.serverCertificateAuthorityData, target.CertificateAuthorityData())
 	if err != nil {
 		return nil, err
 	}
