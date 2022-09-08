@@ -44,6 +44,11 @@ func (m *Target) ShouldConfigureForGKE() bool {
 	return m.targetEntry.UseGKEClientConfig
 }
 
+// ShouldSkipTLSVerify returns true iff the configured target should not have TLS certs verified
+func (m *Target) ShouldSkipTLSVerify() bool {
+	return m.targetEntry.SkipTLSVerify
+}
+
 // ShouldFetchCAFromAPIServer returns true iff the CA should be fetched from the kube-public ConfigMap
 // instead of the other methods (e.g. inline in Osprey config file or from Osprey server)
 func (m *Target) ShouldFetchCAFromAPIServer() bool {

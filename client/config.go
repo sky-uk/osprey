@@ -42,6 +42,9 @@ type TargetEntry struct {
 	//kube-public/ClientConfig resource provided by the OIDC Identity Service in GKE clusters.
 	// +optional
 	UseGKEClientConfig bool `yaml:"use-gke-clientconfig,omitempty"`
+	// SkipTLSVerify true if Osprey should skip verification of TLS certificate
+	// +optional
+	SkipTLSVerify bool `yaml:"skip-tls-verify,omitempty"`
 	// CertificateAuthority is the path to a cert file for the certificate authority.
 	// +optional
 	CertificateAuthority string `yaml:"certificate-authority,omitempty"`

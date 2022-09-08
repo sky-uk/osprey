@@ -153,7 +153,7 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 	var apiServerURL, apiServerCA string
 
 	if target.ShouldConfigureForGKE() {
-		tlsClient, err := web.NewTLSClient()
+		tlsClient, err := web.NewTLSClient(target.ShouldSkipTLSVerify())
 		if err != nil {
 			return nil, fmt.Errorf("unable to create TLS client: %w", err)
 		}
@@ -173,7 +173,7 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 		apiServerCA = clientConfig.Spec.CaCertBase64
 
 	} else if target.ShouldFetchCAFromAPIServer() {
-		tlsClient, err := web.NewTLSClient()
+		tlsClient, err := web.NewTLSClient(target.ShouldSkipTLSVerify())
 		if err != nil {
 			return nil, fmt.Errorf("unable to create TLS client: %w", err)
 		}
@@ -193,7 +193,7 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 		apiServerCA = base64.StdEncoding.EncodeToString([]byte(caConfigMap.Data.CACertData))
 
 	} else {
-		tlsClient, err := web.NewTLSClient(target.CertificateAuthorityData())
+		tlsClient, err := web.NewTLSClient(target.ShouldSkipTLSVerify(), target.CertificateAuthorityData())
 		if err != nil {
 			return nil, fmt.Errorf("unable to create TLS client: %w", err)
 		}

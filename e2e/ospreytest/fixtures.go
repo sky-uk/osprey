@@ -18,7 +18,7 @@ import (
 const targetNamePrefix = "kubectl."
 const targetAliasPrefix = "alias."
 
-//AddCustomNamespaceToContexts adds a namespace to each context in the kubeconfig file
+// AddCustomNamespaceToContexts adds a namespace to each context in the kubeconfig file
 // the name of the namespace will be
 func AddCustomNamespaceToContexts(namespaceSuffix, kubeconfig string, targetedOspreys []*TestOsprey) error {
 	existingConfig, err := clientcmd.LoadFromFile(kubeconfig)
@@ -139,7 +139,7 @@ func (o *TestOsprey) ToGroupClaims(authInfo *clientgo.AuthInfo) ([]string, error
 // CallHealthcheck returns the current status of osprey's healthcheck as an http response and error
 func (o *TestOsprey) CallHealthcheck() (*http.Response, error) {
 	certData, _ := web.LoadTLSCert(o.CertFile)
-	httpClient, err := web.NewTLSClient(certData)
+	httpClient, err := web.NewTLSClient(false, certData)
 	if err != nil {
 		return nil, err
 	}
