@@ -1,3 +1,7 @@
+# Release 2.10.0
+
+- Upgrade the version of a dependency due to issues reported upstream
+
 # Release 2.9.0
 - Enforce TLS verification when connecting to targets by default.  This can be overriden using the
   `skip-tls-verify` flag.
