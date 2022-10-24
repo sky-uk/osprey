@@ -3,49 +3,50 @@ module github.com/sky-uk/osprey/v2
 require (
 	github.com/SermoDigital/jose v0.9.1
 	github.com/coreos/go-oidc v2.2.1+incompatible
-	github.com/dexidp/dex v0.0.0-20211115184643-6e30b362b723
+	github.com/dexidp/dex v0.0.0-20221003101923-e4bceef9f3d1
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang/protobuf v1.5.2
 	github.com/jaytaylor/html2text v0.0.0-20211105163654-bc68cce691ba
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
-	github.com/prometheus/client_golang v1.11.0
-	github.com/sirupsen/logrus v1.8.1
-	github.com/spf13/cobra v1.2.1
-	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
-	golang.org/x/net v0.0.0-20211111083644-e5c967477495
-	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
-	google.golang.org/genproto v0.0.0-20211104193956-4c6863e31247
-	google.golang.org/grpc v1.42.0
+	github.com/prometheus/client_golang v1.13.0
+	github.com/sirupsen/logrus v1.9.0
+	github.com/spf13/cobra v1.5.0
+	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be
+	golang.org/x/net v0.0.0-20220927171203-f486391704dc
+	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1
+	google.golang.org/genproto v0.0.0-20220624142145-8cd45d7dbd1f
+	google.golang.org/grpc v1.49.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/client-go v0.22.3
 )
 
 require (
-	cloud.google.com/go v0.88.0 // indirect
-	github.com/AppsFlyer/go-sundheit v0.4.0 // indirect
-	github.com/Azure/go-ntlmssp v0.0.0-20200615164410-66371956d46c // indirect
+	cloud.google.com/go/compute v1.7.0 // indirect
+	github.com/AppsFlyer/go-sundheit v0.5.0 // indirect
+	github.com/Azure/go-ntlmssp v0.0.0-20220621081337-cb9428e4ac1e // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.2 // indirect
 	github.com/beevik/etree v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/coreos/go-oidc/v3 v3.0.0 // indirect
+	github.com/coreos/go-oidc/v3 v3.4.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dexidp/dex/api/v2 v2.0.0 // indirect
-	github.com/felixge/httpsnoop v1.0.2 // indirect
+	github.com/dexidp/dex/api/v2 v2.1.0 // indirect
+	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
-	github.com/go-asn1-ber/asn1-ber v1.5.1 // indirect
-	github.com/go-ldap/ldap/v3 v3.3.0 // indirect
+	github.com/go-asn1-ber/asn1-ber v1.5.4 // indirect
+	github.com/go-ldap/ldap/v3 v3.4.4 // indirect
 	github.com/go-logr/logr v1.2.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/google/go-cmp v0.5.6 // indirect
+	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/uuid v1.2.0 // indirect
-	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
+	github.com/google/uuid v1.3.0 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.1.0 // indirect
+	github.com/googleapis/gax-go/v2 v2.4.0 // indirect
 	github.com/gorilla/handlers v1.5.1 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/huandu/xstrings v1.3.1 // indirect
@@ -65,22 +66,22 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.32.1 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/prometheus/common v0.37.0 // indirect
+	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
-	github.com/russellhaering/goxmldsig v1.1.1 // indirect
+	github.com/russellhaering/goxmldsig v1.2.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
-	github.com/spf13/cast v1.3.1 // indirect
+	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	go.opencensus.io v0.23.0 // indirect
-	golang.org/x/sys v0.0.0-20211110154304-99a53858aa08 // indirect
+	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
-	google.golang.org/api v0.52.0 // indirect
+	google.golang.org/api v0.98.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
+	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
