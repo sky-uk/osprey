@@ -1,3 +1,7 @@
+# Release 2.11.1
+
+- Add back missing dynamic library
+
 # Release 2.11.0
 
 - Run as nonroot (`nobody`/`65534` by default)
