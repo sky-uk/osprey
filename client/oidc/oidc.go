@@ -2,8 +2,14 @@ package oidc
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os/exec"
@@ -12,10 +18,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
-)
-
-const (
-	ospreyState = "as78*sadf$212"
 )
 
 // Client contains the details for a OIDC client
@@ -49,7 +51,24 @@ func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Dur
 		log.Fatalf("Unable to parse oidc redirect uri: %e", err)
 	}
 
-	authURL := c.oAuthConfig.AuthCodeURL(ospreyState)
+	codeVerifier, err := randomBytesInHex(32)
+	if err != nil {
+		log.Fatalf("unable to generate random bytes: %e", err)
+	}
+	sha := sha256.New()
+	io.WriteString(sha, codeVerifier)
+	codeChallenge := base64.RawURLEncoding.EncodeToString(sha.Sum(nil))
+
+	state, err := randomBytesInHex(24)
+	if err != nil {
+		log.Fatalf("unable to generate random bytes: %e", err)
+	}
+
+	authURL := c.oAuthConfig.AuthCodeURL(
+		state,
+		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
+		oauth2.SetAuthURLParam("code_challenge", codeChallenge),
+	)
 	mux := http.NewServeMux()
 	h := &http.Server{Addr: fmt.Sprintf("%s", redirectURL.Host), Handler: mux}
 
@@ -57,7 +76,7 @@ func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Dur
 		http.Redirect(w, r, authURL, http.StatusFound)
 	})
 
-	mux.HandleFunc(redirectURL.Path, c.handleRedirectURI(ctx))
+	mux.HandleFunc(redirectURL.Path, c.handleRedirectURI(ctx, state, codeVerifier))
 
 	ch := make(chan error)
 	ctxTimeout, cancel := context.WithTimeout(ctx, loginTimeout)
@@ -98,17 +117,15 @@ func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Dur
 		return nil, fmt.Errorf("unable to start local call-back webserver %w", err)
 	case resp := <-c.stopChan:
 		_ = h.Shutdown(ctx)
-		if resp.responseError != nil {
-			return nil, resp.responseError
-		}
-		return resp.accessToken, nil
+		return resp.accessToken, resp.responseError
 	}
 }
 
-func (c *Client) handleRedirectURI(ctx context.Context) http.HandlerFunc {
+func (c *Client) handleRedirectURI(ctx context.Context, state, codeVerifier string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer close(c.stopChan)
-		if r.URL.Query().Get("state") != ospreyState {
+		if subtle.ConstantTimeCompare([]byte(r.URL.Query().Get("state")), []byte(state)) == 0 {
+			// `0` is the return value for "not equal," unlike strcmp and friends...
 			err := fmt.Errorf("state did not match")
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			c.stopChan <- tokenResponse{
@@ -118,7 +135,7 @@ func (c *Client) handleRedirectURI(ctx context.Context) http.HandlerFunc {
 			return
 		}
 
-		oauth2Token, err := c.doAuthRequest(ctx, r)
+		oauth2Token, err := c.doAuthRequest(ctx, r, codeVerifier)
 		if err != nil {
 			err := fmt.Errorf("failed to exchange token: %w", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -153,13 +170,22 @@ window.onload = setTimeout(closeWindow, 1000);
 	}
 }
 
-func (c *Client) doAuthRequest(ctx context.Context, r *http.Request) (*oauth2.Token, error) {
+func (c *Client) doAuthRequest(ctx context.Context, r *http.Request, codeVerifier string) (*oauth2.Token, error) {
 	authCode := r.URL.Query().Get("code")
-	var authCodeOptions []oauth2.AuthCodeOption
-	return c.oAuthConfig.Exchange(ctx, authCode, authCodeOptions...)
+	return c.oAuthConfig.Exchange(ctx, authCode, oauth2.SetAuthURLParam("code_verifier", codeVerifier))
 }
 
 // Authenticated returns a true or false value if a given OIDC client has received a successful login
 func (c *Client) Authenticated() bool {
 	return c.authenticated
+}
+
+func randomBytesInHex(count int) (string, error) {
+	buf := make([]byte, count)
+	_, err := io.ReadFull(rand.Reader, buf)
+	if err != nil {
+		return "", fmt.Errorf("Could not generate %d random bytes: %v", count, err)
+	}
+
+	return hex.EncodeToString(buf), nil
 }
