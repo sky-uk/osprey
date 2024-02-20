@@ -16,6 +16,18 @@ func (g *Group) IsDefault() bool {
 	return g.isDefault
 }
 
+type ProviderConfig struct {
+	serverApplicationID string
+	clientID string
+	clientSecret string
+	certificateAuthority string
+	certificateAuthorityData string
+	redirectURI string
+	scopes []string
+	azureTenantID string
+	issuerURL string
+}
+
 // Targets returns the list of targets belonging to this group
 func (g *Group) Targets() map[string][]Target {
 	groupMap := make(map[string][]Target)

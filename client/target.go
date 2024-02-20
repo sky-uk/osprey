@@ -7,8 +7,8 @@ import (
 // Target has the information of an TargetEntry target server
 type Target struct {
 	name         string
-	targetEntry  TargetEntry
-	providerType string
+	targetEntry  *TargetEntry
+	providerConfig *ProviderConfig
 }
 
 // Aliases returns the list of aliases of the Target alphabetically sorted

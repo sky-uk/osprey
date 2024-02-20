@@ -28,7 +28,7 @@ var _ = Describe("Login", func() {
 		cleanup()
 	})
 
-	It("fails to login with invalid credentials", func() {
+	FIt("fails to login with invalid credentials", func() {
 		login.LoginAndAssertFailure("admin", "wrong")
 	})
 

@@ -26,8 +26,8 @@ type Config struct {
 
 // Providers holds the configuration structs for the supported providers
 type Providers struct {
-	Azure  *AzureConfig  `yaml:"azure,omitempty"`
-	Osprey *OspreyConfig `yaml:"osprey,omitempty"`
+	Azure  []*AzureConfig  `yaml:"azure,omitempty"`
+	Osprey []*OspreyConfig `yaml:"osprey,omitempty"`
 }
 
 // TargetEntry contains information about how to communicate with an osprey server
@@ -77,16 +77,13 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to unmarshal config file %s: %w", path, err)
 	}
 
-	if config.Providers.Azure != nil {
-		azureConfig := config.Providers.Azure
+	for _, azureConfig := range config.Providers.Azure {
 		err = azureConfig.ValidateConfig()
 		if err == nil {
 			err = setTargetCA(azureConfig.CertificateAuthority, azureConfig.CertificateAuthorityData, azureConfig.Targets)
 		}
 	}
-
-	if config.Providers.Osprey != nil {
-		ospreyConfig := config.Providers.Osprey
+	for _, ospreyConfig := range config.Providers.Osprey {
 		err = ospreyConfig.ValidateConfig()
 		if err == nil {
 			err = setTargetCA(ospreyConfig.CertificateAuthority, ospreyConfig.CertificateAuthorityData, ospreyConfig.Targets)
@@ -130,6 +127,8 @@ func (c *Config) validateGroups() error {
 }
 
 // GetRetrievers returns a map of providers to retrievers
+// Can return just a single retriever as it can be called just in time.
+//The disadvantage being login can fail for a different provider after having succeeded for the first.
 func (c *Config) GetRetrievers(options RetrieverOptions) (map[string]Retriever, error) {
 	retrievers := make(map[string]Retriever)
 	var err error
@@ -147,15 +146,65 @@ func (c *Config) GetRetrievers(options RetrieverOptions) (map[string]Retriever, 
 
 // Snapshot creates or returns a ConfigSnapshot
 func (c *Config) Snapshot() *ConfigSnapshot {
-	groupedTargets := make(map[string]map[string]*TargetEntry)
-	if c.Providers.Azure != nil {
-		groupedTargets[AzureProviderName] = c.Providers.Azure.Targets
+	/*
+	for each provide in the providers list, do
+	{
+		build the provider config
+	    iterate over the list of targets and group them by name
+		add the provider config to the target in the list
+	    create a map of group name to the list of Group
 	}
-	if c.Providers.Osprey != nil {
-		groupedTargets[OspreyProviderName] = c.Providers.Osprey.Targets
+	 */
+	groupsByName := make(map[string]Group)
+
+	// build the target list by group name for Azure provider
+	for _, azureProvider := range c.Providers.Azure {
+		// Provide Config is a super struct i.e many fields don't apply for osprey config/setup. Maybe there's a better way :shrug:
+		providerConfig := &ProviderConfig{
+			serverApplicationID:      "",
+			clientID:                 "",
+			clientSecret:             "",
+			certificateAuthority:     "",
+			certificateAuthorityData: "",
+			redirectURI:              "",
+			scopes:                   nil,
+			azureTenantID:            "",
+			issuerURL:                "",
+		}
+
+		groupedTargets := make(map[string][]Target)
+		for targetName, targetEntry := range azureProvider.Targets {
+			for _, groupName := range targetEntry.Groups {
+				target := Target{
+					name:         targetName,
+					targetEntry:  targetEntry,
+					providerConfig: providerConfig,
+				}
+				updatedTargets := append(groupedTargets[groupName], target)
+				groupedTargets[groupName] = updatedTargets
+			}
+		}
+
+		for groupName, targets := range groupedTargets {
+			if group, present := groupsByName[groupName]; present {
+				updatedTargets := append(group.targets, targets...)
+				group.targets = updatedTargets
+			} else {
+				groupsByName[groupName] = Group{
+					name:      groupName,
+					isDefault: groupName == c.DefaultGroup,
+					targets:   targets,
+				}
+			}
+		}
 	}
 
-	groupsByName := groupTargetsByName(groupedTargets, c.DefaultGroup)
+	/*
+	...
+	... do the above for Osprey provider. So, the above pseudo code will need to be modularised to ensure we DRY
+	...
+	 */
+
 	return &ConfigSnapshot{
 		groupsByName:     groupsByName,
 		defaultGroupName: c.DefaultGroup,

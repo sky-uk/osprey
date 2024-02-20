@@ -83,12 +83,13 @@ func login(_ *cobra.Command, _ []string) {
 
 	success := true
 
-	retrievers, err := ospreyconfig.GetRetrievers(retrieverOptions)
-	if err != nil {
-		log.Errorf("Unable to initialise providers: %v", err)
-	}
-
 	for provider, targets := range group.Targets() {
+		// We can build the retrievers just in time and GetRetrievers doesn't need to be a map. But we may need some way to identify the provider type in order to use the right retriever
+		retrievers, err := ospreyconfig.GetRetrievers(retrieverOptions)
+		if err != nil {
+			log.Errorf("Unable to initialise providers: %v", err)
+		}
+
 		retriever, ok := retrievers[provider]
 		if !ok {
 			log.Fatalf("Unsupported provider: %s", provider)
