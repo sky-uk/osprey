@@ -189,22 +189,26 @@ func BuildFullConfig(testDir, providerName, defaultGroup string,
 	switch providerName {
 	case client.AzureProviderName:
 		config.Providers = &client.Providers{
-			Azure: &client.AzureConfig{
-				ClientID:            clientID,
-				ClientSecret:        "some-client-secret",
-				RedirectURI:         "http://localhost:65525/auth/callback",
-				Scopes:              []string{"api://some-dummy-scope"},
-				AzureTenantID:       "some-tenant-id",
-				ServerApplicationID: "some-server-application-id",
-				IssuerURL:           "http://localhost:14980",
-				Targets:             targets,
+			Azure: []*client.AzureConfig{
+				{
+					ClientID:            clientID,
+					ClientSecret:        "some-client-secret",
+					RedirectURI:         "http://localhost:65525/auth/callback",
+					Scopes:              []string{"api://some-dummy-scope"},
+					AzureTenantID:       "some-tenant-id",
+					ServerApplicationID: "some-server-application-id",
+					IssuerURL:           "http://localhost:14980",
+					Targets:             targets,
+				},
 			},
 		}
 	case client.OspreyProviderName:
 		config.Providers = &client.Providers{
-			Osprey: &client.OspreyConfig{
-				//CertificateAuthority: caPath,
-				Targets: targets,
+			Osprey: []*client.OspreyConfig{
+				{
+					//CertificateAuthority: caPath,
+					Targets: targets,
+				},
 			},
 		}
 

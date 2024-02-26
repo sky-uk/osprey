@@ -128,18 +128,20 @@ func (c *Config) validateGroups() error {
 
 // GetRetrievers returns a map of providers to retrievers
 // Can return just a single retriever as it can be called just in time.
-//The disadvantage being login can fail for a different provider after having succeeded for the first.
+// The disadvantage being login can fail for a different provider after having succeeded for the first.
 func (c *Config) GetRetrievers(options RetrieverOptions) (map[string]Retriever, error) {
 	retrievers := make(map[string]Retriever)
-	var err error
-	if c.Providers.Azure != nil {
-		retrievers[AzureProviderName], err = NewAzureRetriever(c.Providers.Azure, options)
+
+	for _, prov := range c.Providers.Azure {
+		result, err := NewAzureRetriever(prov, options)
 		if err != nil {
 			return nil, err
 		}
+		retrievers[prov.AzureProviderName] = result
 	}
-	if c.Providers.Osprey != nil {
-		retrievers[OspreyProviderName] = NewOspreyRetriever(c.Providers.Osprey, options)
+
+	for _, osp := range c.Providers.Osprey {
+		retrievers[osp.ProviderName] = NewOspreyRetriever(osp, options)
 	}
 	return retrievers, nil
 }
@@ -147,37 +149,38 @@ func (c *Config) GetRetrievers(options RetrieverOptions) (map[string]Retriever, 
 // Snapshot creates or returns a ConfigSnapshot
 func (c *Config) Snapshot() *ConfigSnapshot {
 	/*
-	for each provide in the providers list, do
-	{
-		build the provider config
-	    iterate over the list of targets and group them by name
-		add the provider config to the target in the list
-	    create a map of group name to the list of Group
-	}
-	 */
+		for each provide in the providers list, do
+		{
+			build the provider config
+		    iterate over the list of targets and group them by name
+			add the provider config to the target in the list
+		    create a map of group name to the list of Group
+		}
+	*/
 	groupsByName := make(map[string]Group)
 
 	// build the target list by group name for Azure provider
 	for _, azureProvider := range c.Providers.Azure {
 		// Provide Config is a super struct i.e many fields don't apply for osprey config/setup. Maybe there's a better way :shrug:
 		providerConfig := &ProviderConfig{
-			serverApplicationID:      "",
-			clientID:                 "",
-			clientSecret:             "",
-			certificateAuthority:     "",
-			certificateAuthorityData: "",
-			redirectURI:              "",
-			scopes:                   nil,
-			azureTenantID:            "",
-			issuerURL:                "",
+			serverApplicationID:      azureProvider.ServerApplicationID,
+			clientID:                 azureProvider.ClientID,
+			clientSecret:             azureProvider.ClientSecret,
+			certificateAuthority:     azureProvider.CertificateAuthority,
+			certificateAuthorityData: azureProvider.CertificateAuthorityData,
+			redirectURI:              azureProvider.RedirectURI,
+			scopes:                   azureProvider.Scopes,
+			azureTenantID:            azureProvider.AzureTenantID,
+			issuerURL:                azureProvider.IssuerURL,
+			providerType:             azureProvider.AzureProviderName,
 		}
 
 		groupedTargets := make(map[string][]Target)
 		for targetName, targetEntry := range azureProvider.Targets {
 			for _, groupName := range targetEntry.Groups {
 				target := Target{
-					name:         targetName,
-					targetEntry:  targetEntry,
+					name:           targetName,
+					targetEntry:    targetEntry,
 					providerConfig: providerConfig,
 				}
 				updatedTargets := append(groupedTargets[groupName], target)
@@ -200,10 +203,10 @@ func (c *Config) Snapshot() *ConfigSnapshot {
 	}
 
 	/*
-	...
-	... do the above for Osprey provider. So, the above pseudo code will need to be modularised to ensure we DRY
-	...
-	 */
+		...
+		... do the above for Osprey provider. So, the above pseudo code will need to be modularised to ensure we DRY
+		...
+	*/
 
 	return &ConfigSnapshot{
 		groupsByName:     groupsByName,
@@ -248,45 +251,45 @@ func setTargetCA(certificateAuthority, certificateAuthorityData string, targets 
 	return nil
 }
 
-func groupTargetsByName(groupedTargets map[string]map[string]*TargetEntry, defaultGroup string) map[string]Group {
-	groupsByName := make(map[string]Group)
-	for providerName, targetEntries := range groupedTargets {
-		for groupName, group := range groupTargetsByProvider(targetEntries, defaultGroup, providerName) {
-			if existingGroup, ok := groupsByName[groupName]; ok {
-				existingGroup.targets = append(existingGroup.targets, group.targets...)
-				groupsByName[groupName] = existingGroup
-			} else {
-				groupsByName[groupName] = group
-			}
-		}
-	}
+//func groupTargetsByName(groupedTargets map[string]map[string]*TargetEntry, defaultGroup string) map[string]Group {
+//	groupsByName := make(map[string]Group)
+//	for providerName, targetEntries := range groupedTargets {
+//		for groupName, group := range groupTargetsByProvider(targetEntries, defaultGroup, providerName) {
+//			if existingGroup, ok := groupsByName[groupName]; ok {
+//				existingGroup.targets = append(existingGroup.targets, group.targets...)
+//				groupsByName[groupName] = existingGroup
+//			} else {
+//				groupsByName[groupName] = group
+//			}
+//		}
+//	}
+//
+//	return groupsByName
+//}
 
-	return groupsByName
-}
-
-func groupTargetsByProvider(targetEntries map[string]*TargetEntry, defaultGroup string, providerType string) map[string]Group {
-	groupsByName := make(map[string]Group)
-	var groups []Group
-	for key, targetEntry := range targetEntries {
-		targetEntryGroups := targetEntry.Groups
-		if len(targetEntryGroups) == 0 {
-			targetEntryGroups = []string{""}
-		}
-
-		target := Target{name: key, targetEntry: *targetEntry, providerType: providerType}
-		for _, groupName := range targetEntryGroups {
-			group, ok := groupsByName[groupName]
-			if !ok {
-				isDefault := groupName == defaultGroup
-				group = Group{name: groupName, isDefault: isDefault}
-				groups = append(groups, group)
-			}
-			group.targets = append(group.targets, target)
-			groupsByName[groupName] = group
-		}
-	}
-	return groupsByName
-}
+//func groupTargetsByProvider(targetEntries map[string]*TargetEntry, defaultGroup string, providerConfig *ProviderConfig) map[string]Group {
+//	groupsByName := make(map[string]Group)
+//	var groups []Group
+//	for key, targetEntry := range targetEntries {
+//		targetEntryGroups := targetEntry.Groups
+//		if len(targetEntryGroups) == 0 {
+//			targetEntryGroups = []string{""}
+//		}
+//
+//		target := Target{name: key, targetEntry: targetEntry, providerConfig: providerConfig}
+//		for _, groupName := range targetEntryGroups {
+//			group, ok := groupsByName[groupName]
+//			if !ok {
+//				isDefault := groupName == defaultGroup
+//				group = Group{name: groupName, isDefault: isDefault}
+//				groups = append(groups, group)
+//			}
+//			group.targets = append(group.targets, target)
+//			groupsByName[groupName] = group
+//		}
+//	}
+//	return groupsByName
+//}
 
 func homeDir() string {
 	home, err := homedir.Dir()

@@ -27,6 +27,8 @@ type OspreyConfig struct {
 	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
 	// AzureTenantID is the Azure Tenant ID assigned to your organisation
 	Targets map[string]*TargetEntry `yaml:"targets"`
+	// Provider name
+	ProviderName string `yaml:"provider-name,omitempty"`
 }
 
 // ValidateConfig checks that the required configuration has been provided for Osprey

@@ -6,8 +6,8 @@ import (
 
 // Target has the information of an TargetEntry target server
 type Target struct {
-	name         string
-	targetEntry  *TargetEntry
+	name           string
+	targetEntry    *TargetEntry
 	providerConfig *ProviderConfig
 }
 
@@ -57,7 +57,7 @@ func (m *Target) ShouldFetchCAFromAPIServer() bool {
 
 // ProviderType returns the authentication provider of the Target
 func (m *Target) ProviderType() string {
-	return m.providerType
+	return m.providerConfig.providerType
 }
 
 // CertificateAuthorityData returns the CertificateAuthorityData of the Target
@@ -73,10 +73,10 @@ func sortTargets(targets []Target) []Target {
 }
 
 // CreateTarget returns an initiliased Target object
-func CreateTarget(name string, targetEntry TargetEntry, providerType string) Target {
+func CreateTarget(name string, targetEntry *TargetEntry, providerConfig *ProviderConfig) Target {
 	return Target{
-		name:         name,
-		targetEntry:  targetEntry,
-		providerType: providerType,
+		name:           name,
+		targetEntry:    targetEntry,
+		providerConfig: providerConfig,
 	}
 }

@@ -17,22 +17,23 @@ func (g *Group) IsDefault() bool {
 }
 
 type ProviderConfig struct {
-	serverApplicationID string
-	clientID string
-	clientSecret string
-	certificateAuthority string
+	serverApplicationID      string
+	clientID                 string
+	clientSecret             string
+	certificateAuthority     string
 	certificateAuthorityData string
-	redirectURI string
-	scopes []string
-	azureTenantID string
-	issuerURL string
+	redirectURI              string
+	scopes                   []string
+	azureTenantID            string
+	issuerURL                string
+	providerType             string
 }
 
 // Targets returns the list of targets belonging to this group
 func (g *Group) Targets() map[string][]Target {
 	groupMap := make(map[string][]Target)
 	for _, target := range g.targets {
-		groupMap[target.ProviderType()] = append(groupMap[target.ProviderType()], target)
+		groupMap[target.providerConfig.providerType] = append(groupMap[target.providerConfig.providerType], target)
 	}
 	return getSortedTargetsByProvider(groupMap)
 }
