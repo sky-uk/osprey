@@ -13,7 +13,7 @@ services:
   - docker
 
 script:
-  - make travis
+  - make travis -d
   - curl -sfL https://git.io/goreleaser | sh -s -- check # check goreleaser config for deprecations
 
 deploy:
