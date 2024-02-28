@@ -69,41 +69,55 @@ var _ = BeforeSuite(func() {
 	util.CreateBinaries()
 	Expect(err).To(BeNil(), "Creates the test dir")
 
+	fmt.Println("Starting ldap server")
 	ldapServer, err = ldaptest.Start(testDir) //uses the ldaptest/testdata/schema.ldap
 	Expect(err).To(BeNil(), "Starts the ldap server")
+	fmt.Println("Passed ldap server")
+
 	var envs []string
 	for env := range environments {
 		envs = append(envs, env)
 	}
+	fmt.Println(envs)
 
 	fmt.Println("Starting dexes")
 	dexes, err = dextest.StartDexes(testDir, ldapServer, envs, dexPortsFrom)
 	fmt.Println(dexes, err)
 	Expect(err).To(BeNil(), "Starts the dex servers")
+	fmt.Println("Passed dexes")
 
 	fmt.Println("Starting ospreys")
 	ospreys, err = ospreytest.StartOspreys(testDir, dexes, ospreyPortsFrom)
 	Expect(err).To(BeNil(), "Starts the osprey servers")
+	fmt.Println("Passed ospreys")
 
-	fmt.Println("Starting mock servers")
+	fmt.Println("Starting mock api servers")
 	apiTestServer, err = apiservertest.Start("localhost", apiServerPort)
 	Expect(err).To(BeNil(), "Starts the mock API server")
+	fmt.Println("Passed mock API server")
 
 	fmt.Println("Starting OIDC server")
 	oidcTestServer, err = oidctest.Start("localhost", oidcPort)
 	Expect(err).To(BeNil(), "Starts the mock oidc server")
+	fmt.Println("Passed OIDC server")
 })
 
 var _ = AfterSuite(func() {
 	for _, osprey := range ospreys {
+		fmt.Printf("Stopping osprey %s\n", osprey.Environment)
 		ospreytest.Stop(osprey)
 	}
 	for _, aDex := range dexes {
+		fmt.Printf("Stopping dex %s\n", aDex.Environment)
 		dextest.Stop(aDex)
 	}
+	fmt.Println("Stopping OIDC server")
 	oidcTestServer.Stop()
+	fmt.Println("Stopping mock api servers")
 	apiTestServer.Stop()
+	fmt.Println("Stopping ldap server")
 	ldaptest.Stop(ldapServer)
+	fmt.Println("Cleaning up test dirs")
 	os.RemoveAll(testDir)
 })
 
