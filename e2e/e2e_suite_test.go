@@ -66,7 +66,6 @@ var _ = BeforeSuite(func() {
 	testDir, err = ioutil.TempDir("", "osprey-")
 
 	util.CreateBinaries()
-
 	Expect(err).To(BeNil(), "Creates the test dir")
 
 	ldapServer, err = ldaptest.Start(testDir) //uses the ldaptest/testdata/schema.ldap

@@ -2,7 +2,6 @@ package ldaptest
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -53,16 +52,26 @@ func Start(testDir string) (*TestLDAP, error) {
 	validateBinaries("slapd", "ldapadd")
 	ldapDir := fmt.Sprintf("%s/ldap", testDir)
 	ldapConfig, err := generateSLAPDConfig(ldapDir)
+
 	if err != nil {
+		fmt.Printf("Failed to generate SLAPD config: %v", err)
 		return nil, err
 	}
+	fmt.Println("SLAPD config generated successfully")
+
 	testLDAP, err := startTestServer(ldapConfig)
 	if err != nil {
+		fmt.Printf("Failed to start test server: %v", err)
 		return testLDAP, err
 	}
+	fmt.Println("Test server started successfully")
+
 	if err = loadSchemaData(); err != nil {
+		fmt.Printf("Failed to load schema data: %v", err)
 		return testLDAP, err
 	}
+	fmt.Println("Schema data loaded successfully")
+
 	return testLDAP, nil
 }
 
@@ -175,10 +184,12 @@ func includes(wd string) (paths []string, err error) {
 }
 
 func startTestServer(ldapConfig *SLAPDConfig) (*TestLDAP, error) {
-	socketPath := url.QueryEscape(filepath.Join(ldapConfig.LDAPDir, "ldap.unix"))
+	socketPath := filepath.Join(ldapConfig.LDAPDir, "ldap.unix")
+	fmt.Println(socketPath)
+	fmt.Println(ldapConfig.configPath)
 	cmd := clitest.NewAsyncCommand("slapd",
-		"-d", "0",
-		"-h", fmt.Sprintf("ldap://%s ldaps://%s ldapi://%s", host(), secureHost(), socketPath),
+		"-d", "-1",
+		"-h", fmt.Sprintf("ldap://%s ldaps://%s ldapi:/%s", host(), secureHost(), socketPath),
 		"-f", ldapConfig.configPath,
 	)
 	ldapServer := &TestLDAP{
@@ -187,6 +198,7 @@ func startTestServer(ldapConfig *SLAPDConfig) (*TestLDAP, error) {
 		DexConfig:        newLDAPConfig(ldapConfig),
 	}
 	ldapServer.Run()
+	fmt.Println(ldapServer.GetOutput())
 	return ldapServer, ldapServer.Error()
 }
 
