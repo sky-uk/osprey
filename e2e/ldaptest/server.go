@@ -71,7 +71,7 @@ func Start(testDir string) (*TestLDAP, error) {
 		return testLDAP, err
 	}
 	fmt.Println("Schema data loaded successfully")
-	err = nil
+
 	return testLDAP, nil
 }
 
@@ -188,8 +188,8 @@ func startTestServer(ldapConfig *SLAPDConfig) (*TestLDAP, error) {
 	fmt.Println(socketPath)
 	fmt.Println(ldapConfig.configPath)
 	cmd := clitest.NewAsyncCommand("slapd",
-		"-d", "-1",
-		"-h", fmt.Sprintf("ldap://%s ldaps://%s ldapi:/%s", host(), secureHost(), socketPath),
+		"-d", "0",
+		"-h", fmt.Sprintf("\"ldap://%s ldaps://%s ldapi:/%s\"", host(), secureHost(), socketPath),
 		"-f", ldapConfig.configPath,
 	)
 	ldapServer := &TestLDAP{
