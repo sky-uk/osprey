@@ -15,6 +15,7 @@ type Group struct {
 func (g *Group) IsDefault() bool {
 	return g.isDefault
 }
+
 // ProviderConfig is a super struct i.e many fields don't apply for osprey config/setup. Maybe there's a better way :shrug:
 type ProviderConfig struct {
 	serverApplicationID      string
