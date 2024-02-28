@@ -71,7 +71,7 @@ func Start(testDir string) (*TestLDAP, error) {
 		return testLDAP, err
 	}
 	fmt.Println("Schema data loaded successfully")
-
+	err = nil
 	return testLDAP, nil
 }
 
