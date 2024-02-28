@@ -188,8 +188,8 @@ func startTestServer(ldapConfig *SLAPDConfig) (*TestLDAP, error) {
 	fmt.Println(socketPath)
 	fmt.Println(ldapConfig.configPath)
 	cmd := clitest.NewAsyncCommand("slapd",
-		"-d", "0",
-		"-h", fmt.Sprintf("\"ldap://%s ldaps://%s ldapi:/%s\"", host(), secureHost(), socketPath),
+		"-d", "-1",
+		"-h", fmt.Sprintf("ldap://%s ldaps://%s ldapi:/%s", host(), secureHost(), socketPath),
 		"-f", ldapConfig.configPath,
 	)
 	ldapServer := &TestLDAP{
