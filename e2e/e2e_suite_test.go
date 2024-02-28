@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -75,15 +76,20 @@ var _ = BeforeSuite(func() {
 		envs = append(envs, env)
 	}
 
+	fmt.Println("Starting dexes")
 	dexes, err = dextest.StartDexes(testDir, ldapServer, envs, dexPortsFrom)
+	fmt.Println(dexes, err)
 	Expect(err).To(BeNil(), "Starts the dex servers")
 
+	fmt.Println("Starting ospreys")
 	ospreys, err = ospreytest.StartOspreys(testDir, dexes, ospreyPortsFrom)
 	Expect(err).To(BeNil(), "Starts the osprey servers")
 
+	fmt.Println("Starting mock servers")
 	apiTestServer, err = apiservertest.Start("localhost", apiServerPort)
 	Expect(err).To(BeNil(), "Starts the mock API server")
 
+	fmt.Println("Starting OIDC server")
 	oidcTestServer, err = oidctest.Start("localhost", oidcPort)
 	Expect(err).To(BeNil(), "Starts the mock oidc server")
 })
