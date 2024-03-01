@@ -12,6 +12,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type VersionConfig struct {
+	ApiVersion string `yaml:"apiVersion,omitempty"`
+}
+
 // Config holds the information needed to connect to remote OIDC providers
 type Config struct {
 	// Kubeconfig specifies the path to read/write the kubeconfig file.
@@ -28,6 +32,23 @@ type Config struct {
 type Providers struct {
 	Azure  []*AzureConfig  `yaml:"azure,omitempty"`
 	Osprey []*OspreyConfig `yaml:"osprey,omitempty"`
+}
+
+type ConfigV1 struct {
+	// Kubeconfig specifies the path to read/write the kubeconfig file.
+	// +optional
+	Kubeconfig string `yaml:"kubeconfig,omitempty"`
+	// DefaultGroup specifies the group to log in to if none provided.
+	// +optional
+	DefaultGroup string `yaml:"default-group,omitempty"`
+	// Providers is a map of OIDC provider config
+	Providers *ProvidersV1 `yaml:"providers,omitempty"`
+}
+
+// ProvidersV1 Single Provider config
+type ProvidersV1 struct {
+	Azure  *AzureConfig  `yaml:"azure,omitempty"`
+	Osprey *OspreyConfig `yaml:"osprey,omitempty"`
 }
 
 // TargetEntry contains information about how to communicate with an osprey server
@@ -71,8 +92,27 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file %s: %w", path, err)
 	}
+	versionConfig := &VersionConfig{}
+	err = yaml.Unmarshal(in, versionConfig)
 	config := &Config{}
-	err = yaml.Unmarshal(in, config)
+	if versionConfig.ApiVersion == "v2" {
+		err = yaml.Unmarshal(in, config)
+	} else {
+		configV1 := &ConfigV1{}
+		err = yaml.Unmarshal(in, configV1)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal config file %s: %w", path, err)
+		}
+		config.Kubeconfig = configV1.Kubeconfig
+		config.DefaultGroup = configV1.DefaultGroup
+		config.Providers.Azure = []*AzureConfig{configV1.Providers.Azure}
+		config.Providers.Osprey = []*OspreyConfig{configV1.Providers.Osprey}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config file %s: %w", path, err)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config file %s: %w", path, err)
 	}
@@ -160,46 +200,50 @@ func (c *Config) Snapshot() *ConfigSnapshot {
 	groupsByName := make(map[string]Group)
 
 	// build the target list by group name for Azure provider
-	for _, azureProvider := range c.Providers.Azure {
-		// Provide Config is a super struct i.e many fields don't apply for osprey config/setup. Maybe there's a better way :shrug:
-		providerConfig := &ProviderConfig{
-			serverApplicationID:      azureProvider.ServerApplicationID,
-			clientID:                 azureProvider.ClientID,
-			clientSecret:             azureProvider.ClientSecret,
-			certificateAuthority:     azureProvider.CertificateAuthority,
-			certificateAuthorityData: azureProvider.CertificateAuthorityData,
-			redirectURI:              azureProvider.RedirectURI,
-			scopes:                   azureProvider.Scopes,
-			azureTenantID:            azureProvider.AzureTenantID,
-			issuerURL:                azureProvider.IssuerURL,
-			providerType:             azureProvider.AzureProviderName,
-		}
-
-		groupedTargets := make(map[string][]Target)
-		for targetName, targetEntry := range azureProvider.Targets {
-			for _, groupName := range targetEntry.Groups {
-				target := Target{
-					name:           targetName,
-					targetEntry:    targetEntry,
-					providerConfig: providerConfig,
-				}
-				updatedTargets := append(groupedTargets[groupName], target)
-				groupedTargets[groupName] = updatedTargets
+	if c.Providers != nil {
+		for _, azureProvider := range c.Providers.Azure {
+			// Provide Config is a super struct i.e many fields don't apply for osprey config/setup. Maybe there's a better way :shrug:
+			providerConfig := &ProviderConfig{
+				serverApplicationID:      azureProvider.ServerApplicationID,
+				clientID:                 azureProvider.ClientID,
+				clientSecret:             azureProvider.ClientSecret,
+				certificateAuthority:     azureProvider.CertificateAuthority,
+				certificateAuthorityData: azureProvider.CertificateAuthorityData,
+				redirectURI:              azureProvider.RedirectURI,
+				scopes:                   azureProvider.Scopes,
+				azureTenantID:            azureProvider.AzureTenantID,
+				issuerURL:                azureProvider.IssuerURL,
+				providerType:             azureProvider.AzureProviderName,
 			}
-		}
 
-		for groupName, targets := range groupedTargets {
-			if group, present := groupsByName[groupName]; present {
-				updatedTargets := append(group.targets, targets...)
-				group.targets = updatedTargets
-			} else {
-				groupsByName[groupName] = Group{
-					name:      groupName,
-					isDefault: groupName == c.DefaultGroup,
-					targets:   targets,
+			groupedTargets := make(map[string][]Target)
+			for targetName, targetEntry := range azureProvider.Targets {
+				for _, groupName := range targetEntry.Groups {
+					target := Target{
+						name:           targetName,
+						targetEntry:    targetEntry,
+						providerConfig: providerConfig,
+					}
+					updatedTargets := append(groupedTargets[groupName], target)
+					groupedTargets[groupName] = updatedTargets
 				}
 			}
+
+			for groupName, targets := range groupedTargets {
+				if group, present := groupsByName[groupName]; present {
+					updatedTargets := append(group.targets, targets...)
+					group.targets = updatedTargets
+				} else {
+					groupsByName[groupName] = Group{
+						name:      groupName,
+						isDefault: groupName == c.DefaultGroup,
+						targets:   targets,
+					}
+				}
+			}
 		}
+	} else {
+
 	}
 
 	/*
