@@ -48,14 +48,14 @@ func (oc *OspreyConfig) ValidateConfig() error {
 }
 
 // NewOspreyRetriever creates new osprey client
-func NewOspreyRetriever(provider *OspreyConfig, options RetrieverOptions) Retriever {
+func NewOspreyRetriever(provider *ProviderConfig, options RetrieverOptions) (Retriever, error) {
 	return &ospreyRetriever{
-		serverCertificateAuthorityData: provider.CertificateAuthorityData,
+		serverCertificateAuthorityData: provider.certificateAuthorityData,
 		credentials: &LoginCredentials{
 			Username: options.Username,
 			Password: options.Password,
 		},
-	}
+	}, nil
 }
 
 type ospreyRetriever struct {

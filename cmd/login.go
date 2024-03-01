@@ -83,16 +83,15 @@ func login(_ *cobra.Command, _ []string) {
 
 	success := true
 
-	for provider, targets := range group.Targets() {
-		// We can build the retrievers just in time and GetRetrievers doesn't need to be a map. But we may need some way to identify the provider type in order to use the right retriever
-		retrievers, err := ospreyconfig.GetRetrievers(retrieverOptions)
-		if err != nil {
-			log.Errorf("Unable to initialise providers: %v", err)
-		}
+	retrievers, err := ospreyconfig.GetRetrievers(snapshot.ProviderConfigs(), retrieverOptions)
+	if err != nil {
+		log.Fatalf("Unable to initialise retrievers: %v", err)
+	}
 
-		retriever, ok := retrievers[provider]
+	for providerName, targets := range group.TargetsForProvider() {
+		retriever, ok := retrievers[providerName]
 		if !ok {
-			log.Fatalf("Unsupported provider: %s", provider)
+			log.Fatalf("Unsupported provider: %s", providerName)
 		}
 		for _, target := range targets {
 			targetData, err := retriever.RetrieveClusterDetailsAndAuthTokens(target)

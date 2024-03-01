@@ -3,8 +3,9 @@ package client
 // ConfigSnapshot is a snapshot view of the configuration to organize the targets per group.
 // It does not reflect changes to the configuration after it has been taken.
 type ConfigSnapshot struct {
-	defaultGroupName string
-	groupsByName     map[string]Group
+	defaultGroupName     string
+	groupsByName         map[string]Group
+	providerConfigByName map[string]*ProviderConfig
 }
 
 // Groups returns all defined groups sorted alphabetically by name.
@@ -16,6 +17,10 @@ func (t *ConfigSnapshot) Groups() []Group {
 		}
 	}
 	return sortGroups(groups)
+}
+
+func (t *ConfigSnapshot) ProviderConfigs() map[string]*ProviderConfig {
+	return t.providerConfigByName
 }
 
 // HaveGroups returns true if there is at least one defined group.
@@ -35,7 +40,7 @@ func (t *ConfigSnapshot) Targets() []Target {
 	var targets []Target
 	set := make(map[string]*interface{})
 	for _, group := range t.groupsByName {
-		for _, target := range group.targets {
+		for _, target := range group.Targets() {
 			if _, ok := set[target.name]; !ok {
 				set[target.name] = nil
 				targets = append(targets, target)

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
@@ -88,7 +89,7 @@ func NewConfig() *Config {
 
 // LoadConfig reads and parses the Config file
 func LoadConfig(path string) (*Config, error) {
-	in, err := ioutil.ReadFile(path)
+	in, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file %s: %w", path, err)
 	}
@@ -105,8 +106,15 @@ func LoadConfig(path string) (*Config, error) {
 		}
 		config.Kubeconfig = configV1.Kubeconfig
 		config.DefaultGroup = configV1.DefaultGroup
-		config.Providers.Azure = []*AzureConfig{configV1.Providers.Azure}
-		config.Providers.Osprey = []*OspreyConfig{configV1.Providers.Osprey}
+		config.Providers = &Providers{}
+
+		if configV1.Providers.Azure != nil {
+			config.Providers.Azure = []*AzureConfig{configV1.Providers.Azure}
+		}
+
+		if configV1.Providers.Osprey != nil {
+			config.Providers.Osprey = []*OspreyConfig{configV1.Providers.Osprey}
+		}
 	}
 
 	if err != nil {
@@ -169,19 +177,24 @@ func (c *Config) validateGroups() error {
 // GetRetrievers returns a map of providers to retrievers
 // Can return just a single retriever as it can be called just in time.
 // The disadvantage being login can fail for a different provider after having succeeded for the first.
-func (c *Config) GetRetrievers(options RetrieverOptions) (map[string]Retriever, error) {
+func (c *Config) GetRetrievers(providerConfigs map[string]*ProviderConfig, options RetrieverOptions) (map[string]Retriever, error) {
 	retrievers := make(map[string]Retriever)
 
-	for _, prov := range c.Providers.Azure {
-		result, err := NewAzureRetriever(prov, options)
-		if err != nil {
-			return nil, err
+	for _, providerConfig := range providerConfigs {
+		switch providerConfig.provider {
+		case AzureProviderName:
+			result, err := NewAzureRetriever(providerConfig, options)
+			if err != nil {
+				return nil, err
+			}
+			retrievers[providerConfig.name] = result
+		case OspreyProviderName:
+			result, err := NewOspreyRetriever(providerConfig, options)
+			if err != nil {
+				return nil, err
+			}
+			retrievers[providerConfig.name] = result
 		}
-		retrievers[prov.AzureProviderName] = result
-	}
-
-	for _, osp := range c.Providers.Osprey {
-		retrievers[osp.ProviderName] = NewOspreyRetriever(osp, options)
 	}
 	return retrievers, nil
 }
@@ -198,12 +211,18 @@ func (c *Config) Snapshot() *ConfigSnapshot {
 		}
 	*/
 	groupsByName := make(map[string]Group)
+	providerConfigByName := make(map[string]*ProviderConfig)
 
 	// build the target list by group name for Azure provider
 	if c.Providers != nil {
-		for _, azureProvider := range c.Providers.Azure {
-			// Provide Config is a super struct i.e many fields don't apply for osprey config/setup. Maybe there's a better way :shrug:
-			providerConfig := &ProviderConfig{
+		for i, azureProvider := range c.Providers.Azure {
+			givenName := azureProvider.Name
+			if givenName == "" {
+				givenName = "provider-" + strconv.Itoa(i)
+			}
+			providerName := "azure:" + givenName
+			providerConfigByName[providerName] = &ProviderConfig{
+				name:                     providerName,
 				serverApplicationID:      azureProvider.ServerApplicationID,
 				clientID:                 azureProvider.ClientID,
 				clientSecret:             azureProvider.ClientSecret,
@@ -214,15 +233,15 @@ func (c *Config) Snapshot() *ConfigSnapshot {
 				azureTenantID:            azureProvider.AzureTenantID,
 				issuerURL:                azureProvider.IssuerURL,
 				providerType:             azureProvider.AzureProviderName,
+				provider:                 AzureProviderName,
 			}
 
 			groupedTargets := make(map[string][]Target)
 			for targetName, targetEntry := range azureProvider.Targets {
 				for _, groupName := range targetEntry.Groups {
 					target := Target{
-						name:           targetName,
-						targetEntry:    targetEntry,
-						providerConfig: providerConfig,
+						name:        targetName,
+						targetEntry: targetEntry,
 					}
 					updatedTargets := append(groupedTargets[groupName], target)
 					groupedTargets[groupName] = updatedTargets
@@ -231,13 +250,14 @@ func (c *Config) Snapshot() *ConfigSnapshot {
 
 			for groupName, targets := range groupedTargets {
 				if group, present := groupsByName[groupName]; present {
-					updatedTargets := append(group.targets, targets...)
-					group.targets = updatedTargets
+					group.targetsByProvider[providerName] = targets
 				} else {
 					groupsByName[groupName] = Group{
 						name:      groupName,
 						isDefault: groupName == c.DefaultGroup,
-						targets:   targets,
+						targetsByProvider: map[string][]Target{
+							providerName: targets,
+						},
 					}
 				}
 			}
@@ -253,8 +273,9 @@ func (c *Config) Snapshot() *ConfigSnapshot {
 	*/
 
 	return &ConfigSnapshot{
-		groupsByName:     groupsByName,
-		defaultGroupName: c.DefaultGroup,
+		groupsByName:         groupsByName,
+		providerConfigByName: providerConfigByName,
+		defaultGroupName:     c.DefaultGroup,
 	}
 }
 

@@ -6,9 +6,10 @@ import (
 
 // Group organizes the targetEntry targets
 type Group struct {
-	name      string
-	isDefault bool
-	targets   []Target
+	name              string
+	isDefault         bool
+	_targets          []Target
+	targetsByProvider map[string][]Target
 }
 
 // IsDefault returns true if this is the default group in the configuration
@@ -16,27 +17,21 @@ func (g *Group) IsDefault() bool {
 	return g.isDefault
 }
 
-// ProviderConfig is a super struct i.e many fields don't apply for osprey config/setup. Maybe there's a better way :shrug:
-type ProviderConfig struct {
-	serverApplicationID      string
-	clientID                 string
-	clientSecret             string
-	certificateAuthority     string
-	certificateAuthorityData string
-	redirectURI              string
-	scopes                   []string
-	azureTenantID            string
-	issuerURL                string
-	providerType             string
+// Targets returns the list of targets belonging to this group
+func (g *Group) Targets() []Target {
+	if len(g._targets) == 0 {
+		var allTargets []Target
+		for _, targets := range g.targetsByProvider {
+			allTargets = append(allTargets, targets...)
+		}
+		g._targets = sortTargets(allTargets)
+	}
+	return g._targets
 }
 
-// Targets returns the list of targets belonging to this group
-func (g *Group) Targets() map[string][]Target {
-	groupMap := make(map[string][]Target)
-	for _, target := range g.targets {
-		groupMap[target.providerConfig.providerType] = append(groupMap[target.providerConfig.providerType], target)
-	}
-	return getSortedTargetsByProvider(groupMap)
+// TargetsForProvider returns the list of targets by provider belonging to this group
+func (g *Group) TargetsForProvider() map[string][]Target {
+	return getSortedTargetsByProvider(g.targetsByProvider)
 }
 
 func getSortedTargetsByProvider(targetMap map[string][]Target) map[string][]Target {
@@ -53,7 +48,7 @@ func (g *Group) Name() string {
 
 // Contains returns true if it contains the target
 func (g *Group) Contains(target Target) bool {
-	for _, current := range g.targets {
+	for _, current := range g.Targets() {
 		if target.name == current.name {
 			return true
 		}

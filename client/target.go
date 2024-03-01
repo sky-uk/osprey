@@ -71,12 +71,3 @@ func sortTargets(targets []Target) []Target {
 	})
 	return targets
 }
-
-// CreateTarget returns an initiliased Target object
-func CreateTarget(name string, targetEntry *TargetEntry, providerConfig *ProviderConfig) Target {
-	return Target{
-		name:           name,
-		targetEntry:    targetEntry,
-		providerConfig: providerConfig,
-	}
-}
