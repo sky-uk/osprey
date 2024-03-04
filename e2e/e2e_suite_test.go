@@ -96,9 +96,15 @@ var _ = AfterSuite(func() {
 	for _, aDex := range dexes {
 		dextest.Stop(aDex)
 	}
-	oidcTestServer.Stop()
-	apiTestServer.Stop()
-	ldaptest.Stop(ldapServer)
+	if oidcTestServer != nil {
+		oidcTestServer.Stop()
+	}
+	if apiTestServer != nil {
+		apiTestServer.Stop()
+	}
+	if ldapServer != nil {
+		ldaptest.Stop(ldapServer)
+	}
 	os.RemoveAll(testDir)
 })
 

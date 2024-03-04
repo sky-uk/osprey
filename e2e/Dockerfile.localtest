@@ -1,0 +1,15 @@
+FROM ubuntu:16.04
+
+RUN apt update -y && apt install && \
+    DEBIAN_FRONTEND=noninteractive apt -y install --no-install-recommends slapd && \
+    apt -y install --no-install-recommends ldap-utils && \
+    apt -y install tree && \
+    apt -y install curl && \
+    apt -y install build-essential && \
+    apt -y install git-all
+
+RUN curl -fsL https://go.dev/dl/go1.18.10.linux-amd64.tar.gz -o /tmp/go1.18.10.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf /tmp/go1.18.10.linux-amd64.tar.gz
+
+ENV PATH=$PATH:/usr/local/go/bin
+
