@@ -14,7 +14,7 @@ objectClass: inetOrgPerson
 sn: perez
 cn: juan
 mail: juanperez@example.com
-userpassword: foobar
+userpassword: {SSHA}Quy/rrC5T+mwC8AzJaVNua8OE4FlxCs3
 
 dn: cn=jane,ou=People,dc=example,dc=org
 objectClass: person
@@ -22,7 +22,7 @@ objectClass: inetOrgPerson
 sn: doe
 cn: jane
 mail: janedoe@example.com
-userpassword: foo
+userpassword: {SSHA}9gAcCsnDdCLjCnrGcibD8F/VzgvKAFri
 
 dn: cn=john,ou=People,dc=example,dc=org
 objectClass: person
@@ -30,7 +30,7 @@ objectClass: inetOrgPerson
 sn: doe
 cn: john
 mail: johndoe@example.com
-userpassword: bar
+userpassword: {SSHA}oXiK1ZiGrVT/Zj+0EIOASHFvPaqLOeVK
 
 # Group definitions.
 

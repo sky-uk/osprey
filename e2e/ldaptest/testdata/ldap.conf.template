@@ -16,7 +16,7 @@ suffix "dc=example,dc=org"
 
 # root or superuser
 rootdn "{{ .RootDN }}"
-rootpw {{ .RootPwd }}
+rootpw "{SSHA}QRWM/PtoZUlXUOaNRxY6PPrwdvg+wTvx"
 # The database directory MUST exist prior to running slapd AND
 # change path as necessary
 directory	{{ .LDAPDir }}
