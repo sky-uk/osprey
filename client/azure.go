@@ -30,8 +30,10 @@ type AzureConfig struct {
 	ServerApplicationID string `yaml:"server-application-id,omitempty"`
 	// ClientID is the oidc client id used for osprey
 	ClientID string `yaml:"client-id,omitempty"`
-	// ClientSecret is the oidc client secret used for osprey
-	ClientSecret string `yaml:"client-secret,omitempty"`
+	// The ClientSecret was formerly used as part of the OIDC flow.  It's no
+	// longer used, but the entry in the config struct is kept so that newer
+	// binaries can still deserialize old config files.
+	_ string `yaml:"client-secret,omitempty"`
 	// CertificateAuthority is the filesystem path from which to read the CA certificate
 	CertificateAuthority string `yaml:"certificate-authority,omitempty"`
 	// CertificateAuthorityData is base64-encoded CA cert data.
@@ -62,7 +64,7 @@ func (ac *AzureConfig) ValidateConfig() error {
 	if ac.ServerApplicationID == "" {
 		return errors.New("server-application-id is required for azure targets")
 	}
-	if ac.ClientID == "" || ac.ClientSecret == "" {
+	if ac.ClientID == "" {
 		return errors.New("oauth2 clientid and client-secret must be supplied for azure targets")
 	}
 	if ac.RedirectURI == "" {
@@ -80,10 +82,9 @@ func (ac *AzureConfig) ValidateConfig() error {
 // NewAzureRetriever creates new Azure oAuth client
 func NewAzureRetriever(provider *AzureConfig, options RetrieverOptions) (Retriever, error) {
 	config := oauth2.Config{
-		ClientID:     provider.ClientID,
-		ClientSecret: provider.ClientSecret,
-		RedirectURL:  provider.RedirectURI,
-		Scopes:       provider.Scopes,
+		ClientID:    provider.ClientID,
+		RedirectURL: provider.RedirectURI,
+		Scopes:      provider.Scopes,
 	}
 	if provider.IssuerURL == "" {
 		provider.IssuerURL = fmt.Sprintf("https://login.microsoftonline.com/%s/%s", provider.AzureTenantID, wellKnownConfigurationURI)

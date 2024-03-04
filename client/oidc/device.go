@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context/ctxhttp"
 	"golang.org/x/oauth2"
 )
@@ -35,7 +36,11 @@ type pollResponse struct {
 func (c *Client) AuthWithDeviceFlow(ctx context.Context, loginTimeout time.Duration) (*oauth2.Token, error) {
 	c.oAuthConfig.RedirectURL = ""
 	// potential refactor: device_authorization_endpoint is now exposed by the Azure https://login.microsoftonline.com/<tenant-id>/v2.0/.well-known/openid-configuration
-	deviceAuthURL := strings.Replace(c.oAuthConfig.AuthCodeURL(ospreyState), "/authorize", "/devicecode", 1)
+	state, err := randomBytesInHex(24)
+	if err != nil {
+		log.Fatalf("unable to generate random bytes: %e", err)
+	}
+	deviceAuthURL := strings.Replace(c.oAuthConfig.AuthCodeURL(state), "/authorize", "/devicecode", 1)
 	urlParams := url.Values{"client_id": {c.oAuthConfig.ClientID}}
 	if len(c.oAuthConfig.Scopes) > 0 {
 		urlParams.Set("scope", strings.Join(c.oAuthConfig.Scopes, " "))

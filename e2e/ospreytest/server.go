@@ -191,7 +191,6 @@ func BuildFullConfig(testDir, providerName, defaultGroup string,
 		config.Providers = &client.Providers{
 			Azure: &client.AzureConfig{
 				ClientID:            clientID,
-				ClientSecret:        "some-client-secret",
 				RedirectURI:         "http://localhost:65525/auth/callback",
 				Scopes:              []string{"api://some-dummy-scope"},
 				AzureTenantID:       "some-tenant-id",
