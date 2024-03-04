@@ -641,6 +641,24 @@ All `Dex` instances from the different environments will talk to the single
 
 For cloud end-to-end tests, a mocked OIDC server is created and used to authenticate with.
 
+#### Running E2E tests locally
+There's a docker file called `Dockerfile.localtest` which sets up the test environment similar to the one used by travis.
+Travis uses ubuntu 16.04 (xenial) as the default node to run build on unless changed with a `dist` directive.
+More details available [here](https://docs.travis-ci.com/user/reference/linux/)
+
+To run the test locally, run the following command
+
+1. Build the local image
+    `cd <osprey root>/e2e && docker build -f Dockerfile.localtest -t local-osprey-e2etest:1 .`
+2. Run the container with bash as the entry point
+    `docker run -it -v <osprey root folder>:/osprey local-osprey-e2etest:1`
+3. Inside the container run make test
+```
+   cd /osprey
+   export PATH=$PATH:/osprey/build/bin/linux_amd64
+   make test
+```
+
 ## HTTPS/ProtocolBuffers
 
 Given that aws ELBs do not support HTTP/2 osprey needs to run over HTTP.
