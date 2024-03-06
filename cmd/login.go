@@ -83,15 +83,15 @@ func login(_ *cobra.Command, _ []string) {
 
 	success := true
 
-	retrievers, err := ospreyconfig.GetRetrievers(retrieverOptions)
+	retrievers, err := ospreyconfig.GetRetrievers(snapshot.ProviderConfigs(), retrieverOptions)
 	if err != nil {
-		log.Errorf("Unable to initialise providers: %v", err)
+		log.Fatalf("Unable to initialise retrievers: %v", err)
 	}
 
-	for provider, targets := range group.Targets() {
-		retriever, ok := retrievers[provider]
+	for providerName, targets := range group.TargetsForProvider() {
+		retriever, ok := retrievers[providerName]
 		if !ok {
-			log.Fatalf("Unsupported provider: %s", provider)
+			log.Fatalf("Unsupported provider: %s", providerName)
 		}
 		for _, target := range targets {
 			targetData, err := retriever.RetrieveClusterDetailsAndAuthTokens(target)

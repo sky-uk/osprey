@@ -2,7 +2,11 @@ package ospreytest
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/sky-uk/osprey/v2/client"
 
@@ -140,6 +144,7 @@ func BuildFullConfig(testDir, providerName, defaultGroup string,
 	caData bool, caPath, clientID, apiServerURL string, useGKEClientConfig bool) (*TestConfig, error) {
 	config := client.NewConfig()
 	config.Kubeconfig = fmt.Sprintf("%s/.kube/config", testDir)
+	config.APIVersion = "v2"
 	ospreyconfigFile := fmt.Sprintf("%s/.osprey/config", testDir)
 
 	if defaultGroup != "" {
@@ -189,29 +194,50 @@ func BuildFullConfig(testDir, providerName, defaultGroup string,
 	switch providerName {
 	case client.AzureProviderName:
 		config.Providers = &client.Providers{
-			Azure: &client.AzureConfig{
-				ClientID:            clientID,
-				ClientSecret:        "some-client-secret",
-				RedirectURI:         "http://localhost:65525/auth/callback",
-				Scopes:              []string{"api://some-dummy-scope"},
-				AzureTenantID:       "some-tenant-id",
-				ServerApplicationID: "some-server-application-id",
-				IssuerURL:           "http://localhost:14980",
-				Targets:             targets,
+			Azure: []*client.AzureConfig{
+				{
+					ClientID:            clientID,
+					ClientSecret:        "some-client-secret",
+					RedirectURI:         "http://localhost:65525/auth/callback",
+					Scopes:              []string{"api://some-dummy-scope"},
+					AzureTenantID:       "some-tenant-id",
+					ServerApplicationID: "some-server-application-id",
+					IssuerURL:           "http://localhost:14980",
+					Targets:             targets,
+				},
 			},
 		}
 	case client.OspreyProviderName:
 		config.Providers = &client.Providers{
-			Osprey: &client.OspreyConfig{
-				//CertificateAuthority: caPath,
-				Targets: targets,
+			Osprey: []*client.OspreyConfig{
+				{
+					//CertificateAuthority: caPath,
+					Targets: targets,
+				},
 			},
 		}
 
 	}
 
 	testConfig := &TestConfig{Config: config, ConfigFile: ospreyconfigFile}
-	return testConfig, client.SaveConfig(config, ospreyconfigFile)
+	return testConfig, SaveConfig(config, ospreyconfigFile)
+}
+
+// SaveConfig writes the osprey config to the specified path.
+func SaveConfig(config *client.Config, path string) error {
+	err := os.MkdirAll(filepath.Dir(path), 0755)
+	if err != nil {
+		return fmt.Errorf("failed to access config dir %s: %w", path, err)
+	}
+	out, err := yaml.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config file %s: %w", path, err)
+	}
+	err = ioutil.WriteFile(path, out, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to write config file %s: %w", path, err)
+	}
+	return nil
 }
 
 // Client returns a TestCommand for the osprey binary with the provided args arguments.

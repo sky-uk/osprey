@@ -2,18 +2,22 @@ package client
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
+	"strconv"
 
-	"github.com/mitchellh/go-homedir"
-	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/osprey/v2/common/web"
 	"gopkg.in/yaml.v2"
 )
 
+// VersionConfig is used to unmarshal just the apiVersion field from the config file
+type VersionConfig struct {
+	APIVersion string `yaml:"apiVersion,omitempty"`
+}
+
 // Config holds the information needed to connect to remote OIDC providers
 type Config struct {
+	// APIVersion specifies the version of osprey config file used
+	APIVersion string `yaml:"apiVersion,omitempty"`
 	// Kubeconfig specifies the path to read/write the kubeconfig file.
 	// +optional
 	Kubeconfig string `yaml:"kubeconfig,omitempty"`
@@ -26,6 +30,24 @@ type Config struct {
 
 // Providers holds the configuration structs for the supported providers
 type Providers struct {
+	Azure  []*AzureConfig  `yaml:"azure,omitempty"`
+	Osprey []*OspreyConfig `yaml:"osprey,omitempty"`
+}
+
+// ConfigV1 is the v1 version of the config file
+type ConfigV1 struct {
+	// Kubeconfig specifies the path to read/write the kubeconfig file.
+	// +optional
+	Kubeconfig string `yaml:"kubeconfig,omitempty"`
+	// DefaultGroup specifies the group to log in to if none provided.
+	// +optional
+	DefaultGroup string `yaml:"default-group,omitempty"`
+	// Providers is a map of OIDC provider config
+	Providers *ProvidersV1 `yaml:"providers,omitempty"`
+}
+
+// ProvidersV1 Single Provider config
+type ProvidersV1 struct {
 	Azure  *AzureConfig  `yaml:"azure,omitempty"`
 	Osprey *OspreyConfig `yaml:"osprey,omitempty"`
 }
@@ -67,26 +89,48 @@ func NewConfig() *Config {
 
 // LoadConfig reads and parses the Config file
 func LoadConfig(path string) (*Config, error) {
-	in, err := ioutil.ReadFile(path)
+	in, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file %s: %w", path, err)
 	}
-	config := &Config{}
-	err = yaml.Unmarshal(in, config)
+	versionConfig := &VersionConfig{}
+	err = yaml.Unmarshal(in, versionConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config file %s: %w", path, err)
+		return nil, fmt.Errorf("failed to unmarshal version config file %s: %w", path, err)
 	}
 
-	if config.Providers.Azure != nil {
-		azureConfig := config.Providers.Azure
+	config := &Config{}
+	if versionConfig.APIVersion == "v2" {
+		err = yaml.Unmarshal(in, config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal v2 config file %s: %w", path, err)
+		}
+	} else {
+		configV1 := &ConfigV1{}
+		err = yaml.Unmarshal(in, configV1)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal v1 config file %s: %w", path, err)
+		}
+		config.Kubeconfig = configV1.Kubeconfig
+		config.DefaultGroup = configV1.DefaultGroup
+		config.Providers = &Providers{}
+
+		if configV1.Providers.Azure != nil {
+			config.Providers.Azure = []*AzureConfig{configV1.Providers.Azure}
+		}
+
+		if configV1.Providers.Osprey != nil {
+			config.Providers.Osprey = []*OspreyConfig{configV1.Providers.Osprey}
+		}
+	}
+
+	for _, azureConfig := range config.Providers.Azure {
 		err = azureConfig.ValidateConfig()
 		if err == nil {
 			err = setTargetCA(azureConfig.CertificateAuthority, azureConfig.CertificateAuthorityData, azureConfig.Targets)
 		}
 	}
-
-	if config.Providers.Osprey != nil {
-		ospreyConfig := config.Providers.Osprey
+	for _, ospreyConfig := range config.Providers.Osprey {
 		err = ospreyConfig.ValidateConfig()
 		if err == nil {
 			err = setTargetCA(ospreyConfig.CertificateAuthority, ospreyConfig.CertificateAuthorityData, ospreyConfig.Targets)
@@ -103,23 +147,6 @@ func LoadConfig(path string) (*Config, error) {
 	return config, err
 }
 
-// SaveConfig writes the osprey config to the specified path.
-func SaveConfig(config *Config, path string) error {
-	err := os.MkdirAll(filepath.Dir(path), 0755)
-	if err != nil {
-		return fmt.Errorf("failed to access config dir %s: %w", path, err)
-	}
-	out, err := yaml.Marshal(config)
-	if err != nil {
-		return fmt.Errorf("failed to marshal config file %s: %w", path, err)
-	}
-	err = ioutil.WriteFile(path, out, 0755)
-	if err != nil {
-		return fmt.Errorf("failed to write config file %s: %w", path, err)
-	}
-	return nil
-}
-
 func (c *Config) validateGroups() error {
 	for _, group := range c.Snapshot().groupsByName {
 		if group.name == "" && c.DefaultGroup != "" {
@@ -130,35 +157,112 @@ func (c *Config) validateGroups() error {
 }
 
 // GetRetrievers returns a map of providers to retrievers
-func (c *Config) GetRetrievers(options RetrieverOptions) (map[string]Retriever, error) {
+// Can return just a single retriever as it can be called just in time.
+// The disadvantage being login can fail for a different provider after having succeeded for the first.
+func (c *Config) GetRetrievers(providerConfigs map[string]*ProviderConfig, options RetrieverOptions) (map[string]Retriever, error) {
 	retrievers := make(map[string]Retriever)
-	var err error
-	if c.Providers.Azure != nil {
-		retrievers[AzureProviderName], err = NewAzureRetriever(c.Providers.Azure, options)
-		if err != nil {
-			return nil, err
+
+	for _, providerConfig := range providerConfigs {
+		switch providerConfig.provider {
+		case AzureProviderName:
+			result, err := NewAzureRetriever(providerConfig, options)
+			if err != nil {
+				return nil, err
+			}
+			retrievers[providerConfig.name] = result
+		case OspreyProviderName:
+			result, err := NewOspreyRetriever(providerConfig, options)
+			if err != nil {
+				return nil, err
+			}
+			retrievers[providerConfig.name] = result
 		}
-	}
-	if c.Providers.Osprey != nil {
-		retrievers[OspreyProviderName] = NewOspreyRetriever(c.Providers.Osprey, options)
 	}
 	return retrievers, nil
 }
 
 // Snapshot creates or returns a ConfigSnapshot
 func (c *Config) Snapshot() *ConfigSnapshot {
-	groupedTargets := make(map[string]map[string]*TargetEntry)
-	if c.Providers.Azure != nil {
-		groupedTargets[AzureProviderName] = c.Providers.Azure.Targets
-	}
-	if c.Providers.Osprey != nil {
-		groupedTargets[OspreyProviderName] = c.Providers.Osprey.Targets
+	groupsByName := make(map[string]Group)
+	providerConfigByName := make(map[string]*ProviderConfig)
+
+	// build the target list by group name for Azure provider
+	if c.Providers != nil {
+		for i, azureProvider := range c.Providers.Azure {
+			givenName := azureProvider.Name
+			if givenName == "" {
+				givenName = "provider-" + strconv.Itoa(i)
+			}
+			providerName := "azure:" + givenName
+			providerConfigByName[providerName] = &ProviderConfig{
+				name:                     providerName,
+				serverApplicationID:      azureProvider.ServerApplicationID,
+				clientID:                 azureProvider.ClientID,
+				clientSecret:             azureProvider.ClientSecret,
+				certificateAuthority:     azureProvider.CertificateAuthority,
+				certificateAuthorityData: azureProvider.CertificateAuthorityData,
+				redirectURI:              azureProvider.RedirectURI,
+				scopes:                   azureProvider.Scopes,
+				azureTenantID:            azureProvider.AzureTenantID,
+				issuerURL:                azureProvider.IssuerURL,
+				providerType:             azureProvider.AzureProviderName,
+				provider:                 AzureProviderName,
+			}
+
+			c.ConfigureGroupings(azureProvider.Targets, providerName, groupsByName)
+		}
+
+		for i, ospreyProvider := range c.Providers.Osprey {
+			givenName := ospreyProvider.Name
+			if givenName == "" {
+				givenName = "provider-" + strconv.Itoa(i)
+			}
+			providerName := "osprey:" + givenName
+			providerConfigByName[providerName] = &ProviderConfig{
+				name:                     providerName,
+				certificateAuthority:     ospreyProvider.CertificateAuthority,
+				certificateAuthorityData: ospreyProvider.CertificateAuthorityData,
+				provider:                 OspreyProviderName,
+			}
+
+			c.ConfigureGroupings(ospreyProvider.Targets, providerName, groupsByName)
+		}
 	}
 
-	groupsByName := groupTargetsByName(groupedTargets, c.DefaultGroup)
 	return &ConfigSnapshot{
-		groupsByName:     groupsByName,
-		defaultGroupName: c.DefaultGroup,
+		groupsByName:         groupsByName,
+		providerConfigByName: providerConfigByName,
+		defaultGroupName:     c.DefaultGroup,
+	}
+}
+
+// ConfigureGroupings groups the targets by group name
+func (c *Config) ConfigureGroupings(targets map[string]*TargetEntry, providerName string, groupsByName map[string]Group) {
+	groupedTargets := make(map[string][]Target)
+
+	for targetName, targetEntry := range targets {
+		for _, groupName := range targetEntry.Groups {
+			target := Target{
+				name:        targetName,
+				targetEntry: targetEntry,
+			}
+			updatedTargets := append(groupedTargets[groupName], target)
+			groupedTargets[groupName] = updatedTargets
+		}
+	}
+
+	for groupName, targets := range groupedTargets {
+		if group, present := groupsByName[groupName]; present {
+			group.targetsByProvider[providerName] = targets
+		} else {
+			groupsByName[groupName] = Group{
+				name:      groupName,
+				isDefault: groupName == c.DefaultGroup,
+				targetsByProvider: map[string][]Target{
+					providerName: targets,
+				},
+			}
+		}
 	}
 }
 
@@ -197,52 +301,4 @@ func setTargetCA(certificateAuthority, certificateAuthorityData string, targets 
 		}
 	}
 	return nil
-}
-
-func groupTargetsByName(groupedTargets map[string]map[string]*TargetEntry, defaultGroup string) map[string]Group {
-	groupsByName := make(map[string]Group)
-	for providerName, targetEntries := range groupedTargets {
-		for groupName, group := range groupTargetsByProvider(targetEntries, defaultGroup, providerName) {
-			if existingGroup, ok := groupsByName[groupName]; ok {
-				existingGroup.targets = append(existingGroup.targets, group.targets...)
-				groupsByName[groupName] = existingGroup
-			} else {
-				groupsByName[groupName] = group
-			}
-		}
-	}
-
-	return groupsByName
-}
-
-func groupTargetsByProvider(targetEntries map[string]*TargetEntry, defaultGroup string, providerType string) map[string]Group {
-	groupsByName := make(map[string]Group)
-	var groups []Group
-	for key, targetEntry := range targetEntries {
-		targetEntryGroups := targetEntry.Groups
-		if len(targetEntryGroups) == 0 {
-			targetEntryGroups = []string{""}
-		}
-
-		target := Target{name: key, targetEntry: *targetEntry, providerType: providerType}
-		for _, groupName := range targetEntryGroups {
-			group, ok := groupsByName[groupName]
-			if !ok {
-				isDefault := groupName == defaultGroup
-				group = Group{name: groupName, isDefault: isDefault}
-				groups = append(groups, group)
-			}
-			group.targets = append(group.targets, target)
-			groupsByName[groupName] = group
-		}
-	}
-	return groupsByName
-}
-
-func homeDir() string {
-	home, err := homedir.Dir()
-	if err != nil {
-		log.Fatalf("Failed to read home dir: %v", err)
-	}
-	return home
 }
