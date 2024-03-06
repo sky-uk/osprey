@@ -1,13 +1,12 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/sky-uk/osprey/v2/client"
 	"github.com/sky-uk/osprey/v2/client/kubeconfig"
 	"github.com/spf13/cobra"
-
-	"os"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -62,27 +61,30 @@ func user(_ *cobra.Command, _ []string) {
 		log.Fatalf("failed to load existing kubeconfig at %s: %v", kubeconfig.GetPathOptions().GetDefaultFilename(), err)
 	}
 
-	retrievers, err := ospreyconfig.GetRetrievers(client.RetrieverOptions{})
+	retrievers, err := ospreyconfig.GetRetrievers(snapshot.ProviderConfigs(), client.RetrieverOptions{})
 	if err != nil {
 		log.Errorf("Unable to initialise providers: %v", err)
 	}
 
-	for _, targets := range group.Targets() {
+	for providerName, targets := range group.TargetsForProvider() {
 		for _, target := range targets {
-			retriever := retrievers[target.ProviderType()]
+			retriever := retrievers[providerName]
 			authInfo := retriever.GetAuthInfo(config, target)
 			if authInfo != nil {
 				userInfo, err := retriever.RetrieveUserDetails(target, *authInfo)
 				if err != nil {
 					log.Errorf("%s: %v", target.Name(), err)
+					continue
 				}
-				if userInfo != nil {
-					switch target.ProviderType() {
-					case client.OspreyProviderName:
-						log.Infof("%s: %s %s", target.Name(), userInfo.Username, userInfo.Roles)
-					default:
-						log.Infof("%s: %s", target.Name(), userInfo.Username)
-					}
+				provider, err := snapshot.GetProvider(providerName)
+				if err != nil {
+					log.Errorf("%s: %v", target.Name(), err)
+					continue
+				}
+				if provider == client.OspreyProviderName {
+					log.Infof("%s: %s %s", target.Name(), userInfo.Username, userInfo.Roles)
+				} else {
+					log.Infof("%s: %s", target.Name(), userInfo.Username)
 				}
 			} else {
 				log.Infof("%s: none", target.Name())

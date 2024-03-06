@@ -43,15 +43,13 @@ func logout(_ *cobra.Command, _ []string) {
 	displayActiveGroup(targetGroup, ospreyconfig.DefaultGroup)
 
 	success := true
-	for _, targets := range group.Targets() {
-		for _, target := range targets {
-			err = kubeconfig.Remove(target.Name())
-			if err != nil {
-				log.Errorf("Failed to remove %s from kubeconfig: %v", target.Name(), err)
-				success = false
-			} else {
-				log.Infof("Logged out from %s", target.Name())
-			}
+	for _, target := range group.Targets() {
+		err = kubeconfig.Remove(target.Name())
+		if err != nil {
+			log.Errorf("Failed to remove %s from kubeconfig: %v", target.Name(), err)
+			success = false
+		} else {
+			log.Infof("Logged out from %s", target.Name())
 		}
 	}
 

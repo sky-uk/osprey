@@ -133,6 +133,9 @@ func resetDefaults() {
 }
 
 func cleanup() {
+	if ospreyconfig == nil {
+		return
+	}
 	if err := os.Remove(ospreyconfig.Kubeconfig); err != nil {
 		Expect(os.IsNotExist(err)).To(BeTrue())
 	}
