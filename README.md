@@ -654,8 +654,7 @@ To run the test locally, run the following command
     `docker run -it -v <osprey root folder>:/osprey local-osprey-e2etest:1`
 3. Inside the container run make test
 ```
-   cd /osprey
-   export PATH=$PATH:/osprey/build/bin/linux_amd64
+   make build
    make test
 ```
 
