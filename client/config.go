@@ -34,24 +34,6 @@ type Providers struct {
 	Osprey []*OspreyConfig `yaml:"osprey,omitempty"`
 }
 
-// ConfigV1 is the v1 version of the config file
-type ConfigV1 struct {
-	// Kubeconfig specifies the path to read/write the kubeconfig file.
-	// +optional
-	Kubeconfig string `yaml:"kubeconfig,omitempty"`
-	// DefaultGroup specifies the group to log in to if none provided.
-	// +optional
-	DefaultGroup string `yaml:"default-group,omitempty"`
-	// Providers is a map of OIDC provider config
-	Providers *ProvidersV1 `yaml:"providers,omitempty"`
-}
-
-// ProvidersV1 Single Provider config
-type ProvidersV1 struct {
-	Azure  *AzureConfig  `yaml:"azure,omitempty"`
-	Osprey *OspreyConfig `yaml:"osprey,omitempty"`
-}
-
 // TargetEntry contains information about how to communicate with an osprey server
 type TargetEntry struct {
 	// Server is the address of the osprey server (hostname:port).
@@ -89,38 +71,26 @@ func NewConfig() *Config {
 
 // LoadConfig reads and parses the Config file
 func LoadConfig(path string) (*Config, error) {
-	in, err := os.ReadFile(path)
+	configData, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file %s: %w", path, err)
 	}
 	versionConfig := &VersionConfig{}
-	err = yaml.Unmarshal(in, versionConfig)
+	err = yaml.Unmarshal(configData, versionConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal version config file %s: %w", path, err)
 	}
 
 	config := &Config{}
 	if versionConfig.APIVersion == "v2" {
-		err = yaml.Unmarshal(in, config)
+		err = yaml.Unmarshal(configData, config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal v2 config file %s: %w", path, err)
 		}
 	} else {
-		configV1 := &ConfigV1{}
-		err = yaml.Unmarshal(in, configV1)
+		config, err = parseLegacyConfig(configData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal v1 config file %s: %w", path, err)
-		}
-		config.Kubeconfig = configV1.Kubeconfig
-		config.DefaultGroup = configV1.DefaultGroup
-		config.Providers = &Providers{}
-
-		if configV1.Providers.Azure != nil {
-			config.Providers.Azure = []*AzureConfig{configV1.Providers.Azure}
-		}
-
-		if configV1.Providers.Osprey != nil {
-			config.Providers.Osprey = []*OspreyConfig{configV1.Providers.Osprey}
 		}
 	}
 
@@ -305,4 +275,43 @@ func setTargetCA(certificateAuthority, certificateAuthorityData string, targets 
 		}
 	}
 	return nil
+}
+
+func parseLegacyConfig(configData []byte) (*Config, error) {
+	// ProvidersV1 Single Provider config
+	type ProvidersV1 struct {
+		Azure  *AzureConfig  `yaml:"azure,omitempty"`
+		Osprey *OspreyConfig `yaml:"osprey,omitempty"`
+	}
+
+	// ConfigV1 is the v1 version of the config file
+	type ConfigV1 struct {
+		// Kubeconfig specifies the path to read/write the kubeconfig file.
+		// +optional
+		Kubeconfig string `yaml:"kubeconfig,omitempty"`
+		// DefaultGroup specifies the group to log in to if none provided.
+		// +optional
+		DefaultGroup string `yaml:"default-group,omitempty"`
+		// Providers is a map of OIDC provider config
+		Providers *ProvidersV1 `yaml:"providers,omitempty"`
+	}
+
+	config := &Config{}
+	configV1 := &ConfigV1{}
+	err := yaml.Unmarshal(configData, configV1)
+	if err != nil {
+		return nil, err
+	}
+	config.Kubeconfig = configV1.Kubeconfig
+	config.DefaultGroup = configV1.DefaultGroup
+	config.Providers = &Providers{}
+
+	if configV1.Providers.Azure != nil {
+		config.Providers.Azure = []*AzureConfig{configV1.Providers.Azure}
+	}
+
+	if configV1.Providers.Osprey != nil {
+		config.Providers.Osprey = []*OspreyConfig{configV1.Providers.Osprey}
+	}
+	return config, nil
 }
