@@ -209,7 +209,7 @@ func (c *Config) Snapshot() *ConfigSnapshot {
 				provider:                 AzureProviderName,
 			}
 
-			c.ConfigureGroupings(azureProvider.Targets, providerName, groupsByName)
+			c.GroupProviderAwareTargets(azureProvider.Targets, providerName, groupsByName)
 		}
 
 		for i, ospreyProvider := range c.Providers.Osprey {
@@ -225,7 +225,7 @@ func (c *Config) Snapshot() *ConfigSnapshot {
 				provider:                 OspreyProviderName,
 			}
 
-			c.ConfigureGroupings(ospreyProvider.Targets, providerName, groupsByName)
+			c.GroupProviderAwareTargets(ospreyProvider.Targets, providerName, groupsByName)
 		}
 	}
 
@@ -236,21 +236,26 @@ func (c *Config) Snapshot() *ConfigSnapshot {
 	}
 }
 
-// ConfigureGroupings groups the targets by group name
-func (c *Config) ConfigureGroupings(targets map[string]*TargetEntry, providerName string, groupsByName map[string]Group) {
+// GroupProviderAwareTargets groups the targets by group name across all providers
+func (c *Config) GroupProviderAwareTargets(targets map[string]*TargetEntry, providerName string, groupsByName map[string]Group) {
 	groupedTargets := make(map[string][]Target)
 
+	// arranges the list of targets for a provider by their group(s). A target can be part of 0 or more groups
 	for targetName, targetEntry := range targets {
+		// a target not belonging to any group and a config not having a default group is a valid scenario
+		if len(targetEntry.Groups) == 0 {
+			groupName := ""
+			updatedTargets := append(groupedTargets[groupName], Target{name: targetName, targetEntry: targetEntry})
+			groupedTargets[groupName] = updatedTargets
+		}
 		for _, groupName := range targetEntry.Groups {
-			target := Target{
-				name:        targetName,
-				targetEntry: targetEntry,
-			}
-			updatedTargets := append(groupedTargets[groupName], target)
+			updatedTargets := append(groupedTargets[groupName], Target{name: targetName, targetEntry: targetEntry})
 			groupedTargets[groupName] = updatedTargets
 		}
 	}
 
+	// after grouping the targets within a provider above, the below loop merges that map with a map for all providers.
+	// So, the map will be targets arranged by their groups but also mapped to their provider configuration
 	for groupName, targets := range groupedTargets {
 		if group, present := groupsByName[groupName]; present {
 			group.targetsByProvider[providerName] = targets
