@@ -16,6 +16,7 @@ type ProviderConfig struct {
 	provider                 string
 }
 
+// GetProvider gives the name of the provider. azure, osprey etc
 func (p *ProviderConfig) GetProvider() string {
 	return p.provider
 }
