@@ -22,15 +22,37 @@ else ifeq ("$(os)", "Darwin")
 	target_os = darwin
 endif
 
-.PHONY: all build check check-format check-os clean docker format install lint proto release-docker setup test vet
+# Retrieve goarch
+architecture=$(shell uname -m)
+ifeq ("$(architecture)", "i386")
+    goarch="386"
+else ifeq ("$(architecture)", "i686")
+    goarch="386"
+else ifeq ("$(architecture)", "x86_64")
+    goarch="amd64"
+else ifeq ("$(architecture)", "arm")
+    goarch="arm"
+else ifeq ("$(architecture)", "arm64")
+    goarch="arm64"
+else ifeq ("$(architecture)", "aarch64")
+    goarch="aarch64"
+endif
+
+
+.PHONY: all build check check-format check-os check-arch clean docker format install lint proto release-docker setup test vet
 
 all : check install test
-check : check-os check-format vet lint test
+check : check-os check-arch check-format vet lint test
 travis : clean setup check build test docker
 
 check-os:
 ifndef target_os
 	$(error Unsupported platform: ${os})
+endif
+
+check-arch:
+ifndef goarch
+	$(error architecture=${architecture} has not been accounted for)
 endif
 
 setup:
@@ -49,14 +71,15 @@ clean :
 	rm -rf build
 	rm -rf dist
 
-build :
+build : check-arch
 	@echo "== build"
-	GOOS=${target_os} GOARCH=amd64 go build -ldflags '-s $(ldflags)' -o ${build_dir}/${target_os}_amd64/osprey -v
+	@echo "Building binary for ${target_os} arch=${architecture} goarch=${goarch}"
+	GOOS=${target_os} GOARCH=${goarch} go build -ldflags '-s $(ldflags)' -o ${build_dir}/${target_os}_${goarch}/osprey -v .
 
-install :
+install : check-arch
 	@echo "== install"
-	@echo "Installing binary for ${target_os}"
-	GOOS=${target_os} GOARCH=amd64 go install -ldflags '$(ldflags)' -v
+	@echo "Installing binary for ${target_os} ${goarch}"
+	GOOS=${target_os} GOARCH=${goarch} go install -ldflags '$(ldflags)' -v
 
 unformatted = $(shell goimports -l $(files))
 
