@@ -6,9 +6,8 @@ import (
 
 // Target has the information of an TargetEntry target server
 type Target struct {
-	name           string
-	targetEntry    *TargetEntry
-	providerConfig *ProviderConfig
+	name        string
+	targetEntry *TargetEntry
 }
 
 // Aliases returns the list of aliases of the Target alphabetically sorted
@@ -53,11 +52,6 @@ func (m *Target) ShouldSkipTLSVerify() bool {
 // instead of the other methods (e.g. inline in Osprey config file or from Osprey server)
 func (m *Target) ShouldFetchCAFromAPIServer() bool {
 	return m.targetEntry.APIServer != ""
-}
-
-// ProviderType returns the authentication provider of the Target
-func (m *Target) ProviderType() string {
-	return m.providerConfig.providerType
 }
 
 // CertificateAuthorityData returns the CertificateAuthorityData of the Target

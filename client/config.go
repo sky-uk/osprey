@@ -193,7 +193,7 @@ func (c *Config) Snapshot() *ConfigSnapshot {
 			if givenName == "" {
 				givenName = "provider-" + strconv.Itoa(i)
 			}
-			providerName := "azure:" + givenName
+			providerName := AzureProviderName + ":" + givenName
 			providerConfigByName[providerName] = &ProviderConfig{
 				name:                     providerName,
 				serverApplicationID:      azureProvider.ServerApplicationID,
@@ -217,7 +217,7 @@ func (c *Config) Snapshot() *ConfigSnapshot {
 			if givenName == "" {
 				givenName = "provider-" + strconv.Itoa(i)
 			}
-			providerName := "osprey:" + givenName
+			providerName := OspreyProviderName + ":" + givenName
 			providerConfigByName[providerName] = &ProviderConfig{
 				name:                     providerName,
 				certificateAuthority:     ospreyProvider.CertificateAuthority,

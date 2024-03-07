@@ -1,5 +1,7 @@
 package client
 
+import "fmt"
+
 // ConfigSnapshot is a snapshot view of the configuration to organize the targets per group.
 // It does not reflect changes to the configuration after it has been taken.
 type ConfigSnapshot struct {
@@ -22,6 +24,15 @@ func (t *ConfigSnapshot) Groups() []Group {
 // ProviderConfigs is the config for the providers
 func (t *ConfigSnapshot) ProviderConfigs() map[string]*ProviderConfig {
 	return t.providerConfigByName
+}
+
+// GetProvider provides the name of the provider. azure, osprey etc
+func (t *ConfigSnapshot) GetProvider(providerName string) (string, error) {
+	config := t.providerConfigByName[providerName]
+	if config == nil {
+		return "", fmt.Errorf("unable to lookup provider for name: %s", providerName)
+	}
+	return config.GetProvider(), nil
 }
 
 // HaveGroups returns true if there is at least one defined group.

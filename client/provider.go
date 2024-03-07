@@ -15,3 +15,7 @@ type ProviderConfig struct {
 	providerType             string
 	provider                 string
 }
+
+func (p *ProviderConfig) GetProvider() string {
+	return p.provider
+}

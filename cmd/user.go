@@ -1,13 +1,12 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/sky-uk/osprey/v2/client"
 	"github.com/sky-uk/osprey/v2/client/kubeconfig"
 	"github.com/spf13/cobra"
-
-	"os"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -75,14 +74,17 @@ func user(_ *cobra.Command, _ []string) {
 				userInfo, err := retriever.RetrieveUserDetails(target, *authInfo)
 				if err != nil {
 					log.Errorf("%s: %v", target.Name(), err)
+					continue
 				}
-				if userInfo != nil {
-					switch target.ProviderType() {
-					case client.OspreyProviderName:
-						log.Infof("%s: %s %s", target.Name(), userInfo.Username, userInfo.Roles)
-					default:
-						log.Infof("%s: %s", target.Name(), userInfo.Username)
-					}
+				provider, err := snapshot.GetProvider(providerName)
+				if err != nil {
+					log.Errorf("%s: %v", target.Name(), err)
+					continue
+				}
+				if provider == client.OspreyProviderName {
+					log.Infof("%s: %s %s", target.Name(), userInfo.Username, userInfo.Roles)
+				} else {
+					log.Infof("%s: %s", target.Name(), userInfo.Username)
 				}
 			} else {
 				log.Infof("%s: none", target.Name())

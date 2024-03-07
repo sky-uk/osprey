@@ -2,7 +2,6 @@ package ospreytest
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -233,7 +232,7 @@ func SaveConfig(config *client.Config, path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal config file %s: %w", path, err)
 	}
-	err = ioutil.WriteFile(path, out, 0755)
+	err = os.WriteFile(path, out, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to write config file %s: %w", path, err)
 	}
