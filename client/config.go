@@ -64,11 +64,6 @@ type TargetEntry struct {
 	Groups []string `yaml:"groups,omitempty"`
 }
 
-// NewConfig is a convenience function that returns a new Config object with non-nil maps
-func NewConfig() *Config {
-	return &Config{}
-}
-
 // LoadConfig reads and parses the Config file
 func LoadConfig(path string) (*Config, error) {
 	configData, err := os.ReadFile(path)
@@ -275,43 +270,4 @@ func setTargetCA(certificateAuthority, certificateAuthorityData string, targets 
 		}
 	}
 	return nil
-}
-
-func parseLegacyConfig(configData []byte) (*Config, error) {
-	// ProvidersV1 Single Provider config
-	type ProvidersV1 struct {
-		Azure  *AzureConfig  `yaml:"azure,omitempty"`
-		Osprey *OspreyConfig `yaml:"osprey,omitempty"`
-	}
-
-	// ConfigV1 is the v1 version of the config file
-	type ConfigV1 struct {
-		// Kubeconfig specifies the path to read/write the kubeconfig file.
-		// +optional
-		Kubeconfig string `yaml:"kubeconfig,omitempty"`
-		// DefaultGroup specifies the group to log in to if none provided.
-		// +optional
-		DefaultGroup string `yaml:"default-group,omitempty"`
-		// Providers is a map of OIDC provider config
-		Providers *ProvidersV1 `yaml:"providers,omitempty"`
-	}
-
-	config := &Config{}
-	configV1 := &ConfigV1{}
-	err := yaml.Unmarshal(configData, configV1)
-	if err != nil {
-		return nil, err
-	}
-	config.Kubeconfig = configV1.Kubeconfig
-	config.DefaultGroup = configV1.DefaultGroup
-	config.Providers = &Providers{}
-
-	if configV1.Providers.Azure != nil {
-		config.Providers.Azure = []*AzureConfig{configV1.Providers.Azure}
-	}
-
-	if configV1.Providers.Osprey != nil {
-		config.Providers.Osprey = []*OspreyConfig{configV1.Providers.Osprey}
-	}
-	return config, nil
 }
