@@ -249,6 +249,10 @@ The client uses a YAML configuration file. Its recommended location is:
 # default-group: my-group
 
 # V2 Config
+
+Recently, we decided that we would like to authenticate with different providers on a per-context basis. This added granularity will make it much easier to transition from one provider to another.
+We aimed to keep the config as similar as possible, but due to the nature of the change, a new structure was required.
+That structure is detailed below. The new layout for the config file is essentially a list of existing configs underneath the coresponding provider. We chose this format to prevent reinventing the wheel if/when additional providers are added.
 ```
 apiVersion (Optional)
 kubeconfig (Optional)
