@@ -13,10 +13,4 @@ type ProviderConfig struct {
 	azureTenantID            string
 	issuerURL                string
 	providerType             string
-	provider                 string
-}
-
-// GetProvider gives the name of the provider. azure, osprey etc
-func (p *ProviderConfig) GetProvider() string {
-	return p.provider
 }

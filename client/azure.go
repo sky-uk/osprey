@@ -51,8 +51,6 @@ type AzureConfig struct {
 	IssuerURL string `yaml:"issuer-url,omitempty"`
 	// Targets contains a map of strings to osprey targets
 	Targets map[string]*TargetEntry `yaml:"targets"`
-	//provider name
-	AzureProviderName string `yaml:"azure-provider-name,omitempty"`
 }
 
 // ValidateConfig checks that the required configuration has been provided for Azure

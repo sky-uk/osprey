@@ -100,16 +100,16 @@ With a [configuration](#client-configuration) file like:
 ```yaml
 providers:
   osprey:
-    targets:
-      local.cluster:
-        server: https://osprey.local.cluster
-      foo.cluster:
-        server: https://osprey.foo.cluster
-        alias: [foo]
-        groups: [foo, foobar]
-      bar.cluster:
-        server: https://osprey.bar.cluster
-        groups: [bar, foobar]
+    - targets:
+        local.cluster:
+          server: https://osprey.local.cluster
+        foo.cluster:
+          server: https://osprey.foo.cluster
+          alias: [foo]
+          groups: [foo, foobar]
+        bar.cluster:
+          server: https://osprey.bar.cluster
+          groups: [bar, foobar]
 ```
 
 The `groups` are labels that allow the targets to be organised into categories.
@@ -239,7 +239,12 @@ installed version.
 
 The client uses a YAML configuration file. Its recommended location is:
 `$HOME/.osprey/config`. Its contents are as follows:
+#### V2 Config
+The structure of the osprey configuration supports multiple configuration for a provider type.
+This structure will support scenarios where different azure providers can be configured for prod and non-prod targets.
 ```yaml
+apiVersion: v2
+
 # Optional path to the kubeconfig file to load/update when loging in.
 # Uses kubectl defaults if absent ($HOME/.kube/config).
 # kubeconfig: /home/jdoe/.kube/config
@@ -248,112 +253,107 @@ The client uses a YAML configuration file. Its recommended location is:
 # When this value is defined, all targets must define at least one group.
 # default-group: my-group
 
-# V2 Config
-
-Recently, we decided that we would like to authenticate with different providers on a per-context basis. This added granularity will make it much easier to transition from one provider to another.
-We aimed to keep the config as similar as possible, but due to the nature of the change, a new structure was required.
-That structure is detailed below. The new layout for the config file is essentially a list of existing configs underneath the coresponding provider. We chose this format to prevent reinventing the wheel if/when additional providers are added.
-```
-apiVersion (Optional)
-kubeconfig (Optional)
-default-group (Optional)
-providers:
-  Osprey:
-    - provider-name (Optional but Recommended)
-      targets:
-        foo.cluster.internal
-        ...
-      certificate-authority (Optional)
-      certificate-authority-data (Optional)
-  Azure:
-    - name (Optional but Recommended)
-      targets:
-        bar.cluster.external:
-        ...
-      scopes:
-        - "api://azure-tenant-id/Kubernetes.API.All"
-      server-application-id (Optional)
-      client-id (Optional)
-      client-secret (Optional)
-      certificate-authority (Optional)
-      certificate-authority-data (Optional)
-      redirect-uri (Optional)
-      tenant-id (Optional)
-      issuer-url (Optional)
-      azure-provider-name (Optional)
-```
-# V1 Config (Soon to be Deprecated)
-
 ## Named map of supported providers (currently `osprey` and `azure`)
-```
 providers:
   osprey:
-    # CA cert to use for HTTPS connections to Osprey.
-    # Uses system's CA certs if absent.
-    # certificate-authority: /tmp/osprey-238319279/cluster_ca.crt
+    - provider-name (Optional)
+      # CA cert to use for HTTPS connections to Osprey.
+      # Uses system's CA certs if absent.
+      # certificate-authority: /tmp/osprey-238319279/cluster_ca.crt
 
-    # Alternatively, a Base64-encoded PEM format certificate.
-    # This will override certificate-authority if specified.
-    # certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5vdCB2YWxpZAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+      # Alternatively, a Base64-encoded PEM format certificate.
+      # This will override certificate-authority if specified.
+      # certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5vdCB2YWxpZAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
 
-    # Named map of target Osprey servers to contact for access-tokens
+      # Named map of target Osprey servers to contact for access-tokens
     targets:
-      # Target Osprey's environment name.
-      # Used for the name of the cluster, context, and users generated
-      foo.cluster:
-        # hostname:port of the target osprey server
-        server: https://osprey.foo.cluster
+        # Target Osprey's environment name.
+        # Used for the name of the cluster, context, and users generated
+        foo.cluster:
+            # hostname:port of the target osprey server
+            server: https://osprey.foo.cluster
 
-        #  list of names to generate additional contexts against the target.
-        aliases: [foo.alias]
+            #  list of names to generate additional contexts against the target.
+            aliases: [foo.alias]
 
-        #  list of names that can be used to logically group different Osprey servers.
-        groups: [foo]
+            #  list of names that can be used to logically group different Osprey servers.
+            groups: [foo]
 
-        # CA cert to use for HTTPS connections to Osprey.
-        # Uses system's CA certs if absent.
-        # certificate-authority: /tmp/osprey-238319279/cluster_ca.crt
+            # CA cert to use for HTTPS connections to Osprey.
+            # Uses system's CA certs if absent.
+            # certificate-authority: /tmp/osprey-238319279/cluster_ca.crt
 
-        # Alternatively, a Base64-encoded PEM format certificate.
-        # This will override certificate-authority if specified.
-        # certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5vdCB2YWxpZAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
-
+            # Alternatively, a Base64-encoded PEM format certificate.
+            # This will override certificate-authority if specified.
+            # certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5vdCB2YWxpZAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
   # Authenticating against Azure AD
   azure:
-    # These settings are required when authenticating against Azure
+    - name (Optional)
+      # These settings are required when authenticating against Azure
     tenant-id: your-azure-tenant-id
     server-application-id: azure-ad-server-application-id
     client-id: azure-ad-client-id
     client-secret: azure-ad-client-secret
 
-    # List of scopes to request as part of the request. This should be an Azure link to the API exposed on the server application
+      # List of scopes to request as part of the request. This should be an Azure link to the API exposed on the server application
     scopes:
-      - "api://azure-tenant-id/Kubernetes.API.All"
+        - "api://azure-tenant-id/Kubernetes.API.All"
 
-    # This is required for the browser-based authentication flow. The port is configurable, but it must conform to
-    # the format: http://localhost:<port>/auth/callback
+      # This is required for the browser-based authentication flow. The port is configurable, but it must conform to
+      # the format: http://localhost:<port>/auth/callback
     redirect-uri: http://localhost:65525/auth/callback
     targets:
-      foo.cluster:
-        server: http://osprey.foo.cluster
-        # If "use-gke-clientconfig" is specified (default false) Osprey will fetch the API server URL and its
-        # CA cert from the GKE-specific ClientConfig resource in kube-public. This resource is created automatically
-        # by GKE when you enable to OIDC Identity Service. The "api-server" config element is also required.
-        # Usually "api-server" would be set to the public API server endpoint; the fetched API server URL will be
-        # the internal load balancer that proxies requests through the OIDC service.
-        # use-gke-clientconfig: true
-        #
-        # If "skip-tls-verify" is specified (default false) Osprey will skip TLS verification when attempting
-        # to make the connection to the specified server.  This can be used in conjunction with `server` or `api-server`.
-        # skip-tls-verify: true
-        #
-        # If api-server is specified (default ""), Osprey will fetch the CA cert from the API server itself.
-        # Overrides "server". A ConfigMap in kube-public called kube-root-ca.crt should be made accessible
-        # to the system:anonymous group. This ConfigMap is created automatically with the Kubernetes feature
-        # gate RootCAConfigMap which was alpha in Kubernetes v1.13 and became enabled by default in v1.20+
-        # api-server: http://apiserver.foo.cluster
-        aliases: [foo.alias]
-        groups: [foo]
+        foo.cluster:
+            server: http://osprey.foo.cluster
+            # If "use-gke-clientconfig" is specified (default false) Osprey will fetch the API server URL and its
+            # CA cert from the GKE-specific ClientConfig resource in kube-public. This resource is created automatically
+            # by GKE when you enable to OIDC Identity Service. The "api-server" config element is also required.
+            # Usually "api-server" would be set to the public API server endpoint; the fetched API server URL will be
+            # the internal load balancer that proxies requests through the OIDC service.
+            # use-gke-clientconfig: true
+            #
+            # If "skip-tls-verify" is specified (default false) Osprey will skip TLS verification when attempting
+            # to make the connection to the specified server.  This can be used in conjunction with `server` or `api-server`.
+            # skip-tls-verify: true
+            #
+            # If api-server is specified (default ""), Osprey will fetch the CA cert from the API server itself.
+            # Overrides "server". A ConfigMap in kube-public called kube-root-ca.crt should be made accessible
+            # to the system:anonymous group. This ConfigMap is created automatically with the Kubernetes feature
+            # gate RootCAConfigMap which was alpha in Kubernetes v1.13 and became enabled by default in v1.20+
+            # api-server: http://apiserver.foo.cluster
+            aliases: [foo.alias]
+            groups: [foo]
+```
+
+# V1 Config (Deprecated)
+This is the previously supported format.
+The fields are the same but, the provider configuration is mapped to a provider type as opposed to being a list.
+The config parsing will use this format unless specified to v2 on the apiVersion field in the config.
+```yaml
+providers:
+    osprey:
+      targets:
+          local.cluster:
+              server: https://osprey.local.cluster
+          foo.cluster:
+              server: https://osprey.foo.cluster
+              alias: [foo]
+              groups: [foo, foobar]
+          bar.cluster:
+              server: https://osprey.bar.cluster
+              groups: [bar, foobar]
+
+  # Authenticating against Azure AD
+    azure:
+        tenant-id: your-tenant-id
+        server-application-id: api://SERVER-APPLICATION-ID   # Application ID of the "Osprey - Kubernetes APIserver"
+        client-id: azure-application-client-id               # Client ID for the "Osprey - Client" application
+        client-secret: azure-application-client-secret       # Client Secret for the "Osprey - Client" application
+        scopes:
+            # This must be in the format "api://" due to non-interactive logins appending this to the audience in the JWT.
+            - "api://SERVER-APPLICATION-ID/Kubernetes.API.All"
+        redirect-uri: http://localhost:65525/auth/callback   # Redirect URI configured for the "Osprey - Client" application
+        targets: ...
 ```
 
 The name of the configured targets will be used to name the managed clusters,
@@ -770,14 +770,14 @@ The client ID and secrets generated in this section are used to fill out the Osp
 ```yaml
 providers:
   azure:
-    tenant-id: your-tenant-id
-    server-application-id: api://SERVER-APPLICATION-ID   # Application ID of the "Osprey - Kubernetes APIserver"
-    client-id: azure-application-client-id               # Client ID for the "Osprey - Client" application
-    client-secret: azure-application-client-secret       # Client Secret for the "Osprey - Client" application
-    scopes:
-      # This must be in the format "api://" due to non-interactive logins appending this to the audience in the JWT.
-      - "api://SERVER-APPLICATION-ID/Kubernetes.API.All"
-    redirect-uri: http://localhost:65525/auth/callback   # Redirect URI configured for the "Osprey - Client" application
+    - tenant-id: your-tenant-id
+      server-application-id: api://SERVER-APPLICATION-ID   # Application ID of the "Osprey - Kubernetes APIserver"
+      client-id: azure-application-client-id               # Client ID for the "Osprey - Client" application
+      client-secret: azure-application-client-secret       # Client Secret for the "Osprey - Client" application
+      scopes:
+        # This must be in the format "api://" due to non-interactive logins appending this to the audience in the JWT.
+        - "api://SERVER-APPLICATION-ID/Kubernetes.API.All"
+      redirect-uri: http://localhost:65525/auth/callback   # Redirect URI configured for the "Osprey - Client" application
 ```
 
 Kubernetes API server flags:

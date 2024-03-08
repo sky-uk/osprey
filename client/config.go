@@ -128,7 +128,7 @@ func (c *Config) GetRetrievers(providerConfigs map[string]*ProviderConfig, optio
 	retrievers := make(map[string]Retriever)
 
 	for _, providerConfig := range providerConfigs {
-		switch providerConfig.provider {
+		switch providerConfig.providerType {
 		case AzureProviderName:
 			result, err := NewAzureRetriever(providerConfig, options)
 			if err != nil {
@@ -170,8 +170,7 @@ func (c *Config) Snapshot() *ConfigSnapshot {
 				scopes:                   azureProvider.Scopes,
 				azureTenantID:            azureProvider.AzureTenantID,
 				issuerURL:                azureProvider.IssuerURL,
-				providerType:             azureProvider.AzureProviderName,
-				provider:                 AzureProviderName,
+				providerType:             AzureProviderName,
 			}
 
 			c.groupTargetsByProvider(azureProvider.Targets, providerName, groupsByName)
@@ -187,7 +186,7 @@ func (c *Config) Snapshot() *ConfigSnapshot {
 				name:                     providerName,
 				certificateAuthority:     ospreyProvider.CertificateAuthority,
 				certificateAuthorityData: ospreyProvider.CertificateAuthorityData,
-				provider:                 OspreyProviderName,
+				providerType:             OspreyProviderName,
 			}
 
 			c.groupTargetsByProvider(ospreyProvider.Targets, providerName, groupsByName)

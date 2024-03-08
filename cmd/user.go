@@ -76,7 +76,7 @@ func user(_ *cobra.Command, _ []string) {
 					log.Errorf("%s: %v", target.Name(), err)
 					continue
 				}
-				provider, err := snapshot.GetProvider(providerName)
+				provider, err := snapshot.GetProviderType(providerName)
 				if err != nil {
 					log.Errorf("%s: %v", target.Name(), err)
 					continue

@@ -26,13 +26,13 @@ func (t *ConfigSnapshot) ProviderConfigs() map[string]*ProviderConfig {
 	return t.providerConfigByName
 }
 
-// GetProvider provides the name of the provider. azure, osprey etc
-func (t *ConfigSnapshot) GetProvider(providerName string) (string, error) {
+// GetProviderType provides the name of the provider. azure, osprey etc
+func (t *ConfigSnapshot) GetProviderType(providerName string) (string, error) {
 	config := t.providerConfigByName[providerName]
 	if config == nil {
 		return "", fmt.Errorf("unable to lookup provider for name: %s", providerName)
 	}
-	return config.GetProvider(), nil
+	return config.providerType, nil
 }
 
 // HaveGroups returns true if there is at least one defined group.
