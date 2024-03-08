@@ -248,7 +248,40 @@ The client uses a YAML configuration file. Its recommended location is:
 # When this value is defined, all targets must define at least one group.
 # default-group: my-group
 
-# Named map of supported providers (currently `osprey` and `azure`)
+# V2 Config
+```
+apiVersion (Optional)
+kubeconfig (Optional)
+default-group (Optional)
+providers:
+  Osprey:
+    - provider-name (Optional but Recommended)
+      targets:
+        foo.cluster.internal
+        ...
+      certificate-authority (Optional)
+      certificate-authority-data (Optional)
+  Azure:
+    - name (Optional but Recommended)
+      targets:
+        bar.cluster.external:
+        ...
+      scopes:
+        - "api://azure-tenant-id/Kubernetes.API.All"
+      server-application-id (Optional)
+      client-id (Optional)
+      client-secret (Optional)
+      certificate-authority (Optional)
+      certificate-authority-data (Optional)
+      redirect-uri (Optional)
+      tenant-id (Optional)
+      issuer-url (Optional)
+      azure-provider-name (Optional)
+```
+# V1 Config (Soon to be Deprecated)
+
+## Named map of supported providers (currently `osprey` and `azure`)
+```
 providers:
   osprey:
     # CA cert to use for HTTPS connections to Osprey.
@@ -625,7 +658,11 @@ $ make
 We use [Cobra](https://github.com/spf13/cobra), to generate the client and server commands.
 
 ### E2E tests
+
 The e2e tests are executed against local Dex and LDAP servers.
+
+Note: The below docker image is only for linux/amd64. You might be able to get it working with other architectures, but it's not officially supported yet.
+The e2e tests are executed against local Dex and LDAP servers. There is a Dockerfile located in the `e2e/` directory that will handle the dependencies for you. (This came around due to dependency issues with older versions of openldap in ubuntu).
 
 The setup is as follows:
 
