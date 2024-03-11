@@ -239,7 +239,7 @@ installed version.
 
 The client uses a YAML configuration file. Its recommended location is:
 `$HOME/.osprey/config`. Its contents are as follows:
-#### V2 Config
+### V2 Config
 The structure of the osprey configuration supports multiple configuration for a provider type.
 This structure will support scenarios where different azure providers can be configured for prod and non-prod targets.
 ```yaml
@@ -256,7 +256,7 @@ apiVersion: v2
 ## Named map of supported providers (currently `osprey` and `azure`)
 providers:
   osprey:
-    - provider-name (Optional)
+    - provider-name: (Optional)
       # CA cert to use for HTTPS connections to Osprey.
       # Uses system's CA certs if absent.
       # certificate-authority: /tmp/osprey-238319279/cluster_ca.crt
@@ -266,7 +266,7 @@ providers:
       # certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5vdCB2YWxpZAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
 
       # Named map of target Osprey servers to contact for access-tokens
-    targets:
+      targets:
         # Target Osprey's environment name.
         # Used for the name of the cluster, context, and users generated
         foo.cluster:
@@ -288,44 +288,44 @@ providers:
             # certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk5vdCB2YWxpZAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
   # Authenticating against Azure AD
   azure:
-    - name (Optional)
+    - name: (Optional)
       # These settings are required when authenticating against Azure
-    tenant-id: your-azure-tenant-id
-    server-application-id: azure-ad-server-application-id
-    client-id: azure-ad-client-id
-    client-secret: azure-ad-client-secret
+      tenant-id: your-azure-tenant-id
+      server-application-id: azure-ad-server-application-id
+      client-id: azure-ad-client-id
+      client-secret: azure-ad-client-secret
 
-      # List of scopes to request as part of the request. This should be an Azure link to the API exposed on the server application
-    scopes:
-        - "api://azure-tenant-id/Kubernetes.API.All"
+        # List of scopes to request as part of the request. This should be an Azure link to the API exposed on the server application
+      scopes:
+          - "api://azure-tenant-id/Kubernetes.API.All"
 
-      # This is required for the browser-based authentication flow. The port is configurable, but it must conform to
-      # the format: http://localhost:<port>/auth/callback
-    redirect-uri: http://localhost:65525/auth/callback
-    targets:
-        foo.cluster:
-            server: http://osprey.foo.cluster
-            # If "use-gke-clientconfig" is specified (default false) Osprey will fetch the API server URL and its
-            # CA cert from the GKE-specific ClientConfig resource in kube-public. This resource is created automatically
-            # by GKE when you enable to OIDC Identity Service. The "api-server" config element is also required.
-            # Usually "api-server" would be set to the public API server endpoint; the fetched API server URL will be
-            # the internal load balancer that proxies requests through the OIDC service.
-            # use-gke-clientconfig: true
-            #
-            # If "skip-tls-verify" is specified (default false) Osprey will skip TLS verification when attempting
-            # to make the connection to the specified server.  This can be used in conjunction with `server` or `api-server`.
-            # skip-tls-verify: true
-            #
-            # If api-server is specified (default ""), Osprey will fetch the CA cert from the API server itself.
-            # Overrides "server". A ConfigMap in kube-public called kube-root-ca.crt should be made accessible
-            # to the system:anonymous group. This ConfigMap is created automatically with the Kubernetes feature
-            # gate RootCAConfigMap which was alpha in Kubernetes v1.13 and became enabled by default in v1.20+
-            # api-server: http://apiserver.foo.cluster
-            aliases: [foo.alias]
-            groups: [foo]
+        # This is required for the browser-based authentication flow. The port is configurable, but it must conform to
+        # the format: http://localhost:<port>/auth/callback
+      redirect-uri: http://localhost:65525/auth/callback
+      targets:
+          foo.cluster:
+              server: http://osprey.foo.cluster
+              # If "use-gke-clientconfig" is specified (default false) Osprey will fetch the API server URL and its
+              # CA cert from the GKE-specific ClientConfig resource in kube-public. This resource is created automatically
+              # by GKE when you enable to OIDC Identity Service. The "api-server" config element is also required.
+              # Usually "api-server" would be set to the public API server endpoint; the fetched API server URL will be
+              # the internal load balancer that proxies requests through the OIDC service.
+              # use-gke-clientconfig: true
+              #
+              # If "skip-tls-verify" is specified (default false) Osprey will skip TLS verification when attempting
+              # to make the connection to the specified server.  This can be used in conjunction with `server` or `api-server`.
+              # skip-tls-verify: true
+              #
+              # If api-server is specified (default ""), Osprey will fetch the CA cert from the API server itself.
+              # Overrides "server". A ConfigMap in kube-public called kube-root-ca.crt should be made accessible
+              # to the system:anonymous group. This ConfigMap is created automatically with the Kubernetes feature
+              # gate RootCAConfigMap which was alpha in Kubernetes v1.13 and became enabled by default in v1.20+
+              # api-server: http://apiserver.foo.cluster
+              aliases: [foo.alias]
+              groups: [foo]
 ```
 
-# V1 Config (Deprecated)
+### V1 Config (Deprecated)
 This is the previously supported format.
 The fields are the same but, the provider configuration is mapped to a provider type as opposed to being a list.
 The config parsing will use this format unless specified to v2 on the apiVersion field in the config.
