@@ -26,6 +26,8 @@ const (
 
 // AzureConfig holds the configuration for Azure
 type AzureConfig struct {
+	// Name provides a named reference to the provider. For e.g sky-azure, nbcu-azure etc. Optional field
+	Name string `yaml:"name,omitempty"`
 	// ServerApplicationID is the oidc-client-id used on the apiserver configuration
 	ServerApplicationID string `yaml:"server-application-id,omitempty"`
 	// ClientID is the oidc client id used for osprey
@@ -78,27 +80,27 @@ func (ac *AzureConfig) ValidateConfig() error {
 }
 
 // NewAzureRetriever creates new Azure oAuth client
-func NewAzureRetriever(provider *AzureConfig, options RetrieverOptions) (Retriever, error) {
+func NewAzureRetriever(provider *ProviderConfig, options RetrieverOptions) (Retriever, error) {
 	config := oauth2.Config{
-		ClientID:     provider.ClientID,
-		ClientSecret: provider.ClientSecret,
-		RedirectURL:  provider.RedirectURI,
-		Scopes:       provider.Scopes,
+		ClientID:     provider.clientID,
+		ClientSecret: provider.clientSecret,
+		RedirectURL:  provider.redirectURI,
+		Scopes:       provider.scopes,
 	}
-	if provider.IssuerURL == "" {
-		provider.IssuerURL = fmt.Sprintf("https://login.microsoftonline.com/%s/%s", provider.AzureTenantID, wellKnownConfigurationURI)
+	if provider.issuerURL == "" {
+		provider.issuerURL = fmt.Sprintf("https://login.microsoftonline.com/%s/%s", provider.azureTenantID, wellKnownConfigurationURI)
 	} else {
-		provider.IssuerURL = fmt.Sprintf("%s/%s", provider.IssuerURL, wellKnownConfigurationURI)
+		provider.issuerURL = fmt.Sprintf("%s/%s", provider.issuerURL, wellKnownConfigurationURI)
 	}
 
-	oidcEndpoint, err := oidc.GetWellKnownConfig(provider.IssuerURL)
+	oidcEndpoint, err := oidc.GetWellKnownConfig(provider.issuerURL)
 	if err != nil {
 		return nil, fmt.Errorf("unable to query well-known oidc config: %w", err)
 	}
 	config.Endpoint = *oidcEndpoint
 	retriever := &azureRetriever{
-		oidc:     oidc.New(config, provider.ServerApplicationID),
-		tenantID: provider.AzureTenantID,
+		oidc:     oidc.New(config, provider.serverApplicationID),
+		tenantID: provider.azureTenantID,
 	}
 	retriever.useDeviceCode = options.UseDeviceCode
 	retriever.loginTimeout = options.LoginTimeout

@@ -49,16 +49,17 @@ var (
 	testDir        string
 
 	// Suite variables modifiable per test scenario
-	err                error
-	environmentsToUse  map[string][]string
-	targetedOspreys    []*ospreytest.TestOsprey
-	ospreyconfig       *ospreytest.TestConfig
-	ospreyconfigFlag   string
-	defaultGroup       string
-	targetGroup        string
-	targetGroupFlag    string
-	apiServerURL       string
-	useGKEClientConfig bool
+	err                    error
+	environmentsToUse      map[string][]string
+	targetedOspreys        []*ospreytest.TestOsprey
+	ospreyconfig           *ospreytest.TestConfig
+	ospreyconfigFlag       string
+	legacyOspreyconfigFlag string
+	defaultGroup           string
+	targetGroup            string
+	targetGroupFlag        string
+	apiServerURL           string
+	useGKEClientConfig     bool
 )
 
 var _ = BeforeSuite(func() {
@@ -112,6 +113,7 @@ func setupClientForEnvironments(providerName string, envs map[string][]string, c
 	ospreyconfig, err = ospreytest.BuildConfig(testDir, providerName, defaultGroup, envs, ospreys, clientID, apiServerURL, useGKEClientConfig)
 	Expect(err).To(BeNil(), "Creates the osprey config with groups")
 	ospreyconfigFlag = "--ospreyconfig=" + ospreyconfig.ConfigFile
+	legacyOspreyconfigFlag = "--ospreyconfig=" + ospreyconfig.LegacyConfigFile
 
 	if targetGroup != "" {
 		targetGroupFlag = "--group=" + targetGroup
@@ -133,7 +135,12 @@ func resetDefaults() {
 }
 
 func cleanup() {
-	if err := os.Remove(ospreyconfig.Kubeconfig); err != nil {
-		Expect(os.IsNotExist(err)).To(BeTrue())
+	if ospreyconfig != nil {
+		if err := os.Remove(ospreyconfig.Kubeconfig); err != nil {
+			Expect(os.IsNotExist(err)).To(BeTrue())
+		}
+		if err := os.Remove(ospreyconfig.LegacyConfig.Kubeconfig); err != nil {
+			Expect(os.IsNotExist(err)).To(BeTrue())
+		}
 	}
 }

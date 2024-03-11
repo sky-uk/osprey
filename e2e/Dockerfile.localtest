@@ -12,4 +12,6 @@ RUN apt-get -y update && \
 RUN curl -fsSL https://go.dev/dl/go1.18.10.linux-amd64.tar.gz -o /tmp/go1.18.10.linux-amd64.tar.gz && \
     tar -C /usr/local -xzf /tmp/go1.18.10.linux-amd64.tar.gz
 
-ENV PATH=$PATH:/usr/local/go/bin
+WORKDIR /osprey
+
+ENV PATH=$PATH:/usr/local/go/bin:/osprey/build/bin/linux_amd64

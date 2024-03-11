@@ -91,14 +91,12 @@ func displayGroup(group client.Group, listTargets bool) []string {
 	}
 	outputLines = append(outputLines, fmt.Sprintf("%s %s", highlight, name))
 	if listTargets {
-		for _, targets := range group.Targets() {
-			for _, target := range targets {
-				aliases := ""
-				if target.HasAliases() {
-					aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
-				}
-				outputLines = append(outputLines, fmt.Sprintf("    %s%s", target.Name(), aliases))
+		for _, target := range group.Targets() {
+			aliases := ""
+			if target.HasAliases() {
+				aliases = fmt.Sprintf(" | %s", strings.Join(target.Aliases(), " | "))
 			}
+			outputLines = append(outputLines, fmt.Sprintf("    %s%s", target.Name(), aliases))
 		}
 	}
 	return outputLines

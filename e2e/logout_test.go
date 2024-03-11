@@ -17,6 +17,7 @@ var _ = Describe("Logout", func() {
 
 	BeforeEach(func() {
 		resetDefaults()
+		cleanup()
 	})
 
 	JustBeforeEach(func() {
@@ -34,7 +35,7 @@ var _ = Describe("Logout", func() {
 		It("is a no-op", func() {
 			logout.RunAndAssertSuccess()
 
-			kubeconfig.LoadConfig(ospreyconfig.ConfigFile)
+			Expect(kubeconfig.LoadConfig(ospreyconfig.Kubeconfig)).To(Succeed())
 			loggedOutConfig, err := kubeconfig.GetConfig()
 			Expect(err).To(BeNil(), "no-op")
 			Expect(loggedOutConfig.AuthInfos).To(BeEmpty())

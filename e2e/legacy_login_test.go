@@ -12,7 +12,7 @@ import (
 	clientgo "k8s.io/client-go/tools/clientcmd/api"
 )
 
-var _ = Describe("Login", func() {
+var _ = Describe("Sanity check Login using a legacy osprey config file format", func() {
 	var login clitest.LoginCommand
 
 	BeforeEach(func() {
@@ -21,56 +21,56 @@ var _ = Describe("Login", func() {
 
 	JustBeforeEach(func() {
 		setupClientForEnvironments(ospreyProviderName, environmentsToUse, "", "", false)
-		login = Login("user", "login", ospreyconfigFlag, targetGroupFlag, "--disable-browser-popup")
+		login = Login("user", "login", legacyOspreyconfigFlag, targetGroupFlag, "--disable-browser-popup")
 	})
 
 	AfterEach(func() {
 		cleanup()
 	})
 
-	It("fails to login with invalid credentials", func() {
+	It("fails to login with invalid credentials when using a legacy osprey config file", func() {
 		login.LoginAndAssertFailure("admin", "wrong")
 	})
 
-	It("logs in successfully with good credentials", func() {
+	It("logs in successfully with good credentials when using a legacy osprey config file", func() {
 		login.LoginAndAssertSuccess("jane", "foo")
 	})
 
-	It("creates a kubeconfig file on the specified location", func() {
+	It("creates a kubeconfig file on the specified location when using a legacy osprey config file", func() {
 		login.LoginAndAssertSuccess("jane", "foo")
-		Expect(ospreyconfig.Kubeconfig).To(BeAnExistingFile())
+		Expect(ospreyconfig.LegacyConfig.Kubeconfig).To(BeAnExistingFile())
 	})
 
-	It("logs in with certificate-authority-data", func() {
+	It("logs in with certificate-authority-data when using a legacy config file", func() {
 		caDataConfig, err := BuildCADataConfig(testDir, ospreyProviderName, ospreys, true, "", "", "", false)
 		Expect(err).To(BeNil(), "Creates the osprey config")
-		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
+		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.LegacyConfigFile
 		caDataLogin := Login("user", "login", caDataConfigFlag)
 
 		caDataLogin.LoginAndAssertSuccess("jane", "foo")
 	})
 
-	It("logs in overriding certificate-authority with certificate-authority-data", func() {
+	It("logs in overriding certificate-authority with certificate-authority-data when using a legacy osprey config file", func() {
 		caDataConfig, err := BuildCADataConfig(testDir, ospreyProviderName, ospreys, true, dexes[0].DexCA, "", "", false)
 		Expect(err).To(BeNil(), "Creates the osprey config")
-		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
+		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.LegacyConfigFile
 		caDataLogin := Login("user", "login", caDataConfigFlag)
 
 		caDataLogin.LoginAndAssertSuccess("jane", "foo")
 	})
 
-	It("does not allow fetching CA from API Server for Osprey targets", func() {
+	It("does not allow fetching CA from API Server for Osprey targets when using a legacy osprey config file", func() {
 		caDataConfig, err := BuildCADataConfig(testDir, ospreyProviderName, ospreys, true,
 			dexes[0].DexCA, "", fmt.Sprintf("http://localhost:%d", apiServerPort), false)
 		Expect(err).To(BeNil(), "Creates the osprey config")
-		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.ConfigFile
+		caDataConfigFlag := "--ospreyconfig=" + caDataConfig.LegacyConfigFile
 		caDataLogin := Login("user", "login", caDataConfigFlag)
 
 		caDataLogin.LoginAndAssertFailure("jane", "foo")
 		Expect(caDataLogin.GetOutput()).To(ContainSubstring("Osprey targets may not fetch the CA from the API Server"))
 	})
 
-	Context("kubeconfig file", func() {
+	Context("kubeconfig file validations when using a legacy osprey config file", func() {
 		var (
 			generatedConfig      *clientgo.Config
 			expectedEnvironments []string
@@ -79,11 +79,12 @@ var _ = Describe("Login", func() {
 		AssertKubeconfigContents := func() {
 			JustBeforeEach(func() {
 				login.LoginAndAssertSuccess("jane", "foo")
+				Expect(ospreyconfig.LegacyConfig.Kubeconfig).To(BeAnExistingFile())
 
-				err := kubeconfig.LoadConfig(ospreyconfig.Kubeconfig)
-				Expect(err).To(BeNil(), "successfully creates a kubeconfig")
+				err := kubeconfig.LoadConfig(ospreyconfig.LegacyConfig.Kubeconfig)
+				Expect(err).To(BeNil(), "expected to successfully Load a kubeconfig")
 				generatedConfig, err = kubeconfig.GetConfig()
-				Expect(err).To(BeNil(), "successfully creates a kubeconfig")
+				Expect(err).To(BeNil(), "expected to successfully get a kubeconfig")
 			})
 
 			It("logs in to the expected targets", func() {
@@ -94,7 +95,7 @@ var _ = Describe("Login", func() {
 
 			It("contains a cluster per osprey", func() {
 				for _, osprey := range targetedOspreys {
-					expectedCluster := osprey.ToKubeconfigCluster(ospreyconfig.Kubeconfig)
+					expectedCluster := osprey.ToKubeconfigCluster(ospreyconfig.LegacyConfig.Kubeconfig)
 					target := osprey.OspreyconfigTargetName()
 					Expect(generatedConfig.Clusters).To(HaveKeyWithValue(target, expectedCluster))
 				}
@@ -103,7 +104,7 @@ var _ = Describe("Login", func() {
 
 			It("contains a user per osprey", func() {
 				for _, osprey := range targetedOspreys {
-					expectedAuthInfo := osprey.ToKubeconfigUserWithoutToken(ospreyconfig.Kubeconfig)
+					expectedAuthInfo := osprey.ToKubeconfigUserWithoutToken(ospreyconfig.LegacyConfig.Kubeconfig)
 					authInfoID := osprey.OspreyconfigTargetName()
 					Expect(generatedConfig.AuthInfos).To(HaveKey(authInfoID))
 					Expect(generatedConfig.AuthInfos[authInfoID]).To(WithTransform(WithoutToken, Equal(expectedAuthInfo)))
@@ -114,7 +115,7 @@ var _ = Describe("Login", func() {
 
 			It("contains a context per osprey", func() {
 				for _, osprey := range targetedOspreys {
-					kcontext := osprey.ToKubeconfigContext(ospreyconfig.Kubeconfig)
+					kcontext := osprey.ToKubeconfigContext(ospreyconfig.LegacyConfig.Kubeconfig)
 					target := osprey.OspreyconfigTargetName()
 					Expect(generatedConfig.Contexts).To(HaveKeyWithValue(target, kcontext))
 				}
@@ -124,7 +125,7 @@ var _ = Describe("Login", func() {
 
 			It("contains an alias per context", func() {
 				for _, osprey := range targetedOspreys {
-					kcontext := osprey.ToKubeconfigContext(ospreyconfig.Kubeconfig)
+					kcontext := osprey.ToKubeconfigContext(ospreyconfig.LegacyConfig.Kubeconfig)
 					targetAlias := osprey.OspreyconfigAliasName()
 					Expect(generatedConfig.Contexts).To(HaveKeyWithValue(targetAlias, kcontext))
 				}
@@ -134,25 +135,25 @@ var _ = Describe("Login", func() {
 
 		}
 
-		Context("context with configured namespace ", func() {
+		Context("context with configured namespace when using a legacy osprey config file", func() {
 			JustBeforeEach(func() {
 				By("Customizing the generated contexts")
 				login.LoginAndAssertSuccess("jane", "foo")
-				err = AddCustomNamespaceToContexts("-namespace", ospreyconfig.Kubeconfig, targetedOspreys)
+				err = AddCustomNamespaceToContexts("-namespace", ospreyconfig.LegacyConfig.Kubeconfig, targetedOspreys)
 				Expect(err).ToNot(HaveOccurred(), "successfully updates kubeconfig contexts")
 
 				By("logging in again")
 				login.LoginAndAssertSuccess("jane", "foo")
 
-				err := kubeconfig.LoadConfig(ospreyconfig.Kubeconfig)
+				err := kubeconfig.LoadConfig(ospreyconfig.LegacyConfig.Kubeconfig)
 				Expect(err).To(BeNil(), "successfully creates a kubeconfig")
 				generatedConfig, err = kubeconfig.GetConfig()
 				Expect(err).To(BeNil(), "successfully creates a kubeconfig")
 			})
 
-			It("namespace preserved per context", func() {
+			It("preserves namespace per context", func() {
 				for _, osprey := range targetedOspreys {
-					kcontext := osprey.ToKubeconfigContext(ospreyconfig.Kubeconfig)
+					kcontext := osprey.ToKubeconfigContext(ospreyconfig.LegacyConfig.Kubeconfig)
 					kcontext.Namespace = osprey.CustomTargetNamespace("-namespace")
 					target := osprey.OspreyconfigTargetName()
 					Expect(generatedConfig.Contexts).To(HaveKeyWithValue(target, kcontext))
@@ -161,9 +162,9 @@ var _ = Describe("Login", func() {
 				Expect(len(generatedConfig.Contexts)).To(Equal(len(targetedOspreys)*2), "expected number of contexts")
 			})
 
-			It("namespace preserved per alias", func() {
+			It("preserves namespace per alias", func() {
 				for _, osprey := range targetedOspreys {
-					kcontext := osprey.ToKubeconfigContext(ospreyconfig.Kubeconfig)
+					kcontext := osprey.ToKubeconfigContext(ospreyconfig.LegacyConfig.Kubeconfig)
 					kcontext.Namespace = osprey.CustomAliasNamespace("-namespace")
 					targetAlias := osprey.OspreyconfigAliasName()
 					Expect(generatedConfig.Contexts).To(HaveKeyWithValue(targetAlias, kcontext))
@@ -173,8 +174,8 @@ var _ = Describe("Login", func() {
 			})
 		})
 
-		Context("no group provided", func() {
-			Context("no default group", func() {
+		Context("no group provided and using a legacy osprey config file", func() {
+			Context("no default group and using a legacy osprey config file", func() {
 				BeforeEach(func() {
 					defaultGroup = ""
 					expectedEnvironments = []string{"local"}
@@ -183,7 +184,7 @@ var _ = Describe("Login", func() {
 				AssertKubeconfigContents()
 			})
 
-			Context("with default group", func() {
+			Context("with default group and using a legacy osprey config file", func() {
 				BeforeEach(func() {
 					environmentsToUse = map[string][]string{
 						"prod": {"production"},
@@ -197,7 +198,7 @@ var _ = Describe("Login", func() {
 			})
 		})
 
-		Context("group provided", func() {
+		Context("group provided and using a legacy osprey config file", func() {
 			BeforeEach(func() {
 				targetGroup = "development"
 				expectedEnvironments = []string{"dev", "stage"}
@@ -206,15 +207,15 @@ var _ = Describe("Login", func() {
 			AssertKubeconfigContents()
 		})
 
-		Context("non existent group provided", func() {
+		Context("non existent group provided and using a legacy osprey config file", func() {
 			BeforeEach(func() {
 				targetGroup = "non_existent"
 			})
 
-			It("displays error", func() {
+			It("displays error when login with group not found and using a legacy osprey config file", func() {
 				login.LoginAndAssertFailure("jane", "foo")
 
-				_, err := os.Stat(ospreyconfig.Kubeconfig)
+				_, err := os.Stat(ospreyconfig.LegacyConfig.Kubeconfig)
 				Expect(os.IsNotExist(err)).To(BeTrue())
 
 				Expect(login.GetOutput()).To(ContainSubstring("Group not found"))
