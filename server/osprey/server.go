@@ -199,6 +199,9 @@ func (o *osprey) Authorise(ctx context.Context, code, state, failure string) (*p
 	}
 	var tokenClaims claims
 	idToken.Claims(&tokenClaims)
+	if tokenClaims.Groups == nil && tokenClaims.ClaimNames != nil {
+		return nil, status.Error(codes.Internal, "a user can't be a member of more than 200 groups")
+	}
 
 	return &pb.LoginResponse{
 		Cluster: &pb.Cluster{
@@ -284,6 +287,8 @@ type claims struct {
 	Email  string   `json:"email"`
 	Groups []string `json:"groups"`
 	Name   string   `json:"name"`
+
+	ClaimNames map[string]string `json:"_claim_names"`
 }
 
 type loginForm struct {
