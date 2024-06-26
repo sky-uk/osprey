@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gopkg.in/square/go-jose.v2"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/sky-uk/osprey/v2/common/pb"
 	"github.com/sky-uk/osprey/v2/common/web"
 	"golang.org/x/oauth2"
+	"gopkg.in/square/go-jose.v2"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
