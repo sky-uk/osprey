@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gopkg.in/square/go-jose.v2"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/SermoDigital/jose/jws"
@@ -149,6 +151,12 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 		if err != nil {
 			return nil, err
 		}
+
+		err = r.checkTokenForGroupsClaim(oauthToken.AccessToken)
+		if err != nil {
+			return nil, err
+		}
+
 		r.accessToken = oauthToken.AccessToken
 	}
 
@@ -246,6 +254,47 @@ func (r *azureRetriever) consumeClientConfigResponse(response *http.Response) (*
 		return clientConfig, nil
 	}
 	return nil, fmt.Errorf("error fetching ClientConfig from API Server: %s", response.Status)
+}
+
+type claims struct {
+	Groups     []string          `json:"groups"`
+	ClaimNames map[string]string `json:"_claim_names"`
+}
+
+func (r *azureRetriever) checkTokenForGroupsClaim(token string) error {
+	_, err := jose.ParseSigned(token)
+	if err != nil {
+		return fmt.Errorf("oidc: malformed jwt: %v", err)
+	}
+
+	// Throw out tokens with invalid claims before trying to verify the token. This lets
+	// us do cheap checks before possibly re-syncing keys.
+	payload, err := parseJWT(token)
+	if err != nil {
+		return fmt.Errorf("oidc: malformed jwt: %v", err)
+	}
+
+	var tokenClaims claims
+	err = json.Unmarshal(payload, &tokenClaims)
+	if err != nil {
+		return fmt.Errorf("oidc: malformed token claims: %v", err)
+	}
+	if tokenClaims.Groups == nil && tokenClaims.ClaimNames != nil {
+		return fmt.Errorf("users with more than 200 groups are not supported")
+	}
+	return nil
+}
+
+func parseJWT(p string) ([]byte, error) {
+	parts := strings.Split(p, ".")
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("oidc: malformed jwt, expected 3 parts got %d", len(parts))
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("oidc: malformed jwt payload: %v", err)
+	}
+	return payload, nil
 }
 
 type configMap struct {
