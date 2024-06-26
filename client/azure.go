@@ -152,7 +152,7 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 			return nil, err
 		}
 
-		err = r.checkTokenForGroupsClaim(oauthToken.AccessToken)
+		err = checkTokenForGroupsClaim(oauthToken.AccessToken)
 		if err != nil {
 			return nil, err
 		}
@@ -257,30 +257,27 @@ func (r *azureRetriever) consumeClientConfigResponse(response *http.Response) (*
 }
 
 type claims struct {
-	Groups     []string          `json:"groups"`
-	ClaimNames map[string]string `json:"_claim_names"`
+	Groups []string `json:"groups"`
 }
 
-func (r *azureRetriever) checkTokenForGroupsClaim(token string) error {
+func checkTokenForGroupsClaim(token string) error {
 	_, err := jose.ParseSigned(token)
 	if err != nil {
 		return fmt.Errorf("oidc: malformed jwt: %v", err)
 	}
 
-	// Throw out tokens with invalid claims before trying to verify the token. This lets
-	// us do cheap checks before possibly re-syncing keys.
 	payload, err := parseJWT(token)
 	if err != nil {
 		return fmt.Errorf("oidc: malformed jwt: %v", err)
 	}
 
-	var tokenClaims claims
+	var tokenClaims map[string]interface{}
 	err = json.Unmarshal(payload, &tokenClaims)
 	if err != nil {
 		return fmt.Errorf("oidc: malformed token claims: %v", err)
 	}
-	if tokenClaims.Groups == nil && tokenClaims.ClaimNames != nil {
-		return fmt.Errorf("users with more than 200 groups are not supported")
+	if tokenClaims["groups"] == nil {
+		return fmt.Errorf("oidc: malformed token claims: users with more than 200 groups are not supported")
 	}
 	return nil
 }
