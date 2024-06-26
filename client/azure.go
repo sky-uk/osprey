@@ -271,12 +271,12 @@ func checkTokenForGroupsClaim(token string) error {
 		return fmt.Errorf("oidc: malformed jwt: %v", err)
 	}
 
-	var tokenClaims map[string]interface{}
+	var tokenClaims claims
 	err = json.Unmarshal(payload, &tokenClaims)
 	if err != nil {
 		return fmt.Errorf("oidc: malformed token claims: %v", err)
 	}
-	if tokenClaims["groups"] == nil {
+	if tokenClaims.Groups == nil {
 		return fmt.Errorf("oidc: malformed token claims: users with more than 200 groups are not supported")
 	}
 	return nil
