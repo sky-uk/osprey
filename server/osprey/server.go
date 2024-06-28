@@ -284,6 +284,8 @@ type claims struct {
 	Email  string   `json:"email"`
 	Groups []string `json:"groups"`
 	Name   string   `json:"name"`
+
+	ClaimNames map[string]string `json:"_claim_names"`
 }
 
 type loginForm struct {

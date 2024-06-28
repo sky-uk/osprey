@@ -149,6 +149,12 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 		if err != nil {
 			return nil, err
 		}
+
+		err = checkTokenForGroupsClaim(oauthToken.AccessToken)
+		if err != nil {
+			return nil, err
+		}
+
 		r.accessToken = oauthToken.AccessToken
 	}
 
@@ -246,6 +252,19 @@ func (r *azureRetriever) consumeClientConfigResponse(response *http.Response) (*
 		return clientConfig, nil
 	}
 	return nil, fmt.Errorf("error fetching ClientConfig from API Server: %s", response.Status)
+}
+
+func checkTokenForGroupsClaim(token string) error {
+	jwt, err := jws.ParseJWT([]byte(token))
+	if err != nil {
+		return fmt.Errorf("oidc: malformed jwt: %v", err)
+	}
+
+	if jwt.Claims().Get("groups") == nil && jwt.Claims().Get("_claim_names") != nil {
+		return fmt.Errorf("users with more than 200 groups are not supported")
+	}
+
+	return nil
 }
 
 type configMap struct {
