@@ -1,3 +1,11 @@
+# Release 2.12.2
+
+- Bump a version to fix a broken release.
+
+# Release 2.12.1
+
+- Add a custom error message when the `groups` claim is not present in auth token.
+
 # Release 2.11.1
 
 - Add back missing dynamic library
