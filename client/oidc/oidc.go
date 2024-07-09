@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os/exec"
 	"runtime"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -22,17 +23,37 @@ const (
 type Client struct {
 	oAuthConfig         oauth2.Config
 	serverApplicationID string
-	authenticated       bool
-	failedLogin         bool
+	useDeviceCode       bool
+	disableBrowserPopup bool
+	loginTimeout        time.Duration
+	token               *oauth2.Token
+	muLogin             sync.Mutex
 	stopChan            chan tokenResponse
 }
 
-// New returns a new OIDC client
-func New(config oauth2.Config, serverApplicationID string) *Client {
+// Config contains the configuration for a OIDC client
+type Config struct {
+	oauth2.Config
+	ServerApplicationID string
+	LoginTimeout        time.Duration
+	UseDeviceCode       bool
+	DisableBrowserPopup bool
+}
 
+// New returns a new OIDC client
+func New(config Config) *Client {
 	return &Client{
-		oAuthConfig:         config,
-		serverApplicationID: serverApplicationID,
+		oAuthConfig: oauth2.Config{
+			ClientID:     config.ClientID,
+			ClientSecret: config.ClientSecret,
+			Endpoint:     config.Endpoint,
+			RedirectURL:  config.RedirectURL,
+			Scopes:       config.Scopes,
+		},
+		serverApplicationID: config.ServerApplicationID,
+		loginTimeout:        config.LoginTimeout,
+		useDeviceCode:       config.UseDeviceCode,
+		disableBrowserPopup: config.DisableBrowserPopup,
 		stopChan:            make(chan tokenResponse),
 	}
 }
@@ -42,8 +63,24 @@ type tokenResponse struct {
 	responseError error
 }
 
-// AuthWithOIDCCallback attempts to authorise using a local callback
-func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Duration, disableBrowserPopup bool) (*oauth2.Token, error) {
+// Token returns a cached token for a given OIDC client or fetches a new one
+func (c *Client) Token(ctx context.Context) (*oauth2.Token, error) {
+	c.muLogin.Lock()
+	defer c.muLogin.Unlock()
+
+	if c.Authenticated() {
+		return c.token, nil
+	}
+
+	if c.useDeviceCode {
+		return c.authWithDeviceFlow(ctx, c.loginTimeout)
+	}
+
+	return c.authWithOIDCCallback(ctx, c.loginTimeout, c.disableBrowserPopup)
+}
+
+// authWithOIDCCallback attempts to authorise using a local callback
+func (c *Client) authWithOIDCCallback(ctx context.Context, loginTimeout time.Duration, disableBrowserPopup bool) (*oauth2.Token, error) {
 	redirectURL, err := url.Parse(c.oAuthConfig.RedirectURL)
 	if err != nil {
 		log.Fatalf("Unable to parse oidc redirect uri: %e", err)
@@ -51,7 +88,7 @@ func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Dur
 
 	authURL := c.oAuthConfig.AuthCodeURL(ospreyState)
 	mux := http.NewServeMux()
-	h := &http.Server{Addr: fmt.Sprintf("%s", redirectURL.Host), Handler: mux}
+	h := &http.Server{Addr: redirectURL.Host, Handler: mux}
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, authURL, http.StatusFound)
@@ -101,6 +138,9 @@ func (c *Client) AuthWithOIDCCallback(ctx context.Context, loginTimeout time.Dur
 		if resp.responseError != nil {
 			return nil, resp.responseError
 		}
+
+		c.token = resp.accessToken
+
 		return resp.accessToken, nil
 	}
 }
@@ -129,7 +169,6 @@ func (c *Client) handleRedirectURI(ctx context.Context) http.HandlerFunc {
 			return
 		}
 
-		c.authenticated = true
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`<html>
 <head>
@@ -161,5 +200,10 @@ func (c *Client) doAuthRequest(ctx context.Context, r *http.Request) (*oauth2.To
 
 // Authenticated returns a true or false value if a given OIDC client has received a successful login
 func (c *Client) Authenticated() bool {
-	return c.authenticated
+	return c.token != nil && c.token.Valid()
+}
+
+// SetUseDeviceCode is a flag that when set to false, creates non-interactive login requests to auth providers (e.g. device flow).
+func (c *Client) SetUseDeviceCode(value bool) {
+	c.useDeviceCode = value
 }

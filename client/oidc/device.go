@@ -31,8 +31,8 @@ type pollResponse struct {
 	error
 }
 
-// AuthWithDeviceFlow attempts to authorise using the device code oAuth flow.
-func (c *Client) AuthWithDeviceFlow(ctx context.Context, loginTimeout time.Duration) (*oauth2.Token, error) {
+// authWithDeviceFlow attempts to authorise using the device code oAuth flow.
+func (c *Client) authWithDeviceFlow(ctx context.Context, loginTimeout time.Duration) (*oauth2.Token, error) {
 	c.oAuthConfig.RedirectURL = ""
 	// potential refactor: device_authorization_endpoint is now exposed by the Azure https://login.microsoftonline.com/<tenant-id>/v2.0/.well-known/openid-configuration
 	deviceAuthURL := strings.Replace(c.oAuthConfig.AuthCodeURL(ospreyState), "/authorize", "/devicecode", 1)
@@ -83,7 +83,9 @@ func (c *Client) AuthWithDeviceFlow(ctx context.Context, loginTimeout time.Durat
 		if deviceCodePoll.error != nil {
 			return nil, fmt.Errorf("failed to fetch device-flow token: %w", err)
 		}
-		c.authenticated = true
+
+		c.token = deviceCodePoll.Token
+
 		return deviceCodePoll.Token, nil
 	}
 }

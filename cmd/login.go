@@ -1,19 +1,18 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/sky-uk/osprey/v2/client"
 	"github.com/sky-uk/osprey/v2/client/kubeconfig"
 	"github.com/spf13/cobra"
-
-	"fmt"
-	"os"
-	"strings"
+	"golang.org/x/sync/errgroup"
 
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var loginCmd = &cobra.Command{
@@ -81,12 +80,13 @@ func login(_ *cobra.Command, _ []string) {
 		Password:            password,
 	}
 
-	success := true
-
 	retrievers, err := ospreyconfig.GetRetrievers(snapshot.ProviderConfigs(), retrieverOptions)
 	if err != nil {
 		log.Fatalf("Unable to initialise retrievers: %v", err)
 	}
+
+	var g errgroup.Group
+	var muKubeconfig sync.Mutex
 
 	for providerName, targets := range group.TargetsForProvider() {
 		retriever, ok := retrievers[providerName]
@@ -94,20 +94,27 @@ func login(_ *cobra.Command, _ []string) {
 			log.Fatalf("Unsupported provider: %s", providerName)
 		}
 		for _, target := range targets {
-			targetData, err := retriever.RetrieveClusterDetailsAndAuthTokens(target)
-			if err != nil {
-				if state, ok := status.FromError(err); ok && state.Code() == codes.Unauthenticated {
-					log.Fatalf("Failed to log in to %s: %v", target.Name(), state.Message())
+			// Capture the loop variable.
+			target := target
+
+			g.Go(func() error {
+				targetData, err := retriever.RetrieveClusterDetailsAndAuthTokens(target)
+				if err != nil {
+					log.Errorf("Failed to log in to %s: %v", target.Name(), err)
+
+					return err
 				}
-				success = false
-				log.Errorf("Failed to log in to %s: %v", target.Name(), err)
-				continue
-			}
-			updateKubeconfig(target, targetData)
+
+				muKubeconfig.Lock()
+				updateKubeconfig(target, targetData)
+				muKubeconfig.Unlock()
+
+				return nil
+			})
 		}
 	}
 
-	if !success {
+	if err := g.Wait(); err != nil {
 		log.Fatal("Failed to update credentials for some targets.")
 	}
 }

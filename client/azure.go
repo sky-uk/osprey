@@ -6,9 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
-	"time"
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/sky-uk/osprey/v2/client/oidc"
@@ -81,12 +80,6 @@ func (ac *AzureConfig) ValidateConfig() error {
 
 // NewAzureRetriever creates new Azure oAuth client
 func NewAzureRetriever(provider *ProviderConfig, options RetrieverOptions) (Retriever, error) {
-	config := oauth2.Config{
-		ClientID:     provider.clientID,
-		ClientSecret: provider.clientSecret,
-		RedirectURL:  provider.redirectURI,
-		Scopes:       provider.scopes,
-	}
 	if provider.issuerURL == "" {
 		provider.issuerURL = fmt.Sprintf("https://login.microsoftonline.com/%s/%s", provider.azureTenantID, wellKnownConfigurationURI)
 	} else {
@@ -97,26 +90,28 @@ func NewAzureRetriever(provider *ProviderConfig, options RetrieverOptions) (Retr
 	if err != nil {
 		return nil, fmt.Errorf("unable to query well-known oidc config: %w", err)
 	}
-	config.Endpoint = *oidcEndpoint
+
 	retriever := &azureRetriever{
-		oidc:     oidc.New(config, provider.serverApplicationID),
+		oidc: oidc.New(oidc.Config{
+			Config: oauth2.Config{
+				ClientID:     provider.clientID,
+				ClientSecret: provider.clientSecret,
+				Endpoint:     *oidcEndpoint,
+				RedirectURL:  provider.redirectURI,
+				Scopes:       provider.scopes,
+			},
+			LoginTimeout:        options.LoginTimeout,
+			UseDeviceCode:       options.UseDeviceCode,
+			DisableBrowserPopup: options.DisableBrowserPopup,
+		}),
 		tenantID: provider.azureTenantID,
 	}
-	retriever.useDeviceCode = options.UseDeviceCode
-	retriever.loginTimeout = options.LoginTimeout
-	retriever.disableBrowserPopup = options.DisableBrowserPopup
 	return retriever, nil
 }
 
 type azureRetriever struct {
-	accessToken         string
-	useDeviceCode       bool
-	loginTimeout        time.Duration
-	disableBrowserPopup bool
-	oidc                *oidc.Client
-	tenantID            string
-	webserver           *http.Server
-	stopCh              chan struct{}
+	oidc     *oidc.Client
+	tenantID string
 }
 
 func (r *azureRetriever) RetrieveUserDetails(target Target, authInfo api.AuthInfo) (*UserInfo, error) {
@@ -138,24 +133,14 @@ func (r *azureRetriever) RetrieveUserDetails(target Target, authInfo api.AuthInf
 func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*TargetInfo, error) {
 	ctx := context.TODO()
 
-	if !r.oidc.Authenticated() {
-		var oauthToken *oauth2.Token
-		var err error
-		if r.useDeviceCode {
-			oauthToken, err = r.oidc.AuthWithDeviceFlow(ctx, r.loginTimeout)
-		} else {
-			oauthToken, err = r.oidc.AuthWithOIDCCallback(ctx, r.loginTimeout, r.disableBrowserPopup)
-		}
-		if err != nil {
-			return nil, err
-		}
+	token, err := r.oidc.Token(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve access token: %w", err)
+	}
 
-		err = checkTokenForGroupsClaim(oauthToken.AccessToken)
-		if err != nil {
-			return nil, err
-		}
-
-		r.accessToken = oauthToken.AccessToken
+	err = checkTokenForGroupsClaim(token.AccessToken)
+	if err != nil {
+		return nil, err
 	}
 
 	var apiServerURL, apiServerCA string
@@ -223,7 +208,7 @@ func (r *azureRetriever) RetrieveClusterDetailsAndAuthTokens(target Target) (*Ta
 	}
 
 	return &TargetInfo{
-		AccessToken:         r.accessToken,
+		AccessToken:         token.AccessToken,
 		ClusterAPIServerURL: apiServerURL,
 		ClusterCA:           apiServerCA,
 	}, nil
@@ -239,12 +224,12 @@ type clientConfigSpec struct {
 
 func (r *azureRetriever) consumeClientConfigResponse(response *http.Response) (*clientConfig, error) {
 	if response.StatusCode == http.StatusOK {
-		data, err := ioutil.ReadAll(response.Body)
+		data, err := io.ReadAll(response.Body)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read ClientConfig response from API Server: %w", err)
 		}
 		defer response.Body.Close()
-		var clientConfig = &clientConfig{}
+		clientConfig := &clientConfig{}
 		err = json.Unmarshal(data, clientConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse response: %w", err)
@@ -276,12 +261,12 @@ type configMapData struct {
 
 func (r *azureRetriever) consumeCAConfigMapResponse(response *http.Response) (*configMap, error) {
 	if response.StatusCode == http.StatusOK {
-		data, err := ioutil.ReadAll(response.Body)
+		data, err := io.ReadAll(response.Body)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read CA response from API Server: %w", err)
 		}
 		defer response.Body.Close()
-		var configMap = &configMap{}
+		configMap := &configMap{}
 		err = json.Unmarshal(data, configMap)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse response: %w", err)
@@ -297,9 +282,8 @@ func (r *azureRetriever) GetAuthInfo(config *api.Config, target Target) *api.Aut
 		return nil
 	}
 	return authInfo
-
 }
 
 func (r *azureRetriever) SetUseDeviceCode(value bool) {
-	r.useDeviceCode = value
+	r.oidc.SetUseDeviceCode(value)
 }
