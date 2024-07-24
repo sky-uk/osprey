@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"time"
 )
@@ -49,17 +48,10 @@ func NewTLSClient(skipVerify bool, caCerts ...string) (*http.Client, error) {
 		}
 	}
 
-	tlsConfig := &tls.Config{RootCAs: certPool, InsecureSkipVerify: skipVerify}
+	transport := DefaultTransport()
+	transport.TLSClientConfig = &tls.Config{RootCAs: certPool, InsecureSkipVerify: skipVerify}
+	transport.ExpectContinueTimeout = 5 * time.Second
+	transport.TLSHandshakeTimeout = 7 * time.Second
 
-	return &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
-			Proxy:           http.ProxyFromEnvironment,
-			Dial: (&net.Dialer{
-				Timeout: 10 * time.Second,
-			}).Dial,
-			TLSHandshakeTimeout:   7 * time.Second,
-			ExpectContinueTimeout: 5 * time.Second,
-		},
-	}, nil
+	return &http.Client{Transport: transport}, nil
 }
